@@ -25,7 +25,7 @@ class Start<K,T> base Application<int> // add 'base <refid>' to class decl
     function operator+(String s) : int
     {
         return 0;
-    }
+    }z
 
     function foo()
     {
