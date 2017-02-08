@@ -10,7 +10,7 @@ class Start<K,T> base Application<int> // add 'base <refid>' to class decl
     /*
     * Macros always return void
     */
-    macros _get_addr_info (int x, char c)
+    macros _get_addr_info (int x, char c
     {
         string n = null; // cannot assign null to native string
         label:
