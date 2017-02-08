@@ -5,5 +5,5 @@
 </a>
 </div>
 
-# The Sharp Programming Language
-Sharp is an open source Programming Language that makes it easy to build simple, reliable, and efficient software for both new and advanced users.
+# The Test Branch
+This branch is specifically used for testing all of sharp's software.
