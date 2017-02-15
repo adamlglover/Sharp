@@ -1,0 +1,26 @@
+mod application;
+
+class Main base D.G.B {
+
+    public static function main(String[] args) : int {
+        io.console.write("Hello World");
+        return 0;
+    }
+
+    class C {
+        class B base Main.C {
+
+
+        }
+    }
+}
+
+    class D {
+        class B base Main.C {
+
+
+        class F base D {
+
+        }
+        }
+    }
