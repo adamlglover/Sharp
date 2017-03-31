@@ -61,7 +61,7 @@ public:
         for(Param& param : *params) {
             param.free();
         }
-        std::free(params); params = NULL;
+        delete[] (params); params = NULL;
     }
 
     RuntimeNote note;

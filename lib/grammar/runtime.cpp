@@ -54,7 +54,7 @@ void runtime::interpret() {
                 succeeded++;
 
             errors->free();
-            std::free(errors); this->errors = NULL;
+            delete (errors); this->errors = NULL;
         }
     }
 }
@@ -312,7 +312,7 @@ bool runtime::preprocess() {
             succeeded++;
 
         errors->free();
-        std::free(errors); this->errors = NULL;
+        delete (errors); this->errors = NULL;
     }
 
     return !semtekerrors;
@@ -865,27 +865,27 @@ void runtime::cleanup() {
         p2->free();
     }
     parsers.clear();
-    std::free(errors); errors = NULL;
+    delete(errors); errors = NULL;
     modules->clear();
-    std::free(modules); modules = NULL;
+    delete(modules); modules = NULL;
 
     for(ClassObject& klass : *classes) {
         klass.free();
     }
     classes->clear();
-    std::free(classes); classes = NULL;
+    delete (classes); classes = NULL;
 
     for(keypair<string, std::list<string>>& map : *import_map) {
         map.value.clear();
     }
     import_map->clear();
-    std::free(import_map); import_map = NULL;
+    delete (import_map); import_map = NULL;
 
     for(Method& macro : *macros) {
         macro.clear();
     }
     macros->clear();
-    std::free(macros); macros = NULL;
+    delete (macros); macros = NULL;
 }
 
 void rt_error(string message) {
@@ -1023,7 +1023,7 @@ void _srt_start(list<string> files)
         if(source.empty()) {
             for(parser* p2 : parsers) {
                 p2->free();
-                std::free(p2);
+                delete(p2);
             }
 
             rt_error("file `" + file + "` is empty.");
@@ -1055,7 +1055,7 @@ void _srt_start(list<string> files)
         }
 
         t->free();
-        std::free(t);
+        delete (t);
         source.end();
     }
 

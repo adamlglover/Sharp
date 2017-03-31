@@ -1638,11 +1638,11 @@ void parser::free() {
         remove_accesstypes();
         this->tree->clear();
         this->rState->clear();
-        std::free(this->tree); this->tree = NULL;
-        std::free(this->rState); this->rState = NULL;
-        std::free(this->access_types); this->access_types = NULL;
+        delete (this->tree); this->tree = NULL;
+        delete (this->rState); this->rState = NULL;
+        delete (this->access_types); this->access_types = NULL;
         errors->free();
-        std::free(errors); this->errors = NULL;
+        delete (errors); this->errors = NULL;
     }
 }
 

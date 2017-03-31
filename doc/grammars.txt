@@ -190,6 +190,15 @@ while (<expression>) <block>
 Do While statement:
 do  <block> while(<expression>) ;
 
+For loop statement:
+(<for-decl-1> | <for-decl-2>)
+
+<for-decl-1>:
+for ( <uTypeArg> : <expression> ) block
+
+<for-decl-1>:
+for ( [<uTypeArg>]; [<expression>]; <expression>) block
+
 catchClause:
 catch (<utypeArgOpt>) block
 
@@ -210,7 +219,7 @@ throw <expression> ;
 
 <asm-decl>: // not added
 Inline assembly decliration that can only be declared in a method or macros
-asm ( <asm-statement>* ) ;
+asm ( <string-literal>+ ) ;
 
 <statement>:
 <return-statement>

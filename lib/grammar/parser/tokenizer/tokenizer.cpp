@@ -715,9 +715,9 @@ void tokenizer::free() {
     this->errors->free();
     this->lines->clear();
     this->entites->clear();
-    std::free(this->errors); this->errors = NULL;
-    std::free(this->lines); this->lines = NULL;
-    std::free(this->entites); this->entites = NULL;
+    delete (this->errors); this->errors = NULL;
+    delete (this->lines); this->lines = NULL;
+    delete (this->entites); this->entites = NULL;
 
 }
 

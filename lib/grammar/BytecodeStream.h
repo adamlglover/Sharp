@@ -74,7 +74,7 @@ public:
 
     void free() {
         bytecode->clear();
-        std::free (bytecode);
+        delete[] (bytecode);
     }
 
     void flush() {

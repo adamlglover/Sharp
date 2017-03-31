@@ -26,7 +26,7 @@ public:
         if(field == NULL) return;
 
         field->free();
-        std::free(field); field = NULL;
+        delete (field); field = NULL;
     }
 
 

@@ -234,6 +234,7 @@ void Errors::removetesterror_list() {
     {
         list<parseerror> *lst = *std::next(_testerrors->begin(), teCursor);
         lst->clear();
+        delete lst;
         _testerrors->pop_back();
         teCursor--;
         if(teCursor < 0) cm = false;
@@ -277,6 +278,6 @@ void Errors::free() {
     this->lines = NULL;
     this->errors->clear();
     this->_testerrors->clear();
-    std::free(errors); this->errors = NULL;
-    std::free(_testerrors); this->_testerrors = NULL;
+    delete (errors); this->errors = NULL;
+    delete (_testerrors); this->_testerrors = NULL;
 }

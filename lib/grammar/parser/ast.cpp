@@ -54,7 +54,7 @@ void ast::free() {
     this->entities->clear();
     numAsts = 0;
     numEntities = 0;
-    std::free(this->entities); this->entities = NULL;
+    delete (this->entities); this->entities = NULL;
 
     ast* pAst;
     for(int64_t i = 0; i < this->sub_asts->size(); i++)
@@ -65,7 +65,7 @@ void ast::free() {
     }
 
     this->sub_asts->clear();
-    std::free(this->sub_asts); this->sub_asts = NULL;
+    delete (this->sub_asts); this->sub_asts = NULL;
 }
 
 void ast::freesubs() {

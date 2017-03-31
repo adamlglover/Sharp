@@ -366,7 +366,7 @@ public:
 
     ~ref_ptr() {
         class_heiarchy->clear();
-        std::free (class_heiarchy);
+        delete (class_heiarchy);
         class_heiarchy = NULL;
     }
 
