@@ -1,0 +1,52 @@
+mod io;
+
+class Thread {
+
+    public static var THREAD_INIT = 0x000;
+    public static var THREAD_RUNNING = 0x000;
+    public static var THREAD_KILLED = 0x000;
+
+    private var id;
+    private var daemon;
+    private var state;
+    private string name;
+    private var exitVal;
+    private dynamic_object arg;
+    private static ThreadManager manager;
+
+    public static function getManager() : &ThreadManager {
+        if(manager == null) {
+            manager = new ThreadManager(ThreadManager.THREAD_MAX);
+            return manager;
+        } else {
+            return manager;
+        }
+    }
+
+    public Thread(string name, var id) {
+        self->name = name;
+        self->id = id;
+
+        state = THREAD_INIT;
+        _create_thread(name);
+    }
+
+    public function start(function *funcptr(dynamic_object), dynamic_object arg) {
+        asm (
+            "movl 0         # move @funcptr to ptr                                      "
+            "movi 0,%adx    # move address to value of function ptr to address register "
+            "movx %adx,#adx # store address of main function back in %adx                           "
+            "int 0x1c       #"
+
+        )
+    }
+
+    private function _create_thread(string name) {
+        char[] n = name.toArray();
+        asm (
+            "movl 1          # move char[] n to ptr"
+            "int 0x3f        # create thread with name in char[]"
+        )
+    }
+
+}

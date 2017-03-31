@@ -87,7 +87,7 @@
 
 #define movr(r,x) regs[r]=regs[x]; _brh
 
-#define movx(r,x) _nativeread(r,x) _brh
+#define movx(r,x) _nativeread(r,x) _brh // TODO: make a movxd to ret value from register
 
 #define lt(r,x) regs[0x0002]=regs[r]<regs[x]; _brh
 

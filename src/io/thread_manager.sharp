@@ -1,0 +1,28 @@
+mod io;
+
+class ThreadManager {
+
+    public static var THREAD_MAX = 0x40fe;
+
+    private var threadLimit;
+    private var numThreads;
+    ArrayList threads;
+
+    public ThreadManager(var maxThreads) {
+        threadLimit = maxThreads;
+        thread = new ArrayList();
+    }
+
+    public function startThread(Thread &thread, var funcptr, dynamic_object arg) {
+        /* Do sum stuff with thread object */
+        var id = thread.id;
+        asm (
+            "movl 1             # move @funcptr to ptr                                      "
+            "movx %adx,0        # store address of main function back in %adx               "
+            "movl 3             # move @id to ptr                                           "
+            "movx %ebx,0        # store thread id into ebx                                  "
+            "int 0x1c           # start thread                                              "
+
+        )
+    }
+}
