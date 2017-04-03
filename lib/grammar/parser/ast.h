@@ -16,8 +16,6 @@ enum ast_types
     ast_macros_decl,
     ast_method_decl,
     ast_construct_decl,
-    ast_extern_method_decl,
-    ast_extern_typeid_decl,
     ast_label_decl,
     ast_operator_decl,
     ast_var_decl,
@@ -33,14 +31,12 @@ enum ast_types
     ast_primary_expr,
     ast_dotnotation_call_expr,
     ast_utype,
-    ast_method_params,
-    ast_method_inv_params,
     ast_block,
     ast_finally_block,
+    ast_assembly_block,
     ast_catch_clause,
     ast_method_return_type,
     ast_return_stmnt,
-    ast_var_assign_stmnt,
     ast_statement,
     ast_if_statement,
     ast_elseif_statement,
@@ -51,12 +47,14 @@ enum ast_types
     ast_break_statement,
     ast_goto_statement,
     ast_while_statement,
+    ast_assembly_statement,
+    ast_for_statement,
+    ast_foreach_statement,
     ast_type_identifier,
     ast_refrence_pointer,
     ast_modulename,
     ast_literal,
 
-    ast_entity, // the base level ast
     ast_none
 };
 

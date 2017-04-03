@@ -44,9 +44,10 @@ struct parseerror
 {
 public:
     parseerror()
+    :
+            error()
     {
         id = NO_ERR;
-        error = ' ';
         line = 0;
         col = 0;
     }

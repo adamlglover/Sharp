@@ -11,6 +11,7 @@
 #include "Environment.h"
 #include "BytecodeStream.h"
 #include "Opcode.h"
+#include "../runtime/oo/string.h"
 
 class ref_ptr;
 class ResolvedRefrence;
@@ -125,6 +126,26 @@ public:
     bool bool_val;
 };
 
+struct context {
+    context()
+    :
+            super(NULL)
+    {
+    }
+
+    context(ClassObject* super)
+    :
+            super(super)
+    {
+    }
+
+    ClassObject* super;
+
+    void clear() {
+        super = NULL;
+    }
+};
+
 class runtime
 {
 public:
@@ -137,7 +158,8 @@ public:
             uo_errs(0),
             current_module(""),
             last_note("","",0,0),
-            last_notemsg("")
+            last_notemsg(""),
+            ctp(-1)
     {
         for(parser* p : parsers) {
             if(!p->parsed)
@@ -152,6 +174,8 @@ public:
         modules = new list<string>();
         classes = new list<ClassObject>();
         import_map = new list<keypair<string, list<string>>>();
+
+        contexts = new list<context>();
         interpret();
     }
 
@@ -178,6 +202,8 @@ private:
     string current_module;
     list<ClassObject>* classes;
     list<keypair<string, std::list<string>>>*  import_map;
+    list<context>* contexts;
+    int64_t ctp;
     uint64_t uid;
 
     /* One off variables */
@@ -188,9 +214,9 @@ private:
 
     bool preprocess();
 
-    string ast_tostring(ast *pAst);
+    string parse_modulename(ast *pAst);
 
-    list<AccessModifier> preprocc_access_modifier(ast *trunk);
+    list<AccessModifier> parse_access_modifier(ast *trunk);
 
     AccessModifier entity_tomodifier(token_entity entity);
 
@@ -200,7 +226,7 @@ private:
 
     bool isaccess_decl(token_entity token);
 
-    int isvar_access_specifiers(list<AccessModifier>& modifiers);
+    int parse_var_accessspecifiers(list <AccessModifier> &modifiers);
 
     NativeField token_tonativefield(string entity);
 
@@ -209,8 +235,6 @@ private:
     int ismethod_access_specifiers(list<AccessModifier> &modifiers);
 
     list<Param> ast_toparams(ast *pAst, ClassObject* parent);
-
-    string get_modulename(ast *pAst);
 
     void preprocc_operator_decl(ast *pAst, ClassObject *pObject);
 
@@ -263,6 +287,37 @@ private:
 
     void addInstruction(Opcode opcode, double *pInt, int n);
 
+    void partial_parse_class_decl(ast *pAst);
+
+    context *get_context();
+
+    bool parse_access_decl(ast *pAst, list <AccessModifier> &list, int &startpos);
+
+    void parse_class_access_modifiers(list <AccessModifier> &list, ast* pAst);
+
+    ClassObject *addGlobalClassObject(string basic_string, ast *pAst);
+
+    ClassObject *addChildClassObject(string name, ast *pAst, ClassObject* super);
+
+    context *add_context(context ctx);
+
+    void remove_context();
+
+    void partial_parse_var_decl(ast *pAst);
+
+    void parse_var_access_modifiers(list <AccessModifier> &list, ast *pAst);
+
+    void partial_parse_fn_decl(ast *pAst);
+
+    void parse_fn_access_modifiers(list <AccessModifier> &list, ast *pAst);
+
+    list <Param> partial_parse_utype_arglist(ast *pAst);
+
+    string partial_parse_utypearg(ast *pAst);
+
+    bool partial_contains_param(list <Param> &list, string name);
+
+    void partial_parse_operator_decl(ast *pAst);
 };
 
 #define progname "bootstrap"
@@ -353,19 +408,29 @@ inline bool element_has(list<T>& l, T search) {
 class ref_ptr {
 public:
     ref_ptr() {
-        class_heiarchy = new list<string>();
+        class_heiarchy = new list<nString>();
         module = "";
         refname = "";
     }
 
-    void operator=(list<string>* ch) {
+    void operator=(list<nString>* ch) {
         if(ch != NULL) {
-            *class_heiarchy = *ch;
+            clear();
+            class_heiarchy->clear();
+
+            for(unsigned int i = 0; i < ch->size(); i++) {
+                class_heiarchy->push_back(element_at(*ch, i).str());
+            }
+        }
+    }
+
+    void clear() {
+        for(unsigned int i = 0; i < class_heiarchy->size(); i++) {
+            element_at(*class_heiarchy, i).free();
         }
     }
 
     ~ref_ptr() {
-        class_heiarchy->clear();
         delete (class_heiarchy);
         class_heiarchy = NULL;
     }
@@ -376,13 +441,13 @@ public:
         cout << "id: " << refname << endl;
         cout << "mod: " << module << endl;
         cout << "class: ";
-        for(string n : *class_heiarchy)
-            cout << n << ".";
+        for(nString n : *class_heiarchy)
+            cout << n.str() << ".";
         cout << endl;
     }
 
     string module;
-    list<string>* class_heiarchy;
+    list<nString>* class_heiarchy;
     string refname;
 };
 

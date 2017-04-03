@@ -156,7 +156,7 @@ bool parser::isvariable_decl(token_entity token) {
 }
 
 bool parser::ismethod_decl(token_entity token) {
-    return token.getid() == IDENTIFIER && token.gettoken() == "function";
+    return token.getid() == IDENTIFIER && token.gettoken() == "fn";
 }
 
 ast* parser::ast_at(long p)
@@ -192,6 +192,18 @@ bool parser::iswhile_stmnt(token_entity entity) {
     return entity.getid() == IDENTIFIER && entity.gettoken() == "while";
 }
 
+bool parser::isfor_stmnt(token_entity entity) {
+    return entity.getid() == IDENTIFIER && entity.gettoken() == "for";
+}
+
+bool parser::isforeach_stmnt(token_entity entity) {
+    return entity.getid() == IDENTIFIER && entity.gettoken() == "foreach";
+}
+
+bool parser::isassembly_stmnt(token_entity entity) {
+    return entity.getid() == IDENTIFIER && entity.gettoken() == "__asm";
+}
+
 bool parser::isdowhile_stmnt(token_entity entity) {
     return entity.getid() == IDENTIFIER && entity.gettoken() == "do";
 }
@@ -210,10 +222,17 @@ bool parser::isconstructor_decl() {
 }
 
 bool parser::isnative_type(string type) {
-    return type == "int" || type == "short"
-           || type == "long" || type == "bool"
-           || type == "char" || type == "float"
-           || type == "double" || type == "string"
+    return type == "var"
+
+           /*
+            * These reserved words are not native types
+            * they are only used in casting since the Sharp VM
+            * dosent store these values under the hood
+            */
+           || type == "__int8" || type == "__int16"
+           || type == "__int32" || type == "__int64"
+           || type == "__uint8" || type == "__uint16"
+           || type == "__uint32" || type == "__uint64"
            /*
             * This is not a native type but we want this to be
             * able to be set as a variable
@@ -467,8 +486,6 @@ void parser::parse_variabledecl(ast *pAst) {
         parse_variabledecl(pAst->getparent()->gettype() == ast_var_decl ? pAst->getparent() : pAst);
     } else if(partialdecl == 0)
         expect(SEMICOLON, "`;`");
-
-    //cout << "parsed variable declaration" << endl;
 }
 
 void parser::parse_valueassignment(ast *pAst) {
@@ -495,8 +512,24 @@ bool parser::parse_literal(ast *pAst) {
         return true;
     }
     else {
-        errors->newerror(GENERIC, current(), "expected literal");
+        errors->newerror(GENERIC, current(), "expected literal of type (string, char, hex, or bool)");
         return false;
+    }
+}
+
+void parser::parse_assembly_block(ast *pAst) {
+    pAst = get_ast(pAst, ast_assembly_block);
+
+    if(peek(1).getid() == STRING_LITERAL) {
+        advance();
+        pAst->add_entity(current());
+
+        while(peek(1).getid() == STRING_LITERAL) {
+            advance();
+            pAst->add_entity(current());
+        }
+    } else {
+        errors->newerror(GENERIC, current(), "expected string literal");
     }
 }
 
@@ -1186,6 +1219,55 @@ void parser::parse_returnstmnt(ast *pAst) {
     expect(SEMICOLON, pAst, "`;`");
 }
 
+void parser::parse_assemblystmnt(ast *pAst) {
+    pAst = get_ast(pAst, ast_assembly_statement);
+
+    expect_token(pAst, "__asm", "`__asm`");
+
+    expect(LEFTPAREN, pAst, "`(`");
+    parse_assembly_block(pAst);
+    expect(RIGHTPAREN, pAst, "`)`");
+    expect(SEMICOLON, pAst, "`;`");
+}
+
+void parser::parse_forstmnt(ast *pAst) {
+    pAst = get_ast(pAst, ast_for_statement);
+
+    expect_token(pAst, "for", "`for`");
+
+    expect(LEFTPAREN, pAst, "`(`");
+
+    parse_utypearg(pAst);
+    parse_valueassignment(pAst);
+    expect(SEMICOLON, pAst, "`;`"); // The inititalizer
+
+    if(peek(1).gettokentype() != SEMICOLON)
+        parse_expression(pAst);
+    expect(SEMICOLON, pAst, "`;`");
+
+    if(peek(1).gettokentype() != SEMICOLON)
+        parse_expression(pAst);
+    expect(RIGHTPAREN, pAst, "`)`");
+
+    parse_block(pAst);
+}
+
+void parser::parse_foreachstmnt(ast *pAst) {
+    pAst = get_ast(pAst, ast_foreach_statement);
+
+    expect_token(pAst, "foreach", "`foreach`");
+
+    expect(LEFTPAREN, pAst, "`(`");
+    parse_utypearg(pAst);
+
+    expect(COLON, pAst, "`:`");
+
+    parse_expression(pAst);
+    expect(RIGHTPAREN, pAst, "`)`");
+
+    parse_block(pAst);
+}
+
 void parser::parse_whilestmnt(ast *pAst) {
     pAst = get_ast(pAst, ast_while_statement);
 
@@ -1322,9 +1404,21 @@ void parser::parse_statement(ast* pAst) {
     {
         parse_ifstmnt(pAst);
     }
+    else if(isassembly_stmnt(current()))
+    {
+        parse_assemblystmnt(pAst );
+    }
+    else if(isfor_stmnt(current()))
+    {
+        parse_forstmnt(pAst );
+    }
+    else if(isforeach_stmnt(current()))
+    {
+        parse_foreachstmnt(pAst );
+    }
     else if(iswhile_stmnt(current()))
     {
-        parse_whilestmnt(pAst);
+        parse_whilestmnt(pAst );
     }
     else if(isdowhile_stmnt(current()))
     {
@@ -1403,6 +1497,7 @@ void parser::parse_statement(ast* pAst) {
     else if(current().gettokentype() == SEMICOLON)
     {
         /* we don't care about empty statements but we allow them */
+        errors->newwarning(GENERIC, current().getline(), current().getcolumn(), "unnessicary comment");
     }
     else
     {
@@ -1528,22 +1623,22 @@ void parser::parse_all(ast *pAst) {
 bool parser::iskeyword(string key) {
     return key == "mod" || key == "true"
            || key == "false" || key == "class"
-           || key == "int" || key == "short"
-           || key == "long" || key == "char"
-           || key == "bool" || key == "float"
-           || key == "double" || key == "static"
-           || key == "protected" || key == "private"
-           || key == "function" || key == "import"
-           || key == "return" || key == "self"
-           || key == "const" || key == "override"
-           || key == "public" || key == "new"
-           || key == "macros" || key == "null"
-           || key == "operator" || key == "base"
-           || key == "if" || key == "while"
-           || key == "do" || key == "try" || key == "catch"
+           || key == "__int8" || key == "__int16"
+           || key == "__int32" || key == "__int64"
+           || key == "__uint8" || key == "__uint16"
+           || key == "__uint32" || key == "__uint64"
+           || key == "static" || key == "protected"
+           || key == "private" || key == "fn"
+           || key == "import" || key == "return"
+           || key == "self" || key == "const"
+           || key == "override" || key == "public" || key == "new"
+           || key == "macros" || key == "null" || key == "operator"
+           || key == "base" || key == "if" || key == "while" || key == "do"
+           || key == "try" || key == "catch"
            || key == "finally" || key == "throw" || key == "continue"
            || key == "goto" || key == "break" || key == "else"
-           || key == "string" || key == "dynamic_object";
+           || key == "dynamic_object" || key == "__asm" || key == "for" || key == "foreach"
+            || key == "var";
 }
 
 bool parser::parse_type_identifier(ast *pAst) {

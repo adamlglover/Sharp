@@ -23,9 +23,27 @@ public:
             module_name(pmodule),
             uid(uid),
             modifier(modifier),
-            parent(NULL),
             base(NULL),
             super(NULL),
+            note(note)
+    {
+        functions = new list<Method>();
+        constructors = new list<Method>();
+        macros = new list<Method>();
+        overloads = new list<OperatorOverload>();
+        fields = new list<Field>();
+        childClasses = new list<ClassObject>();
+    }
+
+    ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note,
+                    ClassObject* parent)
+            :
+            name(name),
+            module_name(pmodule),
+            uid(uid),
+            modifier(modifier),
+            base(NULL),
+            super(parent),
             note(note)
     {
         functions = new list<Method>();
@@ -100,7 +118,7 @@ private:
     list<OperatorOverload>* overloads;
     list<Field> *fields;
     list<ClassObject>* childClasses;
-    ClassObject* parent, *super;
+    ClassObject *super;
     ClassObject* base;
 };
 

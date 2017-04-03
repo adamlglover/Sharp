@@ -167,10 +167,10 @@ Class Constructor Declaration:
 `[<accesstype>] <identifier = name> <uTypeArg-list> <block>
 
 Method Declaration:
-`[<accesstype>] function <identifier = name> <uTypeArg-list> [: <uType>] <block>
+`[<accesstype>] fn <identifier = name> <uTypeArg-list> [: <uType>] <block>
 
 Operator Declaration:
-`[<accesstype>] function operator <override-operator> <uTypeArg-list> [: <uType>] <block>
+`[<accesstype>] fn operator <override-operator> <uTypeArg-list> [: <uType>] <block>
 
 Variable Declaration statement:
 `[<accesstype>] <uType> <identifier = name> <MemAccessFlag> [ <assign-expr> <value>] [, <variable-decl>] ;`
@@ -191,13 +191,10 @@ Do While statement:
 do  <block> while(<expression>) ;
 
 For loop statement:
-(<for-decl-1> | <for-decl-2>)
-
-<for-decl-1>:
-for ( <uTypeArg> : <expression> ) block
-
-<for-decl-1>:
 for ( [<uTypeArg>]; [<expression>]; <expression>) block
+
+Foreach statement:
+foreach ( <uTypeArg> : <expression> ) block
 
 catchClause:
 catch (<utypeArgOpt>) block

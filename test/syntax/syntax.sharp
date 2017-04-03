@@ -5,29 +5,31 @@ import d.a.b.x;
 class Start base Application // add 'base <refid>' to class decl
 {
 
-    dynamic_object var;
+    private class X {
+        dynamic_object v;
 
-    /*
-    * Macros always return void
-    */
-    macros _get_addr_info (int x, char c)
-    {
-        string n = null; // cannot assign null to native string
-        label:
-        int portid = x;
-        sys.io.open((short)c, sys.io.PORT);
-    };
+        /*
+        * Macros always return void
+        */
+        static macros _get_addr_info (int x, char c)
+        {
+            string n = null; // cannot assign null to native string
+            label:
+            int portid = x;
+            sys.io.open((short)c, sys.io.PORT);
+        };
+    }
 
     /*
     * assign-expr operators must return void,
     * all other operators must return a value
     */
-    function operator+(String s) : int
+    fn operator+(String s) : int
     {
         return 0;
     }
 
-    function foo()
+    fn foo()
     {
         int* z = &x;
         examples.B.a x;
@@ -38,12 +40,12 @@ class Start base Application // add 'base <refid>' to class decl
         i = 5<3/8%8+8/8*8;
         String z = x << (char)9 << (char)7 + "'";
         String q = 'h' + 'e' + 'l' + 'l' + 'o' + "!";
-        mod examples_x.b.x;
+//        mod examples_x.b.x;
         int[] i = new int[]{1, 2, 3, 4, 5, 7};
         A[] a = new A[]{ new A("1"), new A("2"), new A("3", { 9 } ) };
         int q = (int)z++/7;
 
-        if(x < Main.var) {
+        if(x < Main.v) {
             int q = 5 * 4;
             int i = (((int)v--)/6);
 
@@ -57,7 +59,7 @@ class Start base Application // add 'base <refid>' to class decl
                     int i = (short) x[3]++ + 6;
                     int i = ((short) x[3]++) + 6/9;
                     int b = --arr[9];
-                }while(Main.var-- > 0);
+                }while(Main.v-- > 0);
                 goto label;
                 continue;
             }
@@ -91,29 +93,39 @@ class Start base Application // add 'base <refid>' to class decl
         }
 
         String s = new String(x[3], 0);
-        String i = new Map(self->var);
-        int r = self->var;
+        String i = new Map(self->v);
+        var r = self->v;
         Object o = null;
-        int x = 0_000_000.11___0e+10;
-        int[] y = 0x3344b8ef3_382848;
-        short u = 0x4376;
+        var x = 0_000_000.11___0e+10;
+        var[] y = 0x3344b8ef3_382848;
+        var u = 0x4376;
+
+        __asm (
+            "movi 0,%adx    # move address to value of function ptr to address register "
+            "movx %adx,#adx # store address of main function back in %adx               "
+        );
     }
+
+    private fn foobar(int i) {
+
+    }
+
+    private fn foobar(int i) {
+
+    }
+
 
     /*
     * Main function
     */
-    private static override function main(examples.b#Class.var& b6, Integer#Int[] x,
+    private static override fn main(examples.b#Class.v& b6, Integer#Int[] x,
             List lst,Int b, Int.c z) : int
     { // close up gap with processing xpression after function call (parse '++' and '--'
         {
-            int i = ""'n''m''h''y';
+//            int i = ""'n''m''h''y';
         }
 
-        // asm( // make asm decl to process on the fly vm code
-        //  int 0x63;
-        // );
-
-        int i = C.b >> 5;
+        var i = C.b >> (__int8)5;
         z %= 99.1345;
         String s += "";
         String s;
@@ -125,22 +137,31 @@ class Start base Application // add 'base <refid>' to class decl
         examples.B.a w = examples.B.a;
         h = examples.x#B.a;
         examples.B.a = examples;
-        examples.B.a( u = examples.B.a;
+//        examples.B.a( u = examples.B.a;
         sys.io.open("/usr/share/libutils.so", sys.io#BIN, self->x++, new String("string"), sys.io.read("/usr/share/java-7_8.jar"));
+
+        for (int i = 0; i < 10; i++) {
+            i++;
+        }
+
+        ArrayList charLict = new ArrayList(char.class);
+        foreach (char c : charLict.toArray()) {
+            io.out.put(c);
+        }
 
         x = 9;
         return i;
     }
 
-    private static override function main(examples.b#Class.var b6, Integer#Int x, Int b, Int.c z) : int
+    private static override fn main(examples.b#Class.v b6, Integer#Int x, Int b, Int.c z) : int
     {
         {
-            int i = ""'n''m''h''y';
+//            int i = ""'n''m''h''y';
         }
 
         int i = C.b.class;
         examples.B.a x;
-        examples.x#B.a z = self->var;
+        examples.x#B.a z = self->v;
         examples ;
         examples.B.a k = 0;
 

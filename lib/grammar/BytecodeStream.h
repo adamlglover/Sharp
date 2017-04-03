@@ -74,7 +74,7 @@ public:
 
     void free() {
         bytecode->clear();
-        delete[] (bytecode);
+        delete (bytecode);
     }
 
     void flush() {

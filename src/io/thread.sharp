@@ -32,13 +32,14 @@ class Thread {
     }
 
     public function start(function *funcptr(dynamic_object), dynamic_object arg) {
-        asm (
+        __asm (
             "movl 0         # move @funcptr to ptr                                      "
             "movi 0,%adx    # move address to value of function ptr to address register "
-            "movx %adx,#adx # store address of main function back in %adx                           "
-            "int 0x1c       #"
+            "movx %adx,#adx # store address of main function back in %adx               "
+            "int 0x1c                                                                   "
 
-        )
+        );
+        int i = 0;
     }
 
     private function _create_thread(string name) {

@@ -14,6 +14,12 @@ class ClassObject;
 class Param
 {
 public:
+    Param()
+    :
+            field(NULL)
+    {
+    }
+
     Param(Field field)
     {
         this->field = new Field();

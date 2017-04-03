@@ -4,7 +4,7 @@ import io;
 
 class Main {
 
-    public static function main(String[] args) : int {
+    public static fn main(String[] args) : int {
         io.console.write("Hello World");
         return 0;
     }

@@ -165,10 +165,6 @@ int main(int argc, const char* argv[]) {
 #else
     _bootstrap( argc, argv );
 #endif
-    double x = 0;
-    for(long long i = 0; i < 100000000; i++) {
-        x = x+1 * 1000/22.35 - i;
-    }
-    cout << x << " program exiting..." << endl;
+    cout << " program exiting..." << endl;
     return 0;
 }

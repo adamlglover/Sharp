@@ -17,7 +17,7 @@ class Main {
         io.console.write("I am an internal macros");
     };
 
-    public static function main(String[] args) : int {
+    public static fn main(String[] args) : int {
         global("I am a global macros");
         internal();
         return 0;

@@ -7,14 +7,7 @@
 
 enum NativeField
 {
-    fint,
-    fshort,
-    flong,
-    fdouble,
-    ffloat,
-    fbool,
-    fchar,
-    fstring,
+    fvar,
     fdynamic, /* Dynamic object type (Not a native type but is treated as one) */
     fvoid, /* only used as a return type for functions */
     fnof /* not a field */

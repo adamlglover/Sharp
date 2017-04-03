@@ -4,7 +4,7 @@ import io;
 
 class Main {
 
-    public static function main(String[] args) : int {
+    public static fn main(String[] args) : int {
         A a, b;
         io.console.write("A() a + b = " + (a+b).value()); // 10
 
@@ -22,12 +22,12 @@ class A {
 
     int var;
 
-    function operator+(A klass) : A {
+    fn operator+(A klass) : A {
         var += klass.var;
         return self;
     }
 
-    public function value() : int {
+    public fn value() : int {
         return var;
     }
 }

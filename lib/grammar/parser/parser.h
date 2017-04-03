@@ -200,6 +200,20 @@ private:
     bool parse_dot_notation_call_expr(ast *pAst);
 
     ast *rollbacklast();
+
+    bool isassembly_stmnt(token_entity entity);
+
+    void parse_assemblystmnt(ast *pAst);
+
+    void parse_assembly_block(ast *pAst);
+
+    bool isfor_stmnt(token_entity entity);
+
+    bool isforeach_stmnt(token_entity entity);
+
+    void parse_forstmnt(ast *pAst);
+
+    void parse_foreachstmnt(ast *pAst);
 };
 
 #endif //SHARP_PARRSER_H

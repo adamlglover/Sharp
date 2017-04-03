@@ -17,7 +17,6 @@ bool ClassObject::addChildClass(ClassObject klass) {
         return false;
     }
 
-    klass.parent = this;
     childClasses->push_back(klass);
     return true;
 }
