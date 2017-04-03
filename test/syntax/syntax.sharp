@@ -2,6 +2,15 @@ mod examples_x.b.x;
 
 import d.a.b.x;
 
+
+        static macros _get_addr_info (int x, char c)
+        {
+            string n = null; // cannot assign null to native string
+            label:
+            int portid = x;
+            sys.io.open((short)c, sys.io.PORT);
+        };
+
 class Start base Application // add 'base <refid>' to class decl
 {
 
@@ -27,6 +36,10 @@ class Start base Application // add 'base <refid>' to class decl
     fn operator+(String s) : int
     {
         return 0;
+    }
+
+    public Start() {
+
     }
 
     fn foo()

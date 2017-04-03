@@ -118,8 +118,8 @@ void Errors::print_errors() {
                 cout << geterrors(uo_errors);
             else // print optimized errors
                 cout << geterrors(errors);
-        } else // print warnings
-            cout << geterrors(errors);
+        }
+        cout << geterrors(warnings);
     }
 }
 
@@ -201,8 +201,7 @@ void Errors::newwarning(p_errors err, int l, int c, string xcmts) {
     if(asis)
         print_error(e);
 
-    errors->push_back(e);
-    warnings = true;
+    warnings->push_back(e);
 }
 
 string Errors::getline(int line) {

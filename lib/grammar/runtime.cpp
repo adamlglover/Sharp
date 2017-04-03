@@ -15,38 +15,44 @@ size_t succeeded, failed;
 _operator string_toop(string op);
 
 void runtime::interpret() {
-    if(preprocess()) {
+    if(partial_parse()) {
         succeeded = 0; /* There were no errors to stop the files that succeeded */
 
         for(parser* p : parsers) {
             errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
             _current = p;
 
-            const size_t ast_count = p->treesize();
-            ast* pAst;
+            ast* trunk;
+            for(size_t i = 0; i < p->treesize(); i++) {
+                trunk = p->ast_at(i);
 
-            for(size_t i = 0; i < ast_count; i++) {
-                pAst = p->ast_at(i);
-
-                switch(pAst->gettype()) {
-                    case ast_module_decl:
-                        break;
-                    case ast_import_decl:
-                        parse_import_decl(pAst);
-                        break;
-
-                    case ast_class_decl:
-                        parse_class_decl(pAst, NULL);
-                        break;
-
-                    case ast_macros_decl:
-                        break;
-
+                switch(trunk->gettype()) {
                     default:
-                        errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, " unexpected ast type");
+                        stringstream err;
+                        err << ": unknown ast type: " << trunk->gettype();
+                        errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
                         break;
                 }
             }
+
+//            switch(pAst->gettype()) {
+//                case ast_module_decl:
+//                    break;
+//                case ast_import_decl:
+//                    parse_import_decl(pAst);
+//                    break;
+//
+//                case ast_class_decl:
+//                    parse_class_decl(pAst, NULL);
+//                    break;
+//
+//                case ast_macros_decl:
+//                    break;
+//
+//                default:
+//                    errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, " unexpected ast type");
+//                    break;
+//            }
 
             if(errors->_errs()){
                 errs+= errors->error_count();
@@ -264,7 +270,7 @@ void runtime::parse_class_decl(ast *pAst, ClassObject* pObject) {
     }
 }
 
-bool runtime::preprocess() {
+bool runtime::partial_parse() {
     bool semtekerrors = false;
     for(parser* p : parsers) {
         errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
@@ -289,15 +295,16 @@ bool runtime::preprocess() {
                 }
             }
 
+            add_context(context());
             switch(trunk->gettype()) {
                 case ast_class_decl:
-                    add_context(context());
                     partial_parse_class_decl(trunk);
                     break;
                 case ast_import_decl:
                     imports.push_back(parse_modulename(trunk));
                     break;
                 case ast_macros_decl:
+                    partial_parse_macros_decl(trunk);
                     break;
                 case ast_module_decl: /* fail-safe */
                     errors->newerror(GENERIC, trunk->line, trunk->col, "file module cannot be declared more than once");
@@ -308,27 +315,6 @@ bool runtime::preprocess() {
                     errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
                     break;
             }
-
-//            if(i == 0 && trunk->gettype() == ast_module_decl) {
-//                add_module(current_module = parse_modulename(trunk->getsubast(0)));
-//                continue;
-//            } else if(i == 0)
-//                errors->newerror(GENERIC, trunk->line, trunk->col, "module declaration must be "
-//                        "first in every file");
-//
-//            if(trunk->gettype() == ast_class_decl) {
-//                preprocc_class_decl(trunk, NULL);
-//            }
-//            else if(trunk->gettype() == ast_import_decl) {
-//                string import = get_modulename(trunk->getsubast(0));
-//                imports.push_back(import);
-//            }
-//            else if(trunk->gettype() == ast_macros_decl) {
-//                preprocc_macros_decl(trunk, NULL);
-//            }
-//            else if(trunk->gettype() == ast_module_decl) {
-//                errors->newerror(GENERIC, trunk->line, trunk->col, "file module cannot be declared more than once");
-//            }
         }
 
         resolve_map.set(p->sourcefile, imports);
@@ -344,9 +330,10 @@ bool runtime::preprocess() {
 
         errors->free();
         delete (errors); this->errors = NULL;
+        remove_context();
     }
 
-    return false;
+    return !semtekerrors;
 }
 
 void runtime::warning(p_errors error, int line, int col, string xcmnts) {
@@ -369,7 +356,7 @@ bool runtime::isaccess_decl(token_entity token) {
             token.getid() == IDENTIFIER && token.gettoken() == "public";
 }
 
-int runtime::ismacro_access_specifiers(list<AccessModifier>& modifiers) {
+int runtime::parse_macro_access_specifiers(list <AccessModifier> &modifiers) {
     int iter=0;
     for(AccessModifier m : modifiers) {
         if(m > mStatic)
@@ -428,7 +415,7 @@ int runtime::parse_var_accessspecifiers(list <AccessModifier> &modifiers) {
     return -1;
 }
 
-int runtime::ismethod_access_specifiers(list<AccessModifier>& modifiers) {
+int runtime::parse_method_access_specifiers(list <AccessModifier> &modifiers) {
     int iter=0, acess=0;
     for(AccessModifier m : modifiers) {
         if(m == mConst)
@@ -493,384 +480,6 @@ list<Param> runtime::ast_toparams(ast *pAst, ClassObject* parent) {
     return params;
 }
 
-void runtime::preprocc_macros_decl(ast *pAst, ClassObject *pObject) {
-    ast *tmp;
-    list<AccessModifier> modifiers;
-    int namepos=1;
-    bool macrosAdded;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        modifiers = this->parse_access_modifier(pAst);
-        if (modifiers.size() > 2)
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
-        else {
-            int m = ismacro_access_specifiers(modifiers);
-            switch (m) {
-                case -1:
-                    break;
-                default:
-                    this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->getentity(m).getline(),
-                                           pAst->getentity(m).getcolumn(), " `" + pAst->getentity(m).gettoken() + "`");
-                    break;
-            }
-        }
-
-        namepos+=modifiers.size();
-        if(!element_has(modifiers, mPublic) && !element_has(modifiers, mPrivate)
-           && element_has(modifiers, mProtected)) {
-            modifiers.push_back(mPublic);
-        }
-
-        if(element_has(modifiers, mStatic))
-            warning(REDUNDANT_TOKEN, pAst->getentity(element_index(modifiers, mStatic)).getline(),
-                    pAst->getentity(element_index(modifiers, mStatic)).getcolumn(), " `static`, macros are static by default");
-    } else
-        modifiers.push_back(mPublic);
-
-    list<Param> params;
-    NativeField n_rtype = fnof;
-    string name =  pAst->getentity(namepos).gettoken();
-
-    if(pAst->getsubastcount() == 3) {
-        tmp = pAst->getsubast(1)->getsubast(0);
-        if(tmp->getentitycount() > 0)
-            n_rtype = token_tonativefield(tmp->getentity(0).gettoken());
-    } else
-        n_rtype = fvoid;
-
-    tmp = pAst->getsubast(0);
-    params = ast_toparams(pAst->getsubast(0), pObject);
-
-    if(tmp->gettype() == ast_utype_arg_list && n_rtype != fnof) {
-        if(pObject != NULL)
-            macrosAdded =pObject->addMacros(Method(name, current_module, pObject, params, modifiers, n_rtype, RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                                                          pAst->line, pAst->col)));
-        else
-            macrosAdded =add_macros(Method(name, current_module, pObject, params, modifiers, n_rtype, RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                                                  pAst->line, pAst->col)));
-    } else {
-        if(pObject != NULL)
-            macrosAdded =pObject->addMacros(Method(name, current_module, pObject, params, modifiers, NULL, RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                                                         pAst->line, pAst->col)));
-        else
-            macrosAdded =add_macros(Method(name, current_module, pObject, params, modifiers, NULL, RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                                               pAst->line, pAst->col)));
-    }
-
-
-    if(!macrosAdded) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "macro `" + name + "` is already defined in the scope");
-        Method* macro;
-        if(pObject != NULL)
-            macro = pObject->getMacros(name, params);
-        else
-            macro = getmacros(current_module, name, params);
-
-        printnote(macro->note, "macro `" + name + "` previously defined here");
-    }
-}
-
-void runtime::preprocc_constructor_decl(ast *pAst, ClassObject *pObject) {
-    list<AccessModifier> modifiers;
-    int namepos=0;
-    bool methodAdded;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        modifiers = this->parse_access_modifier(pAst);
-        if(modifiers.size() > 1)
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
-        else {
-            AccessModifier mod = element_at(modifiers, 0);
-
-            if(mod != mPublic && mod != mPrivate && mod != mProtected)
-                this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->line, pAst->col,
-                                       " `" + pAst->getentity(0).gettoken() + "`");
-        }
-        namepos+=modifiers.size();
-    } else
-        modifiers.push_back(mPublic);
-
-
-    list<Param> params;
-    string name = pAst->getentity(namepos).gettoken();
-    if(name == pObject->getName()) {
-        params = ast_toparams(pAst->getsubast(0), pObject);
-        methodAdded =pObject->addConstructor(Method(name, "", pObject, params, modifiers, fvoid,
-                                RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                              pAst->line, pAst->col)));
-
-        if(!methodAdded) {
-            this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                                   "constructor `" + name + "` is already defined in the scope");
-            Method* constr;
-            constr = pObject->getConstructor(params);
-            printnote(constr->note, "constructor `" + name + "` previously defined here");
-        }
-    } else
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "constructor `" + name + "` must be the same name as its parent");
-}
-
-void runtime::preprocc_operator_decl(ast *pAst, ClassObject *pObject) {
-    ast *tmp;
-    list<AccessModifier> modifiers;
-    bool methodAdded;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        modifiers = this->parse_access_modifier(pAst);
-        if(modifiers.size() > 3)
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
-        else {
-            int m=ismethod_access_specifiers(modifiers);
-            switch(m) {
-                case -1:
-                    break;
-                default:
-                    this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->getentity(m).getline(),
-                                           pAst->getentity(m).getcolumn(), " `" + pAst->getentity(m).gettoken() + "`");
-                    break;
-            }
-        }
-
-        if(!element_has(modifiers, mPublic) && !element_has(modifiers, mPrivate)
-           && element_has(modifiers, mProtected)) {
-            modifiers.push_back(mPublic);
-        }
-    } else
-        modifiers.push_back(mPublic);
-
-    list<Param> params;
-    NativeField n_rtype = fnof;
-
-    if(pAst->getsubastcount() == 3) {
-        tmp = pAst->getsubast(1)->getsubast(0);
-        if(tmp->getentitycount() > 0)
-            n_rtype = token_tonativefield(tmp->getentity(0).gettoken());
-        tmp = pAst->getsubast(0);
-    } else {
-        tmp = pAst->getsubast(1);
-        n_rtype = fvoid;
-    }
-
-    params = ast_toparams(pAst->getsubast(0), pObject);
-    string op = pAst->getentity(pAst->getentitycount()-1).gettoken();
-
-    if(tmp->gettype() == ast_utype_arg_list && n_rtype != fnof) {
-        methodAdded =pObject->addOperatorOverload(OperatorOverload(RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                               pAst->line, pAst->col),
-                                                                   pObject, params, modifiers, n_rtype, string_toop(op)));
-    } else {
-        methodAdded =pObject->addOperatorOverload(OperatorOverload(RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                               pAst->line, pAst->col),
-                                                                   pObject, params, modifiers, NULL, string_toop(op)));
-    }
-
-
-    if(!methodAdded) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "function `$operator" + op + "` is already defined in the scope");
-        Method* oper;
-        oper = pObject->getOverload(string_toop(op), params);
-        printnote(oper->note, "function `$operator" + op + "` previously defined here");
-    }
-}
-
-void runtime::preprocc_method_decl(ast *pAst, ClassObject *pObject) {
-    ast *tmp;
-    list<AccessModifier> modifiers;
-    int namepos=1;
-    bool methodAdded;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        modifiers = this->parse_access_modifier(pAst);
-        if(modifiers.size() > 3)
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
-        else {
-            int m=ismethod_access_specifiers(modifiers);
-            switch(m) {
-                case -1:
-                    break;
-                default:
-                    this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->getentity(m).getline(),
-                                           pAst->getentity(m).getcolumn(), " `" + pAst->getentity(m).gettoken() + "`");
-                    break;
-            }
-        }
-
-        if(!element_has(modifiers, mPublic) && !element_has(modifiers, mPrivate)
-           && element_has(modifiers, mProtected)) {
-            modifiers.push_back(mPublic);
-        }
-        namepos+=modifiers.size();
-    } else
-        modifiers.push_back(mPublic);
-
-    list<Param> params;
-    NativeField n_rtype = fnof;
-    string name =  pAst->getentity(namepos).gettoken();
-
-    if(pAst->getsubastcount() == 3) {
-        tmp = pAst->getsubast(1)->getsubast(0);
-        if(tmp->getentitycount() > 0)
-            n_rtype = token_tonativefield(tmp->getentity(0).gettoken());
-        tmp = pAst->getsubast(0);
-    } else {
-        tmp = pAst->getsubast(1);
-        n_rtype = fvoid;
-    }
-
-    params = ast_toparams(pAst->getsubast(0), pObject);
-
-    if(tmp->gettype() == ast_utype_arg_list && n_rtype != fnof) {
-        methodAdded =pObject->addFunction(Method(name, "", pObject, params, modifiers, n_rtype,RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                                                       pAst->line, pAst->col)));
-    } else {
-        methodAdded =pObject->addFunction(Method(name, "", pObject, params, modifiers, NULL,
-                                                 RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                             pAst->line, pAst->col)));
-    }
-
-
-    if(!methodAdded) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "function `" + name + "` is already defined in the scope");
-        Method* function;
-        function = pObject->getFunction(name, params);
-        printnote(function->note, "function `" + name + "` previously defined here");
-    }
-}
-
-void runtime::preprocc_var_decl(ast *pAst, ClassObject *pObject) {
-    ast *tmp;
-    list<AccessModifier> modifiers;
-    int namepos=0;
-    bool fieldAdded;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        modifiers = this->parse_access_modifier(pAst);
-        if(modifiers.size() > 3)
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
-        else {
-            int m= parse_var_accessspecifiers(modifiers);
-            switch(m) {
-                case -1:
-                    break;
-                default:
-                    this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->getentity(m).getline(),
-                                           pAst->getentity(m).getcolumn(), " `" + pAst->getentity(m).gettoken() + "`");
-                    break;
-            }
-        }
-
-        if(!element_has(modifiers, mPublic) && !element_has(modifiers, mPrivate)
-           && element_has(modifiers, mProtected)) {
-            modifiers.push_back(mPublic);
-        }
-        namepos+=modifiers.size();
-    } else
-        modifiers.push_back(mPublic);
-
-    string name =  pAst->getentity(namepos).gettoken();
-    tmp = pAst->getsubast(0)->getsubast(0);
-    if(tmp->gettype() == ast_type_identifier && tmp->getentitycount() != 0){
-        fieldAdded =pObject->addField(Field(token_tonativefield(tmp->getentity(0).gettoken()),
-                               uid++, name, pObject, &modifiers,
-                                            RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                        pAst->line, pAst->col))); // native field
-    } else {
-        fieldAdded =pObject->addField(Field(NULL, uid++, name, pObject, &modifiers,
-                                            RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                        pAst->line, pAst->col))); // Refrence field
-
-    }
-
-
-    if(!fieldAdded) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "field `" + name + "` is already defined in the scope");
-        Field* field;
-        field = pObject->getField(name);
-        printnote(field->note, "field `" + name + "` previously defined here");
-    }
-}
-
-void runtime:: preprocc_class_decl(ast *trunk, ClassObject* parent) {
-    ast *pAst, *block;
-    block = trunk->getsubast(trunk->getsubastcount()-1);
-    list<AccessModifier> modifiers;
-    ClassObject* klass;
-    int namepos=1;
-
-    if(isaccess_decl(trunk->getentity(0))) {
-        modifiers = this->parse_access_modifier(trunk);
-        if(modifiers.size() > 1)
-            this->errors->newerror(GENERIC, trunk->line, trunk->col, "too many access specifiers");
-        else {
-            AccessModifier mod = element_at(modifiers, 0);
-
-            if(mod != mPublic && mod != mPrivate && mod != mProtected)
-                this->errors->newerror(INVALID_ACCESS_SPECIFIER, trunk->line, trunk->col,
-                                 " `" + trunk->getentity(0).gettoken() + "`");
-        }
-        namepos+=modifiers.size();
-    } else
-        modifiers.push_back(mPublic);
-
-    string name =  trunk->getentity(namepos).gettoken();
-
-    if(parent == NULL) {
-        if(!this->add_class(ClassObject(name,
-                    current_module, this->uid++, mPublic,
-                                        RuntimeNote(_current->sourcefile, _current->geterrors()->getline(trunk->line),
-                                                    trunk->line, trunk->col)))){
-            this->errors->newerror(PREVIOUSLY_DEFINED, trunk->line, trunk->col, "class `" + name +
-                               "` is already defined in module {" + current_module + "}");
-            ClassObject* klazz;
-            klazz = getClass(current_module, name);
-            printnote(klazz->note, "class `" + name + "` previously defined here");
-            return;
-        } else
-            klass = getClass(current_module, name);
-    } else {
-        if(!parent->addChildClass(ClassObject(name,
-                                             current_module, this->uid++, mPublic,
-                                              RuntimeNote(_current->sourcefile, _current->geterrors()->getline(trunk->line),
-                                                          trunk->line, trunk->col)))) {
-            this->errors->newerror(DUPLICATE_CLASS, trunk->line, trunk->col, " '" + name + "'");
-
-            ClassObject* klazz;
-            klazz = parent->getChildClass(name);
-            printnote(klazz->note, "class `" + name + "` previously defined here");
-            return;
-        } else
-            klass = parent->getChildClass(name);
-    }
-
-
-    for(uint32_t i = 0; i < block->getsubastcount(); i++) {
-        pAst = block->getsubast(i);
-        if(pAst->gettype() == ast_class_decl) {
-            preprocc_class_decl(pAst, klass);
-        }
-        else if(pAst->gettype() == ast_var_decl) {
-            preprocc_var_decl(pAst, klass);
-        }
-        else if(pAst->gettype() == ast_method_decl) {
-            preprocc_method_decl(pAst, klass);
-        }
-        else if(pAst->gettype() == ast_operator_decl) {
-            preprocc_operator_decl(pAst, klass);
-        }
-        else if(pAst->gettype() == ast_construct_decl) {
-            preprocc_constructor_decl(pAst, klass);
-        }
-        else if(pAst->gettype() == ast_macros_decl) {
-            preprocc_macros_decl(pAst, klass);
-        }
-    }
-}
-
 list<AccessModifier> runtime::parse_access_modifier(ast *trunk) {
     int iter=0;
     list<AccessModifier> modifiers;
@@ -908,6 +517,9 @@ void runtime::cleanup() {
     }
     macros->clear();
     delete (macros); macros = NULL;
+
+    contexts->clear();
+    delete (contexts); contexts = NULL;
 }
 
 void rt_error(string message) {
@@ -1463,9 +1075,9 @@ void runtime::partial_parse_class_decl(ast *pAst) {
     string className =  pAst->getentity(startpos).gettoken();
 
     if(Context->super == NULL)
-        klass = addGlobalClassObject(className, pAst);
+        klass = addGlobalClassObject(className, modifiers, pAst);
     else
-        klass = addChildClassObject(className, pAst, Context->super);
+        klass = addChildClassObject(className, modifiers, pAst, Context->super);
 
 
     add_context(context(klass));
@@ -1486,8 +1098,10 @@ void runtime::partial_parse_class_decl(ast *pAst) {
                  partial_parse_operator_decl(pAst);
                  break;
              case ast_construct_decl:
+                 partial_parse_constructor_decl(pAst);
                  break;
              case ast_macros_decl:
+                 partial_parse_macros_decl(pAst);
                  break;
              default:
                  stringstream err;
@@ -1495,26 +1109,64 @@ void runtime::partial_parse_class_decl(ast *pAst) {
                  errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
                  break;
          }
-//        if(pAst->gettype() == ast_class_decl) {
-//            preprocc_class_decl(pAst, klass);
-//        }
-//        else if(pAst->gettype() == ast_var_decl) {
-//\            preprocc_var_decl(pAst, klass);
-//        }
-//        else if(pAst->gettype() == ast_method_decl) {
-//            preprocc_method_decl(pAst, klass);
-//        }
-//        else if(pAst->gettype() == ast_operator_decl) {
-//            preprocc_operator_decl(pAst, klass);
-//        }
-//        else if(pAst->gettype() == ast_construct_decl) {
-//            preprocc_constructor_decl(pAst, klass);
-//        }
-//        else if(pAst->gettype() == ast_macros_decl) {
-//            preprocc_macros_decl(pAst, klass);
-//        }
     }
     remove_context();
+}
+
+void runtime::partial_parse_macros_decl(ast *pAst) {
+    context* Context = get_context();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_macros_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string name =  pAst->getentity(startpos).gettoken();
+
+    params = partial_parse_utype_arglist(pAst->getsubast(0));
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+    Method macro = Method(name, current_module, NULL, params, modifiers, NULL, note);
+
+    if(Context->super == NULL) {
+        addGlobalMacros(macro, pAst);
+    } else {
+        addChildMacros(macro, pAst, Context->super);
+    }
+}
+
+void runtime::partial_parse_constructor_decl(ast *pAst) {
+    context* Context = get_context();
+    list<AccessModifier> modifiers;
+    int startpos=0;
+
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_constructor_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string name = pAst->getentity(startpos).gettoken();
+
+    if(name == Context->super->getName()) {
+        params = partial_parse_utype_arglist(pAst->getsubast(0));
+        RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                       pAst->line, pAst->col);
+
+        if(!Context->super->addConstructor(Method(name, current_module, Context->super, params, modifiers, NULL, note))) {
+            this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                                   "constructor `" + name + "` is already defined in the scope");
+            printnote(Context->super->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
+        }
+    } else
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "constructor `" + name + "` must be the same name as its parent");
 }
 
 void runtime::partial_parse_operator_decl(ast *pAst) {
@@ -1588,11 +1240,48 @@ void runtime::partial_parse_var_decl(ast *pAst) {
     }
 }
 
-void runtime::parse_fn_access_modifiers(list <AccessModifier> &modifiers, ast *pAst) {
+void runtime::parse_macros_access_modifiers(std::list<AccessModifier> &modifiers, ast *pAst) {
+    if (modifiers.size() > 2)
+        this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
+    else {
+        int m = parse_macro_access_specifiers(modifiers);
+        switch (m) {
+            case -1:
+                break;
+            default:
+                this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->getentity(m).getline(),
+                                       pAst->getentity(m).getcolumn(), " `" + pAst->getentity(m).gettoken() + "`");
+                break;
+        }
+    }
+
+    if(!element_has(modifiers, mPublic) && !element_has(modifiers, mPrivate)
+       && element_has(modifiers, mProtected)) {
+        modifiers.push_back(mPublic);
+    }
+
+    if(element_has(modifiers, mStatic))
+        warning(REDUNDANT_TOKEN, pAst->getentity(element_index(modifiers, mStatic)).getline(),
+                pAst->getentity(element_index(modifiers, mStatic)).getcolumn(), " `static`, macros are static by default");
+}
+
+void runtime::parse_constructor_access_modifiers(std::list < AccessModifier > &modifiers, ast * pAst) {
+    if(modifiers.size() > 1)
+        this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
+    else {
+        AccessModifier mod = element_at(modifiers, 0);
+
+        if(mod != mPublic && mod != mPrivate && mod != mProtected)
+            this->errors->newerror(INVALID_ACCESS_SPECIFIER, pAst->line, pAst->col,
+                                   " `" + pAst->getentity(0).gettoken() + "`");
+    }
+}
+
+void runtime::parse_fn_access_modifiers(std::list <AccessModifier> &modifiers, ast *pAst) {
     if(modifiers.size() > 3)
         this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
     else {
-        int m=ismethod_access_specifiers(modifiers);
+        int m= parse_method_access_specifiers(modifiers);
         switch(m) {
             case -1:
                 break;
@@ -1615,6 +1304,7 @@ bool runtime::parse_access_decl(ast *pAst, list <AccessModifier> &modifiers, int
     if(isaccess_decl(pAst->getentity(0))) {
         modifiers = parse_access_modifier(pAst);
         startpos+=modifiers.size();
+        return true;
     }
     return false;
 }
@@ -1631,11 +1321,31 @@ void runtime::parse_class_access_modifiers(std::list <AccessModifier> &modifiers
     }
 }
 
-ClassObject *runtime::addGlobalClassObject(string name, ast *pAst) {
+void runtime::addChildMacros(Method method, ast *pAst, ClassObject *super) {
+    if(!super->addMacros(method)) {
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "macro `" + method.getName() + "` is already defined in the scope");
+
+        Method* macro= super->getMacros(method.getName(), *method.getParams());
+        printnote(macro->note, "macro `" + method.getName() + "` previously defined here");
+    }
+}
+
+void runtime::addGlobalMacros(Method method, ast* pAst) {
+    if(!add_macros(method)) {
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "macro `" + method.getName() + "` is already defined in the scope");
+
+        Method* macro= getmacros(current_module, method.getName(), *method.getParams());
+        printnote(macro->note, "macro `" + macro->getName() + "` previously defined here");
+    }
+}
+
+ClassObject *runtime::addGlobalClassObject(string name, std::list <AccessModifier>& modifiers, ast *pAst) {
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
-    if(!this->add_class(ClassObject(name, current_module, this->uid++, mPublic, note))){
+    if(!this->add_class(ClassObject(name, current_module, this->uid++, element_at(modifiers, 0), note))){
 
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col, "class `" + name +
                                    "` is already defined in module {" + current_module + "}");
@@ -1646,12 +1356,12 @@ ClassObject *runtime::addGlobalClassObject(string name, ast *pAst) {
         return getClass(current_module, name);
 }
 
-ClassObject *runtime::addChildClassObject(string name, ast *pAst, ClassObject* super) {
+ClassObject *runtime::addChildClassObject(string name, std::list <AccessModifier>& modifiers, ast *pAst, ClassObject* super) {
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
     if(!super->addChildClass(ClassObject(name,
-                                          current_module, this->uid++, mPublic,
+                                          current_module, this->uid++, element_at(modifiers, 0),
                                           note, super))) {
         this->errors->newerror(DUPLICATE_CLASS, pAst->line, pAst->col, " '" + name + "'");
 
@@ -1661,7 +1371,7 @@ ClassObject *runtime::addChildClassObject(string name, ast *pAst, ClassObject* s
         return super->getChildClass(name);
 }
 
-void runtime::parse_var_access_modifiers(list <AccessModifier> &modifiers, ast *pAst) {
+void runtime::parse_var_access_modifiers(std::list <AccessModifier> &modifiers, ast *pAst) {
     if(modifiers.size() > 3)
         this->errors->newerror(GENERIC, pAst->line, pAst->col, "too many access specifiers");
     else {

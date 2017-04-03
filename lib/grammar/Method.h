@@ -61,7 +61,7 @@ public:
         for(Param& param : *params) {
             param.free();
         }
-        delete[] (params); params = NULL;
+        delete (params); params = NULL;
     }
 
     RuntimeNote note;

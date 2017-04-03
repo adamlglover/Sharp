@@ -91,7 +91,7 @@ class ast;
 class Errors
 {
 public:
-    Errors(list<string>* lines, string file_name, bool asis, bool aggressive)
+    Errors(list<string>* lines, string file_name, bool asis, bool aggr)
     :
             lines(lines),
             teCursor(-1),
@@ -100,17 +100,19 @@ public:
             fn(file_name),
             warnings(false),
             asis(asis),
-            aggressive(aggressive)
+            aggressive(aggr)
     {
         errors = new list<parseerror>();
+        warnings = new list<parseerror>();
         uo_errors = new list<parseerror>();
-        _testerrors = new list<list<parseerror>*>();
+        _testerrors = new list<std::list<parseerror>*>();
         lasterr = parseerror();
         lastcheckederr = parseerror();
     }
 
     void print_errors();
     uint64_t error_count() { return errors->size(); }
+    uint64_t warn_count() { return warnings->size(); }
     uint64_t uoerror_count() { return uo_errors->size(); }
     int newerror(p_errors err, token_entity token, string xcmts = "");
     void newerror(p_errors err, int l, int c, string xcmts = "");
@@ -131,14 +133,13 @@ private:
     void removetesterror_list();
 
     list<string>* lines;
-    list<parseerror>* errors, *uo_errors;
-    list<list<parseerror>*>* _testerrors;
+    list<parseerror>* errors, *uo_errors, *warnings;
+    list<std::list<parseerror>*>* _testerrors;
     int64_t  teCursor;
     parseerror lasterr;
     parseerror lastcheckederr;
     bool _err, cm;
     bool asis, aggressive;
-    bool warnings;
     string fn;
 
     bool shouldreport(token_entity *token, const parseerror &last_err, const parseerror &e) const;

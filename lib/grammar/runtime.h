@@ -212,7 +212,7 @@ private:
 
     void interpret();
 
-    bool preprocess();
+    bool partial_parse();
 
     string parse_modulename(ast *pAst);
 
@@ -220,29 +220,17 @@ private:
 
     AccessModifier entity_tomodifier(token_entity entity);
 
-    void preprocc_class_decl(ast *trunk, ClassObject* parent);
-
-    void preprocc_var_decl(ast *pAst, ClassObject *pObject);
-
     bool isaccess_decl(token_entity token);
 
     int parse_var_accessspecifiers(list <AccessModifier> &modifiers);
 
     NativeField token_tonativefield(string entity);
 
-    void preprocc_method_decl(ast *pAst, ClassObject *pObject);
-
-    int ismethod_access_specifiers(list<AccessModifier> &modifiers);
+    int parse_method_access_specifiers(list <AccessModifier> &modifiers);
 
     list<Param> ast_toparams(ast *pAst, ClassObject* parent);
 
-    void preprocc_operator_decl(ast *pAst, ClassObject *pObject);
-
-    void preprocc_constructor_decl(ast *pAst, ClassObject *pObject);
-
-    void preprocc_macros_decl(ast *pAst, ClassObject *pObject);
-
-    int ismacro_access_specifiers(list<AccessModifier> &modifiers);
+    int parse_macro_access_specifiers(list <AccessModifier> &modifiers);
 
     void warning(p_errors error, int line, int col, string xcmnts);
 
@@ -295,9 +283,9 @@ private:
 
     void parse_class_access_modifiers(list <AccessModifier> &list, ast* pAst);
 
-    ClassObject *addGlobalClassObject(string basic_string, ast *pAst);
+    ClassObject *addGlobalClassObject(string basic_string, std::list <AccessModifier>& modifiers, ast *pAst);
 
-    ClassObject *addChildClassObject(string name, ast *pAst, ClassObject* super);
+    ClassObject *addChildClassObject(string name, std::list <AccessModifier>& modifiers, ast *pAst, ClassObject* super);
 
     context *add_context(context ctx);
 
@@ -305,7 +293,7 @@ private:
 
     void partial_parse_var_decl(ast *pAst);
 
-    void parse_var_access_modifiers(list <AccessModifier> &list, ast *pAst);
+    void parse_var_access_modifiers(std::list <AccessModifier> &list, ast *pAst);
 
     void partial_parse_fn_decl(ast *pAst);
 
@@ -315,13 +303,25 @@ private:
 
     string partial_parse_utypearg(ast *pAst);
 
-    bool partial_contains_param(list <Param> &list, string name);
+    bool partial_contains_param(std::list <Param> &list, string name);
 
     void partial_parse_operator_decl(ast *pAst);
+
+    void partial_parse_constructor_decl(ast *pAst);
+
+    void parse_constructor_access_modifiers(list <AccessModifier> &list, ast *pAst);
+
+    void partial_parse_macros_decl(ast *pAst);
+
+    void parse_macros_access_modifiers(std::list<AccessModifier> &list, ast *pAst);
+
+    void addGlobalMacros(Method method, ast* pAst);
+
+    void addChildMacros(Method method, ast *pAst, ClassObject *pObject);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.6"
+#define progvers "0.1.8"
 
 struct options {
     /*
