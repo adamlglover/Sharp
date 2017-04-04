@@ -75,6 +75,12 @@ public:
     void setHead(ClassObject* sup) {
         this->head = sup;
     }
+    void setFullName(string fullName) {
+        this->fullName = fullName;
+    }
+    string getFullName() {
+        return fullName;
+    }
 
     size_t constructorCount();
     Method* getConstructor(int p);
@@ -117,6 +123,7 @@ private:
     const AccessModifier modifier;
     const long uid;
     const string name;
+    string fullName;
     const string module_name;
     list<Method>* constructors;
     list<Method>* functions;

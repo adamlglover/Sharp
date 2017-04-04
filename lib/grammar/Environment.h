@@ -15,7 +15,7 @@ class ClassObject;
 class Method;
 class int_ClassObject;
 class int_Method;
-class ResolvedRefrence;
+class ResolvedReference;
 
 class Environment {
 

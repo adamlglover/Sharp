@@ -15,10 +15,10 @@ class x {
 
 }
 
-class Start base Start.X // add 'base <refid>' to class decl
+class Start base x // add 'base <refid>' to class decl
 {
 
-    private class X {
+    private class X base Start.X.g {
         dynamic_object v;
 
         /*

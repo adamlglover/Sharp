@@ -49,9 +49,9 @@
 
 #define hlt self->state=thread_killed; _brh
 
-#define _new(t,x) \
+#define _new(x) \
 { \
-    ptr->createnative(t,regs[x]);\
+    ptr->createnative(regs[x]);\
 }; _brh
 
 #define check_cast \

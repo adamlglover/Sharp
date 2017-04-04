@@ -65,7 +65,7 @@ public:
     double *HEAD;
 
     gc_mark mark;
-    int64_t type, size;
+    int64_t size;
     Sh_object *_Node, *prev, *nxt;
     Monitor monitor;
     List<Sh_object**> refs;
@@ -73,7 +73,7 @@ public:
 
     void _Sh_IncRef(Sh_object* o,Sh_object**);
     void free();
-    void createnative(int type, int64_t size);
+    void createnative(int64_t size);
     void copy_object(Sh_object *pObject);
 };
 

@@ -5,6 +5,7 @@
 #ifndef SHARP_LIST_H
 #define SHARP_LIST_H
 
+#include <algorithm>
 #include "../../stdimports.h"
 #include "../runtime/oo/Exception.h"
 
@@ -21,6 +22,10 @@ public:
         _Data[len-1]=data;
     }
 
+    void push_back() {
+        __expand();
+    }
+
     /*
      * Programmer must be responsible
      * for freeing that data himself
@@ -30,7 +35,7 @@ public:
             stringstream ss;
             ss << "index out of bounds list::remove() _X: " << _X
                << " length: " << len << endl;
-            throw Exception(ss.str());
+            throw std::runtime_error(ss.str());
         }
 
         if(len==1){
@@ -71,7 +76,7 @@ public:
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
                << " length: " << len << endl;
-            throw Exception(ss.str());
+            throw std::runtime_error(ss.str());
         }
         return _Data[_X];
     }
@@ -81,7 +86,7 @@ public:
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
                << " length: " << len << endl;
-            throw Exception(ss.str());
+            throw std::runtime_error(ss.str());
         }
         return _Data[_X];
     }
@@ -101,13 +106,12 @@ private:
     CXX11_INLINE
     void __expand() {
         try{
+            T* newbuf = new T[len+1];
+            std::copy_n(_Data, std::min(len, len+1), newbuf);
+            delete[] _Data;
+            _Data = newbuf;
             len++;
-            if(_Data==NULL){
-                _Data=(T*)memalloc(sizeof(T)*len);
-            } else {
-                _Data=(T*)memrealloc(_Data, sizeof(T)*len);
-            }
-        } catch(Exception &e){
+        } catch(std::exception &e){
             len--;
             throw e;
         }
@@ -116,9 +120,17 @@ private:
     CXX11_INLINE
     void __shrink(){
         try {
+            if(len-1 <=0) {
+                free();
+                return;
+            }
+
+            T* newbuf = new T[len-1];
+            std::copy_n(_Data, std::min(len, len-1), newbuf);
+            delete[] _Data;
+            _Data = newbuf;
             len--;
-            _Data=(T*)memrealloc(_Data, sizeof(T)*len);
-        } catch(Exception &e) {
+        } catch(std::exception &e) {
             len++;
             throw e;
         }

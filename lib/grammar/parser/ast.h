@@ -78,11 +78,13 @@ public:
     ast* getparent();
     long getsubastcount();
     ast *getsubast(long at);
+    ast *getsubast(ast_types at);
     bool hassubast(ast_types at);
     bool hasentity(token_type t);
     void freesubs();
     long getentitycount();
     token_entity getentity(long at);
+    token_entity getentity(token_type t);
 
     void add_entity(token_entity entity);
     void add_ast(ast _ast);

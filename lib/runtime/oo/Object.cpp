@@ -43,10 +43,9 @@ void Sh_object::copy_object(Sh_object *pObject) {
     // TODO: implement
 }
 
-void Sh_object::createnative(int type, int64_t size) {
+void Sh_object::createnative(int64_t size) {
     if(mark != gc_green) {
         HEAD= (double*)memalloc(sizeof(double)*size);
-        this->type=type;
         this->size=size;
         prev = NULL, nxt=NULL;
         _Node=NULL, _rNode=NULL;

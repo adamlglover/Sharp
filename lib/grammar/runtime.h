@@ -12,26 +12,33 @@
 #include "BytecodeStream.h"
 #include "Opcode.h"
 #include "../runtime/oo/string.h"
+#include "m64Assembler.h"
 
 class ref_ptr;
-class ResolvedRefrence;
+class ResolvedReference;
 
-struct RunState {
-    int_ClassObject* instance;
-    int_Method* fn;
-    BytecodeStream injector;
+struct mem_access_flag {
+    mem_access_flag()
+    :
+            ref(0),
+            ptr(0)
+    {
+    }
+    int ref;
+    int ptr;
 };
 
-class ResolvedRefrence {
+class ResolvedReference {
 public:
-    ResolvedRefrence()
+    ResolvedReference()
             :
             rt(NOTRESOLVED),
             field(NULL),
             method(NULL),
             klass(NULL),
             oo(NULL),
-            unresolved("")
+            unresolved(""),
+            array(false)
     {
     }
 
@@ -65,6 +72,8 @@ public:
     }
 
     string unresolved;
+    bool array;
+    mem_access_flag mflag;
     RefrenceType rt;
     NativeField nf;
     ClassObject* klass;
@@ -83,7 +92,7 @@ public:
             int_val(0),
             char_val(0)
     {
-        ref = ResolvedRefrence();
+        ref = ResolvedReference();
     }
 
 
@@ -110,7 +119,7 @@ public:
             case HEX_LITERAL:
                 return "hex literal";
             case REFRENCE:
-                return "refrence {" + ResolvedRefrence::toString(ref.rt) + "}";
+                return "refrence {" + ResolvedReference::toString(ref.rt) + "}";
             case UNKNOWN:
                 return "string literal";
 
@@ -119,7 +128,7 @@ public:
 
 
     ExprType et;
-    ResolvedRefrence ref;
+    ResolvedReference ref;
     string str_val;
     int64_t int_val;
     char char_val;
@@ -146,6 +155,8 @@ struct context {
     }
 };
 
+#define init_constructor_postfix "()<init>"
+
 class runtime
 {
 public:
@@ -166,14 +177,12 @@ public:
                 return;
         }
 
-        rState.fn = NULL;
-        rState.instance = NULL;
-
         env = new Environment();
         macros = new list<Method>();
         modules = new list<string>();
         classes = new list<ClassObject>();
         import_map = new list<keypair<string, list<string>>>();
+        assembler = new m64Assembler();
 
         contexts = new list<context>();
         interpret();
@@ -193,7 +202,6 @@ public:
     size_t errs, uo_errs;
 private:
     Environment* env;
-    RunState rState;
     parser* _current;
     list<parser*> parsers;
     string out;
@@ -203,6 +211,7 @@ private:
     list<ClassObject>* classes;
     list<keypair<string, std::list<string>>>*  import_map;
     list<context>* contexts;
+    m64Assembler* assembler;
     int64_t ctp;
     uint64_t uid;
 
@@ -240,14 +249,14 @@ private:
 
     ref_ptr parse_refrence_ptr(ast *pAst);
 
-    ResolvedRefrence resolve_refrence_ptr(ref_ptr &ref_ptr);
+    ResolvedReference resolve_refrence_ptr(ref_ptr &ref_ptr);
 
     ClassObject* resolve_class_refrence(ast *pAst, ref_ptr &ptr);
 
     CXX11_INLINE
     ClassObject *try_class_resolve(string intmodule, string name);
 
-    ResolvedRefrence parse_utype(ast *pAst);
+    ResolvedReference parse_utype(ast *pAst);
 
     void parse_import_decl(ast *pAst);
 
@@ -257,7 +266,7 @@ private:
 
     void injectConstructors();
 
-    bool expectReferenceType(ResolvedRefrence refrence, ResolvedRefrence::RefrenceType type, ast *pAst);
+    bool expectReferenceType(ResolvedReference refrence, ResolvedReference::RefrenceType type, ast *pAst);
 
     ref_ptr parse_type_identifier(ast *pAst);
 
@@ -265,7 +274,7 @@ private:
 
     ExprValue parse_expression(ast *pAst);
 
-    void checkCast(ast* pAst, ExprValue value, ResolvedRefrence cast);
+    void checkCast(ast* pAst, ExprValue value, ResolvedReference cast);
 
     string nativefield_tostr(NativeField nf);
 
@@ -322,10 +331,16 @@ private:
     ClassObject *parse_base_class(ast *pAst, int startpos);
 
     void setHeadClass(ClassObject *pObject);
+
+    mem_access_flag parse_mem_accessflag(ast *pAst);
+
+    bool isnative_type(string type);
+
+    Method *try_macro_resolve(string intmodule, string name, list <Param> params);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.10"
+#define progvers "0.1.15"
 
 struct options {
     /*
@@ -367,6 +382,11 @@ struct options {
      * Enable warnings as errors
      */
     bool werrors = false;
+
+    /*
+     * Allow unsafe code
+     */
+    bool unsafe = false;
 };
 
 int _bootstrap(int argc, const char* argv[]);
@@ -412,7 +432,7 @@ inline bool element_has(list<T>& l, T search) {
 class ref_ptr {
 public:
     ref_ptr() {
-        class_heiarchy = new list<string>();
+        class_heiarchy = new List<string>();
         module = "";
         refname = "";
     }
@@ -421,27 +441,21 @@ public:
         this->module = ptr.module;
         this->refname = ptr.refname;
 
-        for(string &s : *class_heiarchy ) {
-            s = "";
-        }
-
-        this->class_heiarchy->clear();
-        for(string s : *ptr.class_heiarchy ) {
-            class_heiarchy->push_back(s);
-        }
+        delete (class_heiarchy);
+        this->class_heiarchy = ptr.class_heiarchy;
+        ptr.class_heiarchy = NULL;
     }
 
-    void clear() {
-        this->class_heiarchy->clear();
-        for(string &s : *class_heiarchy ) {
-            s = "";
+    void free() {
+        if(class_heiarchy != NULL) {
+            class_heiarchy->free();
+            delete (class_heiarchy);
         }
+        class_heiarchy = NULL;
     }
 
     ~ref_ptr() {
-        clear();
-        delete (class_heiarchy);
-        class_heiarchy = NULL;
+        free();
     }
 
     void print() {
@@ -450,13 +464,13 @@ public:
         cout << "id: " << refname << endl;
         cout << "mod: " << module << endl;
         cout << "class: ";
-        for(nString n : *class_heiarchy)
-            cout << n.str() << ".";
+        for(int i = 0; i < class_heiarchy->size(); i++)
+            cout << class_heiarchy->at(i) << ".";
         cout << endl;
     }
 
     string module;
-    list<string>* class_heiarchy;
+    List<string>* class_heiarchy;
     string refname;
 };
 

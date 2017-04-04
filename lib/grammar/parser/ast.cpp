@@ -49,11 +49,6 @@ void ast::add_ast(ast _ast)
 }
 
 void ast::free() {
-    this->type = ast_none;
-    this->parent = NULL;
-    this->entities->clear();
-    numAsts = 0;
-    numEntities = 0;
     delete (this->entities); this->entities = NULL;
 
     ast* pAst;
@@ -64,6 +59,10 @@ void ast::free() {
         pAst->free();
     }
 
+    numAsts = 0;
+    numEntities = 0;
+    this->type = ast_none;
+    this->parent = NULL;
     this->sub_asts->clear();
     delete (this->sub_asts); this->sub_asts = NULL;
 }
@@ -114,5 +113,21 @@ bool ast::hasentity(token_type t) {
             return true;
     }
     return false;
+}
+
+ast *ast::getsubast(ast_types at) {
+    for(ast &pAst : *sub_asts) {
+        if(pAst.gettype() == at)
+            return &pAst;
+    }
+    return NULL;
+}
+
+token_entity ast::getentity(token_type t) {
+    for(token_entity &e : *entities) {
+        if(e.gettokentype() == t)
+            return e;
+    }
+    return token_entity();
 }
 
