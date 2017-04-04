@@ -99,7 +99,6 @@ public:
             _err(false),
             cm(false),
             fn(file_name),
-            warnings(false),
             asis(asis),
             aggressive(aggr)
     {

@@ -93,7 +93,7 @@ public:
 
     void free() {
         if(_Data != NULL)
-            std::free(_Data);
+            delete[] (_Data);
         _Data = NULL;
         len=0;
     }

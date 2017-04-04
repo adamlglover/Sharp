@@ -433,6 +433,7 @@ class ref_ptr {
 public:
     ref_ptr() {
         class_heiarchy = new List<string>();
+        class_heiarchy->init();
         module = "";
         refname = "";
     }
@@ -452,10 +453,6 @@ public:
             delete (class_heiarchy);
         }
         class_heiarchy = NULL;
-    }
-
-    ~ref_ptr() {
-        free();
     }
 
     void print() {

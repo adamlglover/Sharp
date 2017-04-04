@@ -72,7 +72,7 @@ public:
     void operator+=(const char &c) {
         if(len == 0) {
             len=1;
-            chars=(char*)memalloc(sizeof(char)*len);
+            chars=(char*)malloc(sizeof(char)*len);
             chars[0]=c;
         } else {
             chars = (char*)realloc(chars,sizeof(char)*(len+1));
