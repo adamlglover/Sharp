@@ -33,6 +33,7 @@ enum p_errors
     EXPECTED_REFRENCE_OF_TYPE = 18,
     INVALID_CAST = 19,
     REDUNDANT_CAST = 20,
+    REDUNDANT_IMPORT = 21,
 
     NO_ERR = 999
 };

@@ -23,10 +23,21 @@ void runtime::interpret() {
             _current = p;
 
             ast* trunk;
+            add_context(context());
             for(size_t i = 0; i < p->treesize(); i++) {
                 trunk = p->ast_at(i);
 
                 switch(trunk->gettype()) {
+                    case ast_module_decl:
+                        break;
+                    case ast_import_decl:
+                        parse_import_decl(trunk);
+                        break;
+                    case ast_class_decl:
+                        parse_class_decl(trunk);
+                        break;
+                    case ast_macros_decl:
+                        break;
                     default:
                         stringstream err;
                         err << ": unknown ast type: " << trunk->gettype();
@@ -67,11 +78,114 @@ void runtime::interpret() {
     }
 }
 
+ClassObject *runtime::parse_base_class(ast *pAst, int startpos) {
+    context* Context = get_context();
+    ClassObject* klass=NULL;
+
+    if(startpos >= pAst->getentitycount()) {
+        return NULL;
+    } else {
+        ref_ptr ptr = parse_refrence_ptr(pAst->getsubast(0));
+        klass = resolve_class_refrence(pAst->getsubast(0), ptr);
+
+        if(klass != NULL) {
+            if((Context->super->getHeadClass() != NULL && Context->super->getHeadClass()->curcular(klass)) ||
+                    Context->super->match(klass) || klass->match(Context->super->getHeadClass()) || Context->super->curcular(klass)) {
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col,
+                                 "cyclic dependency of class `" + ptr.refname + "` in parent class `" + Context->super->getName() + "`");
+            }
+            else {
+                env->create_class(int_ClassObject(klass));
+            }
+        }
+    }
+
+    return klass;
+}
+
+void runtime::setHeadClass(ClassObject *klass) {
+    ClassObject* sup = klass->getSuperClass();
+    if(sup == NULL) {
+        klass->setHead(klass);
+        return;
+    }
+    while(true) {
+        if(sup->getSuperClass() == NULL) {
+            klass->setHead(sup);
+            return;
+        } else
+            sup = sup->getSuperClass();
+    }
+}
+
+void runtime::parse_class_decl(ast *pAst) {
+    context* Context = get_context();
+    ast* astBlock = pAst->getsubast(pAst->getsubastcount()-1);
+    list<AccessModifier> modifiers;
+    ClassObject* klass, *base;
+    int startpos=1;
+
+    parse_access_decl(pAst, modifiers, startpos);
+    string className =  pAst->getentity(startpos).gettoken();
+
+    if(Context->super == NULL)
+        klass = getClass(current_module, className);
+    else {
+        klass = Context->super->getChildClass(className);
+        klass->setSuperClass(Context->super);
+        setHeadClass(klass);
+    }
+
+    add_context(context(klass));
+    base = parse_base_class(pAst, ++startpos);
+
+
+
+    rState.fn = NULL;
+    rState.instance = env->create_class(int_ClassObject(klass));
+    //klass->setBaseClass(parse_base_class(pAst, pObject));
+
+
+
+//    ast* block = pAst->getsubast(pAst->getsubastcount() - 1);
+//    for(uint32_t i = 0; i < block->getsubastcount(); i++) {
+//        pAst = block->getsubast(i);
+//
+//        switch(pAst->gettype()) {
+//            case ast_class_decl:
+//                parse_class_decl(pAst, klass);
+//                break;
+//            case ast_var_decl:
+//                parse_var_decl(pAst);
+//
+//                injectConstructors();
+//                break;
+//            case ast_method_decl:
+//                rState.fn = NULL;
+//                break;
+//            case ast_operator_decl:
+//                break;
+//            case ast_construct_decl:
+//                break;
+//            case ast_macros_decl:
+//                break;
+//            default:
+//                errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, " unexpected ast type");
+//                break;
+//        }
+//    }
+    remove_context();
+}
+
 void runtime::parse_import_decl(ast *pAst) {
-    string import = "";//get_modulename(pAst->getsubast(0));
-    if(!element_has(*modules, import)) {
-        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->getsubast(0)->col,
-                         " `" + import + "` ");
+    string import = parse_modulename(pAst);
+    if(import == current_module) {
+        warning(REDUNDANT_IMPORT, pAst->line, pAst->col, " '" + import + "'");
+    } else {
+        if(!element_has(*modules, import)) {
+            errors->newerror(COULD_NOT_RESOLVE, pAst->line, pAst->col,
+                             " `" + import + "` ");
+        }
     }
 }
 
@@ -448,36 +562,6 @@ int runtime::parse_method_access_specifiers(list <AccessModifier> &modifiers) {
             return (int)(modifiers.size() - 1);
     }
     return -1;
-}
-
-list<Param> runtime::ast_toparams(ast *pAst, ClassObject* parent) {
-    list<Param> params;
-
-    if(pAst->gettype() != ast_utype_arg_list)
-        return params;
-    if(pAst->getsubastcount() == 0)
-        return params;
-
-    ast* tmp;
-    for(int i = 0; i < pAst->getsubastcount(); i++) {
-        tmp = pAst->getsubast(i)->getsubast(0)->getsubast(0);
-
-        string name = pAst->getsubast(i)->getentity(0).gettoken();
-        if(tmp->getentitycount() > 0) {
-            params.push_back(Param(Field(
-                    token_tonativefield(tmp->getentity(0).gettoken()), uid++,
-                    name, parent, NULL,
-                    RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                pAst->line, pAst->col))));
-        } else {
-
-            params.push_back(Param(Field(
-                    NULL, uid++,name, parent, NULL, RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                                                pAst->line, pAst->col))));
-        }
-    }
-
-    return params;
 }
 
 list<AccessModifier> runtime::parse_access_modifier(ast *trunk) {
@@ -859,15 +943,15 @@ ResolvedRefrence runtime::resolve_refrence_ptr(ref_ptr &ref_ptr) {
             refrence.klass = klass;
         }
     } else {
-        ClassObject* klass = try_class_resolve(ref_ptr.module, element_at(*ref_ptr.class_heiarchy, 0).str());
+        ClassObject* klass = try_class_resolve(ref_ptr.module, element_at(*ref_ptr.class_heiarchy, 0));
         if(klass == NULL) {
             refrence.rt = ResolvedRefrence::NOTRESOLVED;
-            refrence.unresolved = element_at(*ref_ptr.class_heiarchy, 0).str();
+            refrence.unresolved = element_at(*ref_ptr.class_heiarchy, 0);
         } else {
             ClassObject* childClass = NULL;
             string className;
             for(size_t i = 1; i < ref_ptr.class_heiarchy->size(); i++) {
-                className = element_at(*ref_ptr.class_heiarchy, i).str();
+                className = element_at(*ref_ptr.class_heiarchy, i);
 
                 if((childClass = klass->getChildClass(className)) == NULL) {
                     refrence.rt = ResolvedRefrence::NOTRESOLVED;

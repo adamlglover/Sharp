@@ -228,8 +228,6 @@ private:
 
     int parse_method_access_specifiers(list <AccessModifier> &modifiers);
 
-    list<Param> ast_toparams(ast *pAst, ClassObject* parent);
-
     int parse_macro_access_specifiers(list <AccessModifier> &modifiers);
 
     void warning(p_errors error, int line, int col, string xcmnts);
@@ -318,10 +316,16 @@ private:
     void addGlobalMacros(Method method, ast* pAst);
 
     void addChildMacros(Method method, ast *pAst, ClassObject *pObject);
+
+    void parse_class_decl(ast *pAst);
+
+    ClassObject *parse_base_class(ast *pAst, int startpos);
+
+    void setHeadClass(ClassObject *pObject);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.8"
+#define progvers "0.1.10"
 
 struct options {
     /*
@@ -408,29 +412,34 @@ inline bool element_has(list<T>& l, T search) {
 class ref_ptr {
 public:
     ref_ptr() {
-        class_heiarchy = new list<nString>();
+        class_heiarchy = new list<string>();
         module = "";
         refname = "";
     }
 
-    void operator=(list<nString>* ch) {
-        if(ch != NULL) {
-            clear();
-            class_heiarchy->clear();
+    void operator=(ref_ptr ptr) {
+        this->module = ptr.module;
+        this->refname = ptr.refname;
 
-            for(unsigned int i = 0; i < ch->size(); i++) {
-                class_heiarchy->push_back(element_at(*ch, i).str());
-            }
+        for(string &s : *class_heiarchy ) {
+            s = "";
+        }
+
+        this->class_heiarchy->clear();
+        for(string s : *ptr.class_heiarchy ) {
+            class_heiarchy->push_back(s);
         }
     }
 
     void clear() {
-        for(unsigned int i = 0; i < class_heiarchy->size(); i++) {
-            element_at(*class_heiarchy, i).free();
+        this->class_heiarchy->clear();
+        for(string &s : *class_heiarchy ) {
+            s = "";
         }
     }
 
     ~ref_ptr() {
+        clear();
         delete (class_heiarchy);
         class_heiarchy = NULL;
     }
@@ -447,7 +456,7 @@ public:
     }
 
     string module;
-    list<nString>* class_heiarchy;
+    list<string>* class_heiarchy;
     string refname;
 };
 

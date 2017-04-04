@@ -71,6 +71,9 @@ void int_errs()
 
     err.set(REDUNDANT_CAST, "redundant cast of type");
     predefined_errs.push_back(err);
+
+    err.set(REDUNDANT_IMPORT, "redundant self import of module");
+    predefined_errs.push_back(err);
 }
 
 void Errors::print_error(parseerror &err) {
@@ -276,7 +279,9 @@ void Errors::free() {
     this->lasterr = parseerror();
     this->lines = NULL;
     this->errors->clear();
+    this->warnings->clear();
     this->_testerrors->clear();
     delete (errors); this->errors = NULL;
+    delete (warnings); this->warnings = NULL;
     delete (_testerrors); this->_testerrors = NULL;
 }

@@ -25,6 +25,7 @@ public:
             modifier(modifier),
             base(NULL),
             super(NULL),
+            head(NULL),
             note(note)
     {
         functions = new list<Method>();
@@ -43,6 +44,7 @@ public:
             uid(uid),
             modifier(modifier),
             base(NULL),
+            head(NULL),
             super(parent),
             note(note)
     {
@@ -60,6 +62,7 @@ public:
     string getModuleName() { return module_name; }
     ClassObject* getSuperClass() { return super; }
     ClassObject* getBaseClass() { return base; }
+    ClassObject* getHeadClass() { return head; }
     bool match(ClassObject* klass) {
         return klass != NULL && klass->uid == uid;
     }
@@ -68,6 +71,9 @@ public:
     }
     void setSuperClass(ClassObject* sup) {
         this->super = sup;
+    }
+    void setHead(ClassObject* sup) {
+        this->head = sup;
     }
 
     size_t constructorCount();
@@ -118,7 +124,7 @@ private:
     list<OperatorOverload>* overloads;
     list<Field> *fields;
     list<ClassObject>* childClasses;
-    ClassObject *super;
+    ClassObject *super, *head;
     ClassObject* base;
 };
 
