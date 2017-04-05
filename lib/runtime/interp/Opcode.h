@@ -36,6 +36,12 @@
 #define GET_Ca(i) (((i >> 8) & 1) ? (-1*(i >> 9 & 0x7FFFFFF)) : (i >> 9 & 0x7FFFFFF))
 #define GET_Cb(i) (i >> 36)
 
+#define DA_MAX 36028797018963967
+#define DA_MIN -36028797018963968
+
+#define CA_MAX 134217727
+#define CA_MIN -134217727
+
 #define _brh pc++; goto _interp;
 #define _brh_NOINCREMENT goto _interp;
 

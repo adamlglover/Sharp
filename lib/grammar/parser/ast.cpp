@@ -2,6 +2,7 @@
 // Created by bknun on 1/7/2017.
 //
 #include "ast.h"
+#include "../runtime.h"
 
 
 ast_types ast::gettype()
@@ -129,5 +130,17 @@ token_entity ast::getentity(token_type t) {
             return e;
     }
     return token_entity();
+}
+
+ast *ast::getsubast_after(ast_types at) {
+    bool found = false;
+    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+        if(found)
+            return &element_at(*sub_asts, i);
+        if(element_at(*sub_asts, i).gettype() == at) {
+            found = true;
+        }
+    }
+    return NULL;
 }
 

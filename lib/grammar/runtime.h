@@ -10,7 +10,6 @@
 #include "ClassObject.h"
 #include "Environment.h"
 #include "BytecodeStream.h"
-#include "Opcode.h"
 #include "../runtime/oo/string.h"
 #include "m64Assembler.h"
 
@@ -82,57 +81,34 @@ public:
     OperatorOverload* oo;
 };
 
-class ExprValue {
+enum expression_type {
+    expression_var=1,
+    expression_vararray=2,
+    expression_class=3,
+    expression_classarray=4,
+    expression_dynamicclass=5,
+    expression_dynamicclass_array=6,
+    expression_expression=7,
+    expression_string=8,
+    expression_unknown=0x900f
+};
 
-public:
-    ExprValue()
+struct Expression {
+    Expression()
     :
-            et(UNKNOWN),
-            str_val(""),
-            int_val(0),
-            char_val(0)
+            type(expression_unknown),
+            klass(NULL),
+            code()
     {
-        ref = ResolvedReference();
     }
 
+    expression_type type;
+    ClassObject* klass;
+    m64Assembler code;
 
-    enum ExprType {
-        STR_LITERAL,
-        CHAR_LITERAL,
-        INT_LITERAL,
-        HEX_LITERAL,
-        BOOL_LITERAL,
-        REFRENCE,
-        UNKNOWN
-    };
-
-    string typeToString() {
-        switch (et) {
-            case STR_LITERAL:
-                return "string literal";
-            case CHAR_LITERAL:
-                return "character literal";
-            case INT_LITERAL:
-                return "integer literal";
-            case BOOL_LITERAL:
-                return "bool literal";
-            case HEX_LITERAL:
-                return "hex literal";
-            case REFRENCE:
-                return "refrence {" + ResolvedReference::toString(ref.rt) + "}";
-            case UNKNOWN:
-                return "string literal";
-
-        }
+    void free() {
+        code.free();
     }
-
-
-    ExprType et;
-    ResolvedReference ref;
-    string str_val;
-    int64_t int_val;
-    char char_val;
-    bool bool_val;
 };
 
 struct context {
@@ -270,17 +246,17 @@ private:
 
     ref_ptr parse_type_identifier(ast *pAst);
 
-    ExprValue parse_value(ast *pAst);
+    Expression parse_value(ast *pAst);
 
-    ExprValue parse_expression(ast *pAst);
+    Expression parse_expression(ast *pAst);
 
-    void checkCast(ast* pAst, ExprValue value, ResolvedReference cast);
+//    void checkCast(ast* pAst, ExprValue value, ResolvedReference cast);
 
     string nativefield_tostr(NativeField nf);
 
-    bool nativeFieldCompare(NativeField field, ExprValue::ExprType type);
+//    bool nativeFieldCompare(NativeField field, ExprValue::ExprType type);
 
-    void addInstruction(Opcode opcode, double *pInt, int n);
+    //void addInstruction(Opcode opcode, double *pInt, int n);
 
     void partial_parse_class_decl(ast *pAst);
 
@@ -337,10 +313,24 @@ private:
     bool isnative_type(string type);
 
     Method *try_macro_resolve(string intmodule, string name, list <Param> params);
+
+    Expression parse_primary_expression(ast *pAst);
+
+    Expression parse_literal(ast *pAst);
+
+    void parse_charliteral(string basic_string, m64Assembler &assembler);
+
+    void parse_intliteral(string int_string, m64Assembler &assembler, ast* pAst);
+
+    bool all_integers(string int_string);
+
+    string invalidate_underscores(string basic_string);
+
+    int64_t get_low_bytes(double var);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.15"
+#define progvers "0.1.16"
 
 struct options {
     /*

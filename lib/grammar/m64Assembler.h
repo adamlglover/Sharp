@@ -42,8 +42,26 @@ public:
         return false;
     }
 
+    void push_i64(int64_t i64){
+        __asm64.push_back(i64);
+    }
+    void push_i64(int64_t i64, int64_t xtra){
+        __asm64.push_back(i64);
+        __asm64.push_back(xtra);
+    }
 
     List<int64_t> __asm64;
+
+    void free() {
+        __asm64.free();
+        injectors.key.free();
+
+        for(unsigned int i = 0; i < injectors.value.size(); i++) {
+            injectors.value.at(i).free();
+        }
+        injectors.value.free();
+    }
+
 private:
 
     m64Assembler& get_injector(string key) {

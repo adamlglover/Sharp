@@ -102,6 +102,11 @@ public:
     unsigned long size() { return len; }
 
 
+    void copy(List<int64_t> list) {
+        free();
+
+    }
+
 private:
     CXX11_INLINE
     void __expand() {

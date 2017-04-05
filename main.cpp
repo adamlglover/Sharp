@@ -3,6 +3,8 @@
 
 #ifdef MAKE_COMPILER
 #include "lib/grammar/runtime.h"
+#include "lib/runtime/interp/Opcode.h"
+
 #else
 #include "lib/runtime/startup.h"
 #include "lib/util/file.h"

@@ -23,16 +23,16 @@ enum token_type
     PLUS,
     MINUS,
     MULT,
-    DIV, //
-    MOD, // %
+    _DIV, //
+    _MOD, // %
     COLON, // :
     SEMICOLON,
     DUBQUOTE, // "
     SINGQUOTE, // '
     COMMA,
     NEWLINE,
-    LTE, // <=
-    GTE, // >=
+    _LTE, // <=
+    _GTE, // >=
     EQEQ, // ==
     PLUSEQ,
     MINUSEQ,
@@ -58,8 +58,8 @@ enum token_type
     RIGHTBRACE, // ]
     QUESMK, // ?
     PTR, // ->
-    INC, // ++
-    DEC, // --
+    _INC, // ++
+    _DEC, // --
     _EOF = 9999, // end of file
 
     NONE // not a type

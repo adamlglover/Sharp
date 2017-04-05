@@ -164,8 +164,8 @@ void tokenizer::scan_symbol() {
 
         char chs[] = {current(), peek(1)};
 
-        if ((chs[0] == '<') && (chs[1] == '=')) type = LTE;
-        else if ((chs[0] == '>') && (chs[1] == '=')) type = GTE;
+        if ((chs[0] == '<') && (chs[1] == '=')) type = _LTE;
+        else if ((chs[0] == '>') && (chs[1] == '=')) type = _GTE;
         else if ((chs[0] == '!') && (chs[1] == '=')) type = NOTEQ;
         else if ((chs[0] == '=') && (chs[1] == '=')) type = EQEQ;
         else if ((chs[0] == '<') && (chs[1] == '<')) type = SHL;
@@ -173,8 +173,8 @@ void tokenizer::scan_symbol() {
         else if ((chs[0] == '&') && (chs[1] == '&')) type = ANDAND;
         else if ((chs[0] == '|') && (chs[1] == '|')) type = OROR;
         else if ((chs[0] == '-') && (chs[1] == '>')) type = PTR;
-        else if ((chs[0] == '+') && (chs[1] == '+')) type = INC;
-        else if ((chs[0] == '-') && (chs[1] == '-')) type = DEC;
+        else if ((chs[0] == '+') && (chs[1] == '+')) type = _INC;
+        else if ((chs[0] == '-') && (chs[1] == '-')) type = _DEC;
         else if ((chs[0] == '+') && (chs[1] == '=')) type = PLUSEQ;
         else if ((chs[0] == '*') && (chs[1] == '=')) type = MULTEQ;
         else if ((chs[0] == '-') && (chs[1] == '=')) type = MINUSEQ;
@@ -219,9 +219,9 @@ void tokenizer::scan_symbol() {
     else if ('!' == current())
         entites->push_back(token_entity(string(1, current()), SINGLE, col, line, NOT));
     else if ('/' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, DIV));
+        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, _DIV));
     else if ('%' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, MOD));
+        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, _MOD));
     else if ('(' == current())
         entites->push_back(token_entity(string(1, current()), SINGLE, col, line, LEFTPAREN));
     else if (')' == current())

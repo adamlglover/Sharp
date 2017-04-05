@@ -79,6 +79,7 @@ public:
     long getsubastcount();
     ast *getsubast(long at);
     ast *getsubast(ast_types at);
+    ast *getsubast_after(ast_types at);
     bool hassubast(ast_types at);
     bool hasentity(token_type t);
     void freesubs();

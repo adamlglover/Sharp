@@ -1,12 +1,13 @@
 //
 // Created by BraxtonN on 1/30/2017.
 //
-#include <cstring>
+#include <string>
 #include <sstream>
 #include <cstdio>
 #include "runtime.h"
 #include "../util/file.h"
-#include "Opcode.h"
+#include "../runtime/interp/Opcode.h"
+#include "../runtime/interp/register.h"
 
 using namespace std;
 
@@ -141,7 +142,9 @@ void runtime::parse_class_decl(ast *pAst) {
                 parse_var_decl(pAst);
                 break;
             default: {
-                errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, ": unknown ast type: ");
+                stringstream err;
+                err << ": unknown ast type: " << trunk->gettype();
+                errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
                 break;
             }
         }
@@ -189,6 +192,11 @@ void runtime::parse_var_decl(ast *pAst) {
 
     ResolvedReference ref = parse_utype(pAst->getsubast(0));
 
+    if(pAst->hassubast(ast_value)) {
+        Expression expression = parse_value(pAst);
+        // TODO: do something based on the assign expression
+    }
+
 //    if(parser::isassign_exprsymbol(pAst->getentity(startpos+1).gettoken())) {
 //        ExprValue value = parse_value(pAst);
 //    }
@@ -210,6 +218,106 @@ void runtime::parse_import_decl(ast *pAst) {
                              " `" + import + "` ");
         }
     }
+}
+
+Expression runtime::parse_value(ast *pAst) {
+    return parse_expression(pAst->getsubast(ast_expression));
+}
+
+Expression runtime::parse_literal(ast *pAst) {
+    Expression expression;
+
+    switch(pAst->getentity(0).getid()) {
+        case CHAR_LITERAL: {
+            expression.type = expression_var;
+            parse_charliteral(pAst->getentity(0).gettoken(), expression.code);
+            return expression;
+        }
+        case INTEGER_LITERAL:
+            expression.type = expression_var;
+            parse_intliteral(pAst->getentity(0).gettoken(), expression.code, pAst);
+            return expression;
+        case HEX_LITERAL:
+            return expression;
+        case STRING_LITERAL:
+            return expression;
+        default:
+            break;
+    }
+
+    if(pAst->getentity(0).gettoken() == "true" ||
+       pAst->getentity(0).gettoken() == "false") {
+        // bool literal
+    }
+
+    return expression;
+}
+
+Expression runtime::parse_primary_expression(ast *pAst) {
+    Expression expression;
+
+    if(pAst->hassubast(ast_literal)) {
+        expression = parse_literal(pAst->getsubast(ast_literal));
+    }
+
+    return expression;
+}
+
+Expression runtime::parse_expression(ast *pAst) {
+    Expression expression, expr;
+
+    /*
+     * Based on this ery expression we know that the value must always evaluate to a var
+     * So in that case we can store the value of x in register %egx
+     */
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == _INC || pAst->getentity(0).gettokentype() == _DEC
+       || pAst->getentity(0).gettokentype() == PLUS || pAst->getentity(0).gettokentype() == MINUS) {
+        expression.type = expression_var;
+        expr = parse_expression(pAst->getsubast(ast_expression));
+        // TODO: do a check on the expression to make sure the code is correct
+        expr.free();
+        return expression;
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTPAREN) {
+        if(pAst->hassubast(ast_utype)) {
+            ResolvedReference reference = parse_utype(pAst->getsubast(ast_utype));
+            expr = parse_expression(pAst->getsubast(ast_expression));
+            // TODO: check cast on desired expression and that the expression is in face castable
+            expr.free();
+            return expression;
+        }
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == NOT) {
+        expr = parse_expression(pAst->getsubast(ast_expression));
+        // TODO: evaluate if the expression can be "notted" or inverted
+
+        if(pAst->getsubast_after(ast_expression) == NULL)
+            return expression;
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTPAREN) {
+        expr = parse_expression(pAst->getsubast(ast_expression));
+        // TODO: Take the type of the expression returned to be processed correctly
+
+        if(pAst->hassubast(ast_dotnotation_call_expr)) {
+            // TODO: handle
+        } else if(pAst->getsubast_after(ast_expression) == NULL)
+            return expression;
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTCURLY) {
+        if(pAst->hassubast(ast_vector_array)) {
+            // TODO: this is not allowed...complain!
+        }
+    }
+
+    if(pAst->hassubast(ast_primary_expr)) {
+        expr = parse_primary_expression(pAst->getsubast(ast_primary_expr));
+    }
+
+    return expression;
 }
 
 ref_ptr runtime::parse_type_identifier(ast *pAst) {
@@ -300,8 +408,7 @@ ClassObject* runtime::resolve_class_refrence(ast *pAst, ref_ptr &ptr) {
 }
 
 ResolvedReference runtime::parse_utype(ast *pAst) {
-    ref_ptr ptr;
-    ptr.operator=(parse_type_identifier(pAst->getsubast(0)));
+    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
     ResolvedReference refrence;
 
     if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(LEFTBRACE)) {
@@ -1042,84 +1149,62 @@ bool runtime::expectReferenceType(ResolvedReference refrence, ResolvedReference:
     return false;
 }
 
-ExprValue runtime::parse_value(ast *pAst) {
-    return parse_expression(pAst->getsubast(0));
-}
-
-ExprValue runtime::parse_expression(ast *pAst) {
-    ExprValue evalue;
-
-    /* ++ or -- or - or + before the expression */
-    // skip
-
-    if(pAst->hasentity(LEFTPAREN) && pAst->hasentity(RIGHTPAREN)) {
-        if(pAst->getsubast(0)->gettype() == ast_utype) {
-            ResolvedReference ptr = parse_utype(pAst->getsubast(0));
-            ExprValue value = parse_expression(pAst->getsubast(1));
-
-            checkCast(pAst->getsubast(0), value, ptr);
-        }
-    }
-
-    return evalue;
-}
-
-void runtime::checkCast(ast* pAst, ExprValue value, ResolvedReference cast) {
-
-    if(value.et == ExprValue::UNKNOWN) {
-
-    }
-
-    switch (cast.rt) {
-        case ResolvedReference::NATIVE:
-            if(nativeFieldCompare(cast.nf, value.et))
-                warning(REDUNDANT_CAST, pAst->line, pAst->col, " `" + ResolvedReference::toString(cast.rt)
-                    + "` and `" + value.typeToString() + "`");
-
-/*            if(cast.nf <= fchar) {
-                if(value.et == ExprValue::STR_LITERAL || value.et == ExprValue::REFRENCE
-                        || value.et == ExprValue::UNKNOWN) {
-                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `" + nativefield_tostr(cast.nf) +
-                            "` and `" + value.typeToString() + "`");
-                }
-            }
-
-            if(cast.nf == fstring) {
-                if(value.et != ExprValue::STR_LITERAL) {
-                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `string` and `" + value.typeToString() + "`");
-                }
-            }
-
-            if(cast.nf == fdynamic) {
-                if(value.et != ExprValue::REFRENCE) {
-                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `dynamic object` and `" + value.typeToString() + "`");
-                }
-            }*/
-            break;
-        case ResolvedReference::FIELD:
-            errors->newerror(INVALID_CAST, pAst->col, pAst->line, " cannot cast field field");
-            break;
-        case ResolvedReference::METHOD:
-        case ResolvedReference::MACROS:
-        case ResolvedReference::OO:
-            errors->newerror(INVALID_CAST, pAst->col, pAst->line, " cannot cast a method");
-            break;
-
-        case ResolvedReference::CLASS:
-            if(value.et != ExprValue::REFRENCE || (value.ref.rt != ResolvedReference::CLASS && value.ref.rt != ResolvedReference::FIELD)) {
-                errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `class` and `" + value.typeToString() + "`");
-                return;
-            }
-
-            if(!cast.klass->match(value.ref.klass)) {
-                errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `class` and `" + value.typeToString() + "`");
-            }
-            break;
-
-        default: // not resolved already complained about
-            break;
-    }
-}
+//void runtime::checkCast(ast* pAst, ExprValue value, ResolvedReference cast) {
+//
+//    if(value.et == ExprValue::UNKNOWN) {
+//
+//    }
+//
+//    switch (cast.rt) {
+//        case ResolvedReference::NATIVE:
+//            if(nativeFieldCompare(cast.nf, value.et))
+//                warning(REDUNDANT_CAST, pAst->line, pAst->col, " `" + ResolvedReference::toString(cast.rt)
+//                    + "` and `" + value.typeToString() + "`");
+//
+///*            if(cast.nf <= fchar) {
+//                if(value.et == ExprValue::STR_LITERAL || value.et == ExprValue::REFRENCE
+//                        || value.et == ExprValue::UNKNOWN) {
+//                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `" + nativefield_tostr(cast.nf) +
+//                            "` and `" + value.typeToString() + "`");
+//                }
+//            }
+//
+//            if(cast.nf == fstring) {
+//                if(value.et != ExprValue::STR_LITERAL) {
+//                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `string` and `" + value.typeToString() + "`");
+//                }
+//            }
+//
+//            if(cast.nf == fdynamic) {
+//                if(value.et != ExprValue::REFRENCE) {
+//                    errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `dynamic object` and `" + value.typeToString() + "`");
+//                }
+//            }*/
+//            break;
+//        case ResolvedReference::FIELD:
+//            errors->newerror(INVALID_CAST, pAst->col, pAst->line, " cannot cast field field");
+//            break;
+//        case ResolvedReference::METHOD:
+//        case ResolvedReference::MACROS:
+//        case ResolvedReference::OO:
+//            errors->newerror(INVALID_CAST, pAst->col, pAst->line, " cannot cast a method");
+//            break;
+//
+//        case ResolvedReference::CLASS:
+//            if(value.et != ExprValue::REFRENCE || (value.ref.rt != ResolvedReference::CLASS && value.ref.rt != ResolvedReference::FIELD)) {
+//                errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `class` and `" + value.typeToString() + "`");
+//                return;
+//            }
+//
+//            if(!cast.klass->match(value.ref.klass)) {
+//                errors->newerror(INVALID_CAST, pAst->col, pAst->line, " `class` and `" + value.typeToString() + "`");
+//            }
+//            break;
+//
+//        default: // not resolved already complained about
+//            break;
+//    }
+//}
 
 string runtime::nativefield_tostr(NativeField nf) {
     switch (nf) {
@@ -1134,14 +1219,14 @@ string runtime::nativefield_tostr(NativeField nf) {
     }
 }
 
-bool runtime::nativeFieldCompare(NativeField field, ExprValue::ExprType type) {
-    switch (field) {
-        default:
-            return false;
-    }
-}
+//bool runtime::nativeFieldCompare(NativeField field, ExprValue::ExprType type) {
+//    switch (field) {
+//        default:
+//            return false;
+//    }
+//}
 
-void runtime::addInstruction(Opcode opcode, double *pInt, int n) {
+//void runtime::addInstruction(Opcode opcode, double *pInt, int n) {
 //    if(rState.fn == NULL) {
 //        rState.injector.add((int)opcode);
 //
@@ -1153,7 +1238,7 @@ void runtime::addInstruction(Opcode opcode, double *pInt, int n) {
 //        for(int i = 0; i < n; i++)
 //            rState.fn->bytecode.add(pInt[i]);
 //    }
-}
+//}
 
 context *runtime::get_context() {
     return &element_at(*contexts, ctp);
@@ -1566,6 +1651,99 @@ bool runtime::isnative_type(string type) {
             */
            || type == "dynamic_object"
             ;
+}
+
+/*
+ * Convert a string that contains a representation of a character liter
+ * i.e 'c' or '\n' to its real representation
+ */
+void runtime::parse_charliteral(string char_string, m64Assembler &assembler) {
+    int64_t  i64;
+    if(char_string.size() > 1) {
+        switch(char_string.at(1)) {
+            case 'n':
+                assembler.push_i64(SET_Di(i64, MOVI, '\n'), ebx);
+                break;
+            case 't':
+                assembler.push_i64(SET_Di(i64, MOVI, '\t'), ebx);
+                break;
+            case 'b':
+                assembler.push_i64(SET_Di(i64, MOVI, '\b'), ebx);
+                break;
+            case 'v':
+                assembler.push_i64(SET_Di(i64, MOVI, '\v'), ebx);
+                break;
+            case 'r':
+                assembler.push_i64(SET_Di(i64, MOVI, '\r'), ebx);
+                break;
+            case 'f':
+                assembler.push_i64(SET_Di(i64, MOVI, '\f'), ebx);
+                break;
+            default:
+                assembler.push_i64(SET_Di(i64, MOVI, char_string.at(1)), ebx);
+                break;
+        }
+    } else {
+        assembler.push_i64(SET_Di(i64, MOVI, char_string.at(0)), ebx);
+    }
+}
+
+void runtime::parse_intliteral(string int_string, m64Assembler &assembler, ast* pAst) {
+    int64_t i64;
+    double var;
+    int_string = invalidate_underscores(int_string);
+
+    if(all_integers(int_string)) {
+        var = std::strtod (int_string.c_str(), NULL);
+        if(var > DA_MAX || var < DA_MIN) {
+            stringstream ss;
+            ss << "integral number too large: " + int_string;
+            errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
+        }
+        assembler.push_i64(SET_Di(i64, MOVI, var), ebx);
+    }else {
+        var = std::strtod (int_string.c_str(), NULL);
+        if((int64_t )var > DA_MAX || (int64_t )get_low_bytes(var) < DA_MIN) {
+            stringstream ss;
+            ss << "integral number too large: " + int_string;
+            errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
+        }
+
+        assembler.push_i64(SET_Di(i64, MOVBI, ((int64_t)var)), get_low_bytes(var));
+    }
+}
+
+bool runtime::all_integers(string int_string) {
+    for(char c : int_string) {
+        if(!isdigit(c))
+            return false;
+    }
+    return true;
+}
+
+string runtime::invalidate_underscores(string basic_string) {
+    stringstream newstring;
+    for(char c : basic_string) {
+        if(c != '_')
+            newstring << c;
+    }
+    return newstring.str();
+}
+
+int64_t runtime::get_low_bytes(double var) {
+    stringstream ss;
+    ss.precision(16);
+    ss << var;
+    string num = ss.str(), result = "";
+    for(unsigned int i = 0; i < num.size(); i++) {
+        if(num.at(i) == '.') {
+            for(unsigned int x = i+1; x < num.size(); x++) {
+                result += num.at(x);
+            }
+            return strtoll(result.c_str(), NULL, 0);
+        }
+    }
+    return 0;
 }
 
 _operator string_toop(string op) {

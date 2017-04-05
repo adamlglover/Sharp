@@ -19,7 +19,7 @@ class Start base x // add 'base <refid>' to class decl
 {
 
     private class X base Start.X.g {
-        dynamic_object v;
+        dynamic_object v=9;
 
         /*
         * Macros always return void

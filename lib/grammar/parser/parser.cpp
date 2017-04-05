@@ -674,7 +674,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
              * This expression rule dosen't process correctly by itsself
              * so we hav to do it ourselves
              */
-            if(peek(1).gettokentype() == INC || peek(1).gettokentype() == DEC)
+            if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC)
             {
                 advance();
                 pAst->add_entity(current());
@@ -704,7 +704,7 @@ bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
 
     /* ++ or -- or - or + before the expression */
-    if(peek(1).gettokentype() == INC || peek(1).gettokentype() == DEC
+    if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC
        || peek(1).gettokentype() == PLUS || peek(1).gettokentype() == MINUS)
     {
         advance();
@@ -885,7 +885,7 @@ bool parser::parse_expression(ast *pAst) {
 
 
     /* ++ or -- after the expression */
-    if(peek(1).gettokentype() == INC || peek(1).gettokentype() == DEC)
+    if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC)
     {
         advance();
         pAst->add_entity(current());
@@ -895,8 +895,8 @@ bool parser::parse_expression(ast *pAst) {
     }
 
     /* expression ('*'|'/'|'%') expression */
-    if(peek(1).gettokentype() == MULT || peek(1).gettokentype() == DIV ||
-       peek(1).gettokentype() == MOD)
+    if(peek(1).gettokentype() == MULT || peek(1).gettokentype() == _DIV ||
+       peek(1).gettokentype() == _MOD)
     {
         advance();
         pAst->add_entity(current());
@@ -927,7 +927,7 @@ bool parser::parse_expression(ast *pAst) {
 
     /* expression ('<=' | '>=' | '>' | '<') expression */
     if(peek(1).gettokentype() == LESSTHAN || peek(1).gettokentype() == GREATERTHAN ||
-       peek(1).gettokentype() == GTE || peek(1).gettokentype() == LTE)
+       peek(1).gettokentype() == _GTE || peek(1).gettokentype() == _LTE)
     {
         advance();
         pAst->add_entity(current());
