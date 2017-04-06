@@ -88,6 +88,8 @@ bool ClassObject::addField(Field field) {
     if(getField(field.name) != NULL)
         return false;
 
+    field.vaddr = this->fieldCount()-1;
+    field.fullName = this->fullName + "." + name;
     fields->push_back(field);
     return true;
 }

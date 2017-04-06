@@ -83,17 +83,17 @@ ClassObject *runtime::parse_base_class(ast *pAst, int startpos) {
 }
 
 void runtime::setHeadClass(ClassObject *klass) {
-    ClassObject* sup = klass->getSuperClass();
+    ClassObject* sup = klass->getBaseClass();
     if(sup == NULL) {
         klass->setHead(klass);
         return;
     }
     while(true) {
-        if(sup->getSuperClass() == NULL) {
+        if(sup->getBaseClass() == NULL) {
             klass->setHead(sup);
             return;
         } else
-            sup = sup->getSuperClass();
+            sup = sup->getBaseClass();
     }
 }
 
@@ -197,9 +197,6 @@ void runtime::parse_var_decl(ast *pAst) {
         // TODO: do something based on the assign expression
     }
 
-//    if(parser::isassign_exprsymbol(pAst->getentity(startpos+1).gettoken())) {
-//        ExprValue value = parse_value(pAst);
-//    }
 //
 //    if(pAst->hasentity(COMMA)) {
 //
@@ -221,7 +218,11 @@ void runtime::parse_import_decl(ast *pAst) {
 }
 
 Expression runtime::parse_value(ast *pAst) {
-    return parse_expression(pAst->getsubast(ast_expression));
+    context* Context = get_context();
+    add_context(context(true, Context));
+    Expression e = parse_expression(pAst->getsubast(ast_expression));
+    remove_context();
+    return e;
 }
 
 Expression runtime::parse_literal(ast *pAst) {
@@ -251,6 +252,7 @@ Expression runtime::parse_literal(ast *pAst) {
 
     if(pAst->getentity(0).gettoken() == "true" ||
        pAst->getentity(0).gettoken() == "false") {
+        expression.type = expression_var;
         parse_boolliteral(pAst->getentity(0).gettoken(), expression.code);
     }
 
@@ -259,56 +261,202 @@ Expression runtime::parse_literal(ast *pAst) {
 
 Expression runtime::parse_primary_expression(ast *pAst) {
     Expression expression;
+    context* Context = get_context();
+    int64_t i64;
+    ast* a = pAst->getsubast(0);
 
     if(pAst->hassubast(ast_literal)) {
-        expression = parse_literal(pAst->getsubast(ast_literal));
+        return parse_literal(pAst->getsubast(ast_literal));
+    }
+
+    if(pAst->hasentity(DOT)) {
+        if(!Context->expression_head) {
+            errors->newerror(GENERIC, pAst->getentity(DOT), "unexpected token " + pAst->getentity(DOT).gettoken());
+        } else {
+            // TODO: write assembly to get next field in pointer
+        }
+    }
+
+    if(pAst->hassubast(ast_utype)) {
+        ResolvedReference utype = parse_utype(pAst->getsubast(ast_utype));
+        expression.utype_refrence_toexpression(utype);
+        expression.utype = utype;
+
+        if(pAst->getsubast(ast_utype)->hasentity(DOT)) {
+            expression.type = expression_var;
+            int64_t classid = 0;
+
+            if(utype.mflag.ptr) {
+                errors->newerror(REDUNDANT_TOKEN, pAst->getentity(DOT), " '*'");
+            } else if(utype.mflag.ref) {
+                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '&'");
+            } else if(utype.array) {
+                errors->newerror(REDUNDANT_TOKEN, pAst->getentity(DOT), " '[]'");
+            }
+
+            switch(utype.refrenceType) {
+                case ResolvedReference::FIELD:
+                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'class' instead of 'field'");
+                    break;
+                case ResolvedReference::CLASS:
+                    classid = utype.klass->getUID();
+                    expression.code.push_i64(SET_Ei(i64, _OPT)); // This tells the optimizer to omit this instruction and certain ones before it
+                    expression.code.push_i64(SET_Di(i64, MOVI, classid), ebx);
+                    break;
+                case ResolvedReference::METHOD:
+                    break;
+                case ResolvedReference::MACROS:
+                    break;
+                case ResolvedReference::OO:
+                    break;
+                case ResolvedReference::NATIVE:
+                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'class' instead of 'native type'");
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            if(utype.mflag.ptr) {
+                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '*'");
+            } else if(utype.mflag.ref) {
+                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '&'");
+            } else if(utype.array) {
+                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '[]'");
+            }
+
+            switch(utype.refrenceType) {
+                case ResolvedReference::FIELD:
+                    expression.code.push_i64(SET_Di(i64, MOVX, ecx), cx);
+                    break;
+                case ResolvedReference::CLASS:
+                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'field' instead of 'class'");
+                    break;
+                case ResolvedReference::METHOD:
+                    break;
+                case ResolvedReference::MACROS:
+                    break;
+                case ResolvedReference::OO:
+                    break;
+                case ResolvedReference::NATIVE:
+                    errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), ", expected type of 'field' instead of 'native type'");
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    if(pAst->hassubast(ast_dotnotation_call_expr)) {
+
     }
 
     return expression;
 }
+Expression runtime::parse_cast_expression(context *pContext, ast *pAst) {
+    Expression expression;
+
+    ResolvedReference utype = parse_utype(pAst->getsubast(ast_utype));
+    expression = parse_expression(pAst->getsubast(ast_expression));
+
+    if(utype.refrenceType == ResolvedReference::NATIVE) {
+        parse_native_cast(utype, expression, pAst->getsubast(ast_expression));
+        expression.type = expression_var;
+    } else if(utype.refrenceType == ResolvedReference::CLASS) {
+        parse_class_cast(utype, expression, pAst->getsubast(ast_expression));
+    } else {
+        errors->newerror(GENERIC, pAst->getsubast(ast_expression)->line,
+                         pAst->getsubast(ast_expression)->col, "expected class ");
+    }
+    return expression;
+}
+
+void runtime::parse_native_cast(ResolvedReference utype, Expression expression, ast *pAst) {
+    int64_t i64;
+    if(utype.nf >= fi8 && utype.nf <= fui64) {
+        if(expression.type == expression_class) {
+            mov_field(expression, pAst);
+        }
+
+        switch(utype.nf) {
+            case fi8:
+                expression.code.push_i64(SET_Ci(i64, MOV8, ecx,0, ebx));
+                break;
+            case fi16:
+                expression.code.push_i64(SET_Ci(i64, MOV16, ecx,0, ebx));
+                break;
+            case fi32:
+                expression.code.push_i64(SET_Ci(i64, MOV32, ecx,0, ebx));
+                break;
+            case fi64:
+                expression.code.push_i64(SET_Ci(i64, MOV64, ecx,0, ebx));
+                break;
+            case fui8:
+                expression.code.push_i64(SET_Ci(i64, MOVU8, ecx,0, ebx));
+                break;
+            case fui16:
+                expression.code.push_i64(SET_Ci(i64, MOVU16, ecx,0, ebx));
+                break;
+            case fui32:
+                expression.code.push_i64(SET_Ci(i64, MOVU32, ecx,0, ebx));
+                break;
+            case fui64:
+                expression.code.push_i64(SET_Ci(i64, MOVU64, ecx,0, ebx));
+                break;
+        }
+    } else if(utype.nf == fvar) {
+
+    } else if(utype.nf == fdynamic) {
+
+    }
+}
 
 Expression runtime::parse_expression(ast *pAst) {
-    Expression expression, expr;
+    Expression expression;
+    context* Context = get_context();
+    add_context(context(false, Context));
+    int64_t i64;
 
     /*
-     * Based on this ery expression we know that the value must always evaluate to a var
+     * Based on this very expression we know that the value must always evaluate to a var
      * So in that case we can store the value of x in register %egx
      */
-    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == _INC || pAst->getentity(0).gettokentype() == _DEC
-       || pAst->getentity(0).gettokentype() == PLUS || pAst->getentity(0).gettokentype() == MINUS) {
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == _INC || pAst->getentity(0).gettokentype() == _DEC) {
+        expression = parse_expression(pAst->getsubast(ast_expression));
+        pre_incdec_expression(expression, pAst->getsubast(ast_expression));
+
+        remove_context();
         expression.type = expression_var;
-        expr = parse_expression(pAst->getsubast(ast_expression));
-        // TODO: do a check on the expression to make sure the code is correct
-        expr.free();
         return expression;
     }
 
     if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTPAREN) {
         if(pAst->hassubast(ast_utype)) {
-            ResolvedReference reference = parse_utype(pAst->getsubast(ast_utype));
-            expr = parse_expression(pAst->getsubast(ast_expression));
-            // TODO: check cast on desired expression and that the expression is in face castable
-            expr.free();
+            expression = parse_cast_expression(Context, pAst);
+            remove_context();
             return expression;
         }
     }
 
     if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == NOT) {
-        expr = parse_expression(pAst->getsubast(ast_expression));
+        expression = parse_expression(pAst->getsubast(ast_expression));
         // TODO: evaluate if the expression can be "notted" or inverted
 
-        if(pAst->getsubast_after(ast_expression) == NULL)
+        if (pAst->getsubast_after(ast_expression) == NULL) {
+            remove_context();
             return expression;
+        }
     }
 
     if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTPAREN) {
-        expr = parse_expression(pAst->getsubast(ast_expression));
+        expression = parse_expression(pAst->getsubast(ast_expression));
         // TODO: Take the type of the expression returned to be processed correctly
 
-        if(pAst->hassubast(ast_dotnotation_call_expr)) {
+        if (pAst->hassubast(ast_dotnotation_call_expr)) {
             // TODO: handle
-        } else if(pAst->getsubast_after(ast_expression) == NULL)
+        } else if (pAst->getsubast_after(ast_expression) == NULL){
+            remove_context();
             return expression;
+        }
     }
 
     if(pAst->getentitycount() != 0 && pAst->getentity(0).gettokentype() == LEFTCURLY) {
@@ -318,9 +466,31 @@ Expression runtime::parse_expression(ast *pAst) {
     }
 
     if(pAst->hassubast(ast_primary_expr)) {
-        expr = parse_primary_expression(pAst->getsubast(ast_primary_expr));
+        expression = parse_primary_expression(pAst->getsubast(ast_primary_expr));
+        if(pAst->getsubast_after(ast_primary_expr) == NULL){
+            remove_context();
+            return expression;
+        }
     }
 
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettoken() == "self") {
+
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettoken() == "base") {
+
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettoken() == "null") {
+
+    }
+
+    if(pAst->getentitycount() != 0 && pAst->getentity(0).gettoken() == "new") {
+
+    }
+
+
+    remove_context();
     return expression;
 }
 
@@ -398,8 +568,8 @@ ClassObject *runtime::parse_base_class(ast *pAst, ClassObject* inheritor) {
 ClassObject* runtime::resolve_class_refrence(ast *pAst, ref_ptr &ptr) {
     ResolvedReference resolvedRefrence = resolve_refrence_ptr(ptr);
 
-    if(resolvedRefrence.rt == ResolvedReference::NOTRESOLVED) {
-        errors->newerror(COULD_NOT_RESOLVE, pAst->line, pAst->col, " `" + resolvedRefrence.unresolved + "` " +
+    if(resolvedRefrence.refrenceType == ResolvedReference::NOTRESOLVED) {
+        errors->newerror(COULD_NOT_RESOLVE, pAst->line, pAst->col, " `" + resolvedRefrence.refrenceName + "` " +
                             (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
     } else {
 
@@ -423,17 +593,19 @@ ResolvedReference runtime::parse_utype(ast *pAst) {
         refrence.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
     }
 
-    if(ptr.module == "" && isnative_type(ptr.refname)) {
+    if(ptr.module == "" && parser::isnative_type(ptr.refname)) {
         refrence.nf = token_tonativefield(ptr.refname);
-        refrence.rt = ResolvedReference::NATIVE;
+        refrence.refrenceType = ResolvedReference::NATIVE;
+        refrence.refrenceName = ptr.toString();
         ptr.free();
         return refrence;
     }
 
     refrence = resolve_refrence_ptr(ptr);
+    refrence.refrenceName = ptr.toString();
 
-    if(refrence.rt == ResolvedReference::NOTRESOLVED) {
-        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.unresolved + "` " +
+    if(refrence.refrenceType == ResolvedReference::NOTRESOLVED) {
+        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
                                                                    (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
     }
 
@@ -1002,6 +1174,22 @@ NativeField runtime::token_tonativefield(string entity) {
         return fvar;
     else if(entity == "dynamic_object")
         return fdynamic;
+    else if(entity == "__int8")
+        return fi8;
+    else if(entity == "__int16")
+        return fi16;
+    else if(entity == "__int32")
+        return fi32;
+    else if(entity == "__int64")
+        return fi64;
+    else if(entity == "__uint8")
+        return fui8;
+    else if(entity == "__uint16")
+        return fui16;
+    else if(entity == "__uint32")
+        return fui32;
+    else if(entity == "__uint64")
+        return fui64;
     return fnof;
 }
 
@@ -1075,17 +1263,18 @@ ResolvedReference runtime::resolve_refrence_ptr(ref_ptr &ref_ptr) {
     if(ref_ptr.class_heiarchy->size() == 0) {
         ClassObject* klass = try_class_resolve(ref_ptr.module, ref_ptr.refname);
         if(klass == NULL) {
-            refrence.rt = ResolvedReference::NOTRESOLVED;
-            refrence.unresolved = ref_ptr.refname;
+
+            refrence.refrenceType = ResolvedReference::NOTRESOLVED;
+            refrence.refrenceName = ref_ptr.refname;
         } else {
-            refrence.rt = ResolvedReference::CLASS;
+            refrence.refrenceType = ResolvedReference::CLASS;
             refrence.klass = klass;
         }
     } else {
         ClassObject* klass = try_class_resolve(ref_ptr.module, ref_ptr.class_heiarchy->get(0));
         if(klass == NULL) {
-            refrence.rt = ResolvedReference::NOTRESOLVED;
-            refrence.unresolved = ref_ptr.class_heiarchy->get(0);
+            refrence.refrenceType = ResolvedReference::NOTRESOLVED;
+            refrence.refrenceName = ref_ptr.class_heiarchy->get(0);
         } else {
             ClassObject* childClass = NULL;
             string className;
@@ -1093,8 +1282,8 @@ ResolvedReference runtime::resolve_refrence_ptr(ref_ptr &ref_ptr) {
                 className = ref_ptr.class_heiarchy->get(i);
 
                 if((childClass = klass->getChildClass(className)) == NULL) {
-                    refrence.rt = ResolvedReference::NOTRESOLVED;
-                    refrence.unresolved = className;
+                    refrence.refrenceType = ResolvedReference::NOTRESOLVED;
+                    refrence.refrenceName = className;
                     return refrence;
                 } else {
                     klass = childClass;
@@ -1104,25 +1293,25 @@ ResolvedReference runtime::resolve_refrence_ptr(ref_ptr &ref_ptr) {
 
             if(childClass != NULL) {
                 if(childClass->getField(ref_ptr.refname) != NULL) {
-                    refrence.rt = ResolvedReference::FIELD;
+                    refrence.refrenceType = ResolvedReference::FIELD;
                     refrence.field = childClass->getField(ref_ptr.refname);
                 }  else if(childClass->getChildClass(ref_ptr.refname) != NULL) {
-                    refrence.rt = ResolvedReference::CLASS;
+                    refrence.refrenceType = ResolvedReference::CLASS;
                     refrence.klass = klass->getChildClass(ref_ptr.refname);
                 } else {
-                    refrence.rt = ResolvedReference::NOTRESOLVED;
-                    refrence.unresolved = ref_ptr.refname;
+                    refrence.refrenceType = ResolvedReference::NOTRESOLVED;
+                    refrence.refrenceName = ref_ptr.refname;
                 }
             } else {
                 if(klass->getField(ref_ptr.refname) != NULL) {
-                    refrence.rt = ResolvedReference::FIELD;
+                    refrence.refrenceType = ResolvedReference::FIELD;
                     refrence.field = klass->getField(ref_ptr.refname);
                 } else if(klass->getChildClass(ref_ptr.refname) != NULL) {
-                    refrence.rt = ResolvedReference::CLASS;
+                    refrence.refrenceType = ResolvedReference::CLASS;
                     refrence.klass = klass->getChildClass(ref_ptr.refname);
                 } else {
-                    refrence.rt = ResolvedReference::NOTRESOLVED;
-                    refrence.unresolved = ref_ptr.refname;
+                    refrence.refrenceType = ResolvedReference::NOTRESOLVED;
+                    refrence.refrenceName = ref_ptr.refname;
                 }
             }
         }
@@ -1145,11 +1334,11 @@ ClassObject *runtime::getSuper(ClassObject *pObject) {
 }
 
 bool runtime::expectReferenceType(ResolvedReference refrence, ResolvedReference::RefrenceType expectedType, ast *pAst) {
-    if(refrence.rt == expectedType)
+    if(refrence.refrenceType == expectedType)
         return true;
 
     errors->newerror(EXPECTED_REFRENCE_OF_TYPE, pAst->line, pAst->col, " '" + ResolvedReference::toString(expectedType) + "' instead of '" +
-            ResolvedReference::toString(refrence.rt) + "'");
+            ResolvedReference::toString(refrence.refrenceType) + "'");
     return false;
 }
 
@@ -1214,12 +1403,30 @@ string runtime::nativefield_tostr(NativeField nf) {
     switch (nf) {
         case fvar:
             return "var";
+        case fi8:
+            return "__int8";
+        case fi16:
+            return "__int16";
+        case fi32:
+            return "__int32";
+        case fi64:
+            return "__int64";
+        case fui8:
+            return "__uint8";
+        case fui16:
+            return "__uint16";
+        case fui32:
+            return "__uint32";
+        case fui64:
+            return "__uint64";
         case fdynamic:
             return "dynamic object";
         case fvoid:
             return "void";
         case fnof:
             return "not a native field";
+        default:
+            return "unknown";
     }
 }
 
@@ -1841,6 +2048,45 @@ int64_t runtime::get_string(string basic_string) {
     return -1;
 }
 
+void runtime::mov_field(Expression &expression, ast* pAst) {
+    int64_t i64;
+    if(expression.utype.refrenceType == ResolvedReference::FIELD) {
+        expression.code.push_i64(SET_Di(i64, OBJECT_NXT, expression.utype.field->vaddr));
+        expression.code.push_i64(SET_Di(i64, MOVI, 0), egx);
+        expression.code.push_i64(SET_Ci(i64, MOVX, ebx,0, egx));
+    } else {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "variable expected");
+    }
+}
+
+void runtime::pre_incdec_expression(Expression &expression, ast *pAst) {
+    int64_t i64;
+    if(expression.type == expression_var) {
+        errors->newerror(GENERIC, pAst->getsubast(ast_expression)->line,
+                         pAst->getsubast(ast_expression)->col, "variable expected");
+    } else if(expression.type == expression_class) {
+        mov_field(expression, pAst->getsubast(ast_expression));
+        expression.code.push_i64(SET_Di(i64, INC, ebx));
+    }
+}
+
+void runtime::parse_class_cast(ResolvedReference &utype, Expression &expression, ast *pAst) {
+    if(utype.refrenceType != ResolvedReference::NOTRESOLVED) {
+        if(expression.type == expression_var) {
+            errors->newerror(INVALID_CAST, pAst->getsubast(ast_expression)->line,
+                             pAst->getsubast(ast_expression)->col, " '" + expression.utype.toString() + "' and '" + utype.toString() + "'");
+        } else if(expression.type == expression_class) {
+            if(utype.klass->match(expression.utype.klass)) {
+                errors->newerror(REDUNDANT_CAST, pAst->getsubast(ast_expression)->line,
+                                 pAst->getsubast(ast_expression)->col, " '" + expression.utype.toString() + "' and '" + utype.toString() + "'");
+            } else if(utype.klass->getHeadClass()->curcular(expression.utype.klass)) {
+
+            }
+
+        }
+    }
+}
+
 _operator string_toop(string op) {
     if(op=="+")
         return op_PLUS;
@@ -1877,4 +2123,42 @@ _operator string_toop(string op) {
     if(op=="%=")
         return op_MOD_EQ;
     return op_NO;
+}
+
+void Expression::utype_refrence_toexpression(ResolvedReference ref) {
+    if(ref.refrenceType == ResolvedReference::RefrenceType::NOTRESOLVED) {
+        this->type = expression_unknown;
+    } else {
+        switch(ref.refrenceType) {
+            case ResolvedReference::RefrenceType::FIELD:
+                this->type = ref.array ? expression_classarray : expression_class;
+                break;
+            case ResolvedReference::RefrenceType::CLASS:
+                this->type = ref.array ? expression_classarray : expression_class;
+                break;
+            case ResolvedReference::RefrenceType::METHOD:
+                break;
+            case ResolvedReference::RefrenceType::MACROS:
+                break;
+            case ResolvedReference::RefrenceType::OO:
+                break;
+            case ResolvedReference::RefrenceType::NATIVE:
+                if(ref.nf == fdynamic)
+                    this->type = ref.array ? expression_dynamicclass_array : expression_dynamicclass;
+                else
+                this->type = ref.array ? expression_vararray : expression_var;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+string ResolvedReference::toString() {
+    if(refrenceType == FIELD || refrenceType == CLASS) {
+        return refrenceName;
+    } else if(refrenceType == NATIVE) {
+        return runtime::nativefield_tostr(nf);
+    }
+    return "";
 }

@@ -1,0 +1,9 @@
+mod application;
+
+class Main {
+    private var x = ++b;
+
+    public static fn main(string[] args) : var {
+
+    }
+}

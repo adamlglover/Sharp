@@ -8,7 +8,7 @@ import examples_x.b.x;
             string n = null; // cannot assign null to native string
             label:
             int portid = x;
-            sys.io.open((short)c, sys.io.PORT);
+            sys.io.open((short)c, sys.io.PORT)[9];
         };
 
 class x {
@@ -17,6 +17,8 @@ class x {
 
 class Start base x // add 'base <refid>' to class decl
 {
+
+    int x = 9.class;
 
     private class X base Start.X.g {
         dynamic_object v=9;

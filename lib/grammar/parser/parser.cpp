@@ -703,9 +703,8 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
 bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
 
-    /* ++ or -- or - or + before the expression */
-    if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC
-       || peek(1).gettokentype() == PLUS || peek(1).gettokentype() == MINUS)
+    /* ++ or -- before the expression */
+    if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC)
     {
         advance();
         pAst->add_entity(current());
@@ -843,16 +842,6 @@ bool parser::parse_expression(ast *pAst) {
         else
             parse_valuelist(pAst);
 
-        return true;
-    }
-
-    if(peek(1).gettokentype() == DOT)
-    {
-        advance();
-        pAst->add_entity(current());
-
-        advance();
-        expect_token(pAst, "class", "`class`");
         return true;
     }
 

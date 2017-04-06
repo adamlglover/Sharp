@@ -74,6 +74,9 @@ void int_errs()
 
     err.set(REDUNDANT_IMPORT, "redundant self import of module");
     predefined_errs.push_back(err);
+
+    err.set(UNEXPECTED_TOKEN, "unexpected token");
+    predefined_errs.push_back(err);
 }
 
 void Errors::print_error(parseerror &err) {

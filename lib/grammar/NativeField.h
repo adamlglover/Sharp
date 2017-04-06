@@ -7,6 +7,14 @@
 
 enum NativeField
 {
+    fi8,
+    fi16,
+    fi32,
+    fi64,
+    fui8,
+    fui16,
+    fui32,
+    fui64,
     fvar,
     fdynamic, /* Dynamic object type (Not a native type but is treated as one) */
     fvoid, /* only used as a return type for functions */

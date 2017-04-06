@@ -21,6 +21,7 @@ public:
             nf(nf),
             uid(uid),
             name(name),
+            fullName(""),
             parent(parent),
             klass(NULL),
             note(note),
@@ -40,6 +41,7 @@ public:
             nf(fnof),
             uid(uid),
             name(name),
+            fullName(""),
             parent(parent),
             klass(klass),
             note(note),
@@ -58,6 +60,7 @@ public:
             nf(fnof),
             uid(0),
             name(""),
+            fullName(""),
             modifiers(NULL),
             note("","",0,0),
             refrence(false),
@@ -75,6 +78,7 @@ public:
         klass = f.klass;
         uid = f.uid;
         name = f.name;
+        fullName = f.fullName;
         parent = f.parent;
         modifiers = f.modifiers;
         refrence = f.refrence;
@@ -95,7 +99,7 @@ public:
     NativeField nf;
     ClassObject* klass;
     uint64_t uid, vaddr;
-    string name;
+    string name, fullName;
     ClassObject* parent;
     list<AccessModifier>* modifiers; // 3 max modifiers
 };

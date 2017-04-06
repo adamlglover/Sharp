@@ -27,28 +27,49 @@ struct mem_access_flag {
     int ptr;
 };
 
+/*
+ *
+        switch(type) {
+            case ResolvedReference::NATIVE:
+                break;
+            case ResolvedReference::FIELD:
+                break;
+            case ResolvedReference::CLASS:
+                break;
+            case ResolvedReference::METHOD:
+                break;
+            case ResolvedReference::MACROS:
+                break;
+            case ResolvedReference::OO:
+                break;
+            case ResolvedReference::NATIVE:
+                break;
+            default:
+                break;
+        }
+ */
 class ResolvedReference {
 public:
     ResolvedReference()
             :
-            rt(NOTRESOLVED),
+            refrenceType(NOTRESOLVED),
             field(NULL),
             method(NULL),
             klass(NULL),
             oo(NULL),
-            unresolved(""),
+            refrenceName(""),
             array(false)
     {
     }
 
     enum RefrenceType {
-        FIELD,
-        CLASS,
-        METHOD,
-        MACROS,
-        OO,
-        NATIVE,
-        NOTRESOLVED
+        FIELD=0,
+        CLASS=1,
+        METHOD=2,
+        MACROS=3,
+        OO=4,
+        NATIVE=5,
+        NOTRESOLVED=0xfff
     };
 
     static string toString(RefrenceType type) {
@@ -70,10 +91,12 @@ public:
         }
     }
 
-    string unresolved;
+    string toString();
+
+    string refrenceName;
     bool array;
     mem_access_flag mflag;
-    RefrenceType rt;
+    RefrenceType refrenceType;
     NativeField nf;
     ClassObject* klass;
     Field* field;
@@ -97,13 +120,15 @@ struct Expression {
     Expression()
     :
             type(expression_unknown),
-            klass(NULL),
+            utype(),
             code()
     {
     }
 
+    void utype_refrence_toexpression(ResolvedReference ref);
+
     expression_type type;
-    ClassObject* klass;
+    ResolvedReference utype;
     m64Assembler code;
 
     void free() {
@@ -114,17 +139,42 @@ struct Expression {
 struct context {
     context()
     :
-            super(NULL)
+            super(NULL),
+            accessor(NULL),
+            expression_head(false)
     {
     }
 
     context(ClassObject* super)
     :
-            super(super)
+            super(super),
+            accessor(NULL),
+            expression_head(false)
+    {
+    }
+
+    /*
+     * we use ints to act as fillers to assign
+     */
+    context(bool expression_head)
+            :
+            super(NULL),
+            accessor(NULL),
+            expression_head(expression_head)
+    {
+    }
+
+    context(bool expression_head, context* ctx)
+            :
+            super(ctx->super),
+            accessor(ctx->accessor),
+            expression_head(expression_head)
     {
     }
 
     ClassObject* super;
+    ClassObject* accessor;
+    bool expression_head;
 
     void clear() {
         super = NULL;
@@ -177,6 +227,9 @@ public:
 
     Errors* errors;
     size_t errs, uo_errs;
+
+    static string nativefield_tostr(NativeField nf);
+
 private:
     Environment* env;
     parser* _current;
@@ -254,9 +307,7 @@ private:
 
 //    void checkCast(ast* pAst, ExprValue value, ResolvedReference cast);
 
-    string nativefield_tostr(NativeField nf);
-
-//    bool nativeFieldCompare(NativeField field, ExprValue::ExprType type);
+    //    bool nativeFieldCompare(NativeField field, ExprValue::ExprType type);
 
     //void addInstruction(Opcode opcode, double *pInt, int n);
 
@@ -341,6 +392,16 @@ private:
     int64_t get_string(string basic_string);
 
     void parse_boolliteral(string basic_string, m64Assembler &assembler);
+
+    Expression parse_cast_expression(context *pContext, ast *pAst);
+
+    void parse_native_cast(ResolvedReference reference, Expression expression, ast *pAst);
+
+    void mov_field(Expression &expression, ast* pAst);
+
+    void pre_incdec_expression(Expression &expression, ast *pAst);
+
+    void parse_class_cast(ResolvedReference &reference, Expression &expression, ast *pAst);
 };
 
 #define progname "bootstrap"
@@ -473,6 +534,15 @@ public:
     string module;
     List<string>* class_heiarchy;
     string refname;
+
+    string toString() {
+        stringstream ss;
+        ss << module << "#";
+        for(int i = 0; i < class_heiarchy->size(); i++)
+            ss << class_heiarchy->at(i) << ".";
+        ss << refname << endl;
+        return ss.str();
+    }
 };
 
 #endif //SHARP_RUNTIME_H

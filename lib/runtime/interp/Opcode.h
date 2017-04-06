@@ -113,7 +113,7 @@
 
 #define movl(x) ptr=x; _brh
 
-#define object_nxt ptr=ptr->nxt; _brh
+#define object_nxt ptr=ptr->nxt; _brh // TODO: add arg(x) to pick index of the node to jump to
 
 #define object_prev ptr=ptr->prev; _brh // ToDO: for future check if node is null
 
@@ -172,6 +172,12 @@ enum OPCODE {
     PUT=0x29,
     PUTC=0x2a,
     CHECKLEN=0x2b,
+    MOVU8=0x2c,
+    MOVU16=0x2d,
+    MOVU32=0x2e,
+    MOVU64=0x2f,
+
+    _OPT=0xff, /* unused special instruction for compiler */
 };
 
 #endif //SHARP_OPCODE_H
