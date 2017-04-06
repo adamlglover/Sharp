@@ -158,6 +158,7 @@ public:
         modules = new list<string>();
         classes = new list<ClassObject>();
         import_map = new list<keypair<string, list<string>>>();
+        string_map.init();
         assembler = new m64Assembler();
 
         contexts = new list<context>();
@@ -186,6 +187,7 @@ private:
     string current_module;
     list<ClassObject>* classes;
     list<keypair<string, std::list<string>>>*  import_map;
+    List<string> string_map;
     list<context>* contexts;
     m64Assembler* assembler;
     int64_t ctp;
@@ -327,10 +329,22 @@ private:
     string invalidate_underscores(string basic_string);
 
     int64_t get_low_bytes(double var);
+
+    void parse_hexliteral(string hex_string, m64Assembler &assembler, ast *pAst);
+
+    void parse_string_literal(string basic_string, m64Assembler &assembler);
+
+    int64_t add_string(string basic_string);
+
+    bool has_string(string basic_string);
+
+    int64_t get_string(string basic_string);
+
+    void parse_boolliteral(string basic_string, m64Assembler &assembler);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.16"
+#define progvers "0.1.17"
 
 struct options {
     /*

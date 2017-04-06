@@ -193,7 +193,7 @@ void runtime::parse_var_decl(ast *pAst) {
     ResolvedReference ref = parse_utype(pAst->getsubast(0));
 
     if(pAst->hassubast(ast_value)) {
-        Expression expression = parse_value(pAst);
+        Expression expression = parse_value(pAst->getsubast(ast_value));
         // TODO: do something based on the assign expression
     }
 
@@ -238,8 +238,12 @@ Expression runtime::parse_literal(ast *pAst) {
             parse_intliteral(pAst->getentity(0).gettoken(), expression.code, pAst);
             return expression;
         case HEX_LITERAL:
+            expression.type = expression_var;
+            parse_hexliteral(pAst->getentity(0).gettoken(), expression.code, pAst);
             return expression;
         case STRING_LITERAL:
+            expression.type = expression_string;
+            parse_string_literal(pAst->getentity(0).gettoken(), expression.code);
             return expression;
         default:
             break;
@@ -247,7 +251,7 @@ Expression runtime::parse_literal(ast *pAst) {
 
     if(pAst->getentity(0).gettoken() == "true" ||
        pAst->getentity(0).gettoken() == "false") {
-        // bool literal
+        parse_boolliteral(pAst->getentity(0).gettoken(), expression.code);
     }
 
     return expression;
@@ -1679,6 +1683,9 @@ void runtime::parse_charliteral(string char_string, m64Assembler &assembler) {
             case 'f':
                 assembler.push_i64(SET_Di(i64, MOVI, '\f'), ebx);
                 break;
+            case '\\':
+                assembler.push_i64(SET_Di(i64, MOVI, '\\'), ebx);
+                break;
             default:
                 assembler.push_i64(SET_Di(i64, MOVI, char_string.at(1)), ebx);
                 break;
@@ -1713,6 +1720,70 @@ void runtime::parse_intliteral(string int_string, m64Assembler &assembler, ast* 
     }
 }
 
+void runtime::parse_hexliteral(string hex_string, m64Assembler &assembler, ast *pAst) {
+    int64_t i64;
+    double var;
+    hex_string = invalidate_underscores(hex_string);
+
+    var = std::strtod (hex_string.c_str(), NULL);
+    if(var > DA_MAX || var < DA_MIN) {
+        stringstream ss;
+        ss << "integral number too large: " + hex_string;
+        errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
+    }
+    assembler.push_i64(SET_Di(i64, MOVI, var), ebx);
+}
+
+void runtime::parse_string_literal(string basic_string, m64Assembler &assembler) {
+    int64_t i64;
+    string new_string = "";
+    for(unsigned int i = 0; i < basic_string.size(); i++) {
+        if(basic_string.at(i) == '\\') {
+            if((i+1) >= basic_string.size()) {
+                break;
+            } else {
+                i++;
+                switch(basic_string.at(i)) {
+                    case 'n':
+                        new_string +='\n';
+                        break;
+                    case 't':
+                        new_string +='\t';
+                        break;
+                    case 'b':
+                        new_string +='\b';
+                        break;
+                    case 'v':
+                        new_string +='\v';
+                        break;
+                    case 'r':
+                        new_string +='\r';
+                        break;
+                    case 'f':
+                        new_string +='\f';
+                        break;
+                    case '\\':
+                        new_string +='\\';
+                        break;
+                    default:
+                        new_string +=basic_string.at(i);
+                        break;
+                }
+            }
+        } else {
+            new_string += basic_string.at(i);
+        }
+    }
+
+
+    assembler.push_i64(SET_Di(i64, MOVI, add_string(new_string)), ebx);
+}
+
+void runtime::parse_boolliteral(string bool_string, m64Assembler &assembler) {
+    int64_t i64;
+    assembler.push_i64(SET_Di(i64, MOVI, (bool_string == "true" ? 1 : 0)), ebx);
+}
+
 bool runtime::all_integers(string int_string) {
     for(char c : int_string) {
         if(!isdigit(c))
@@ -1744,6 +1815,30 @@ int64_t runtime::get_low_bytes(double var) {
         }
     }
     return 0;
+}
+
+int64_t runtime::add_string(string basic_string) {
+    if(!has_string(basic_string)) {
+        string_map.push_back(basic_string);
+        return string_map.size()-1;
+    }
+    return get_string(basic_string);
+}
+
+bool runtime::has_string(string basic_string) {
+    for(unsigned int i = 0; i < string_map.size(); i++) {
+        if(string_map.at(i) == basic_string)
+            return true;
+    }
+    return false;
+}
+
+int64_t runtime::get_string(string basic_string) {
+    for(unsigned int i = 0; i < string_map.size(); i++) {
+        if(string_map.at(i) == basic_string)
+            return i;
+    }
+    return -1;
 }
 
 _operator string_toop(string op) {
