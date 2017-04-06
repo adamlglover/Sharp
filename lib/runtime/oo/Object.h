@@ -52,7 +52,6 @@ x->prev=NULL;  \
 x->size=0;  \
 x->_Node=NULL;  \
 x->_rNode=NULL;  \
-x->type=refrenceobject;  \
 }
 
 /* Objects stored in memory */

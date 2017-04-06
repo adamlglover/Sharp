@@ -97,7 +97,6 @@ void Environment::newClass(int64_t object, int64_t klass) {
     if(objects[object].mark == gc_green)
         objects[object].free();
 
-    objects[object].type = classobject;
     objects[object].mark = gc_green;
 }
 
@@ -143,21 +142,6 @@ void Environment::init(_gc_object* objects, int64_t size) {
 void Environment::newNative(Sh_object *object, int8_t type) {
     if(object->mark == gc_green)
         object->free();
-
-    object->type = (Type)type;
-    switch(type) {
-        case nativeint:
-        case nativeshort:
-        case nativelong:
-        case nativechar:
-        case nativebool:
-        case nativefloat:
-        case nativedouble:
-            return;
-        default:
-            object->type = nilobject;
-            return;
-    }
 }
 
 void Environment::newArray(Sh_object *object, int64_t len) {
@@ -170,7 +154,6 @@ void Environment::newRefrence(Sh_object *object) {
     if(object->mark == gc_green)
         object->free();
 
-    object->type = refrenceobject;
 }
 
 void Environment::free(Sh_object *objects, int64_t len) {

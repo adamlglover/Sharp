@@ -41,8 +41,6 @@ ClassObject *ClassObject::newdup() {
     }
     if(fieldCount > 0) {
         klass->fields = NULL;//new Sh_object[fieldCount];
-        for(int64_t i = 0; i < fieldCount; i++)
-            klass->fields[i].type = (Type)flds[i].type;
     } else {
         klass->fields = NULL;
     }

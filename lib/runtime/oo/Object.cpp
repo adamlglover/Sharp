@@ -9,7 +9,6 @@
 Sh_object::Sh_object() {
     this->mark = gc_orange;
     this->monitor = Monitor();
-    this->type = nilobject;
     this->HEAD = NULL;
     nxt = NULL, prev=NULL;
     _Node = NULL;
@@ -19,7 +18,6 @@ Sh_object::Sh_object() {
 Sh_object::Sh_object(int64_t type) {
     this->mark = gc_orange;
     this->monitor = Monitor();
-    this->type = type;
     this->HEAD = NULL;
     nxt = NULL, prev=NULL;
     _Node = NULL;
@@ -64,6 +62,5 @@ void Sh_object::_Sh_IncRef(Sh_object* o, Sh_object **ptr) {
     (*ptr)->prev=o->prev;
     (*ptr)->size=o->size;
     (*ptr)->_Node=o->_Node;
-    (*ptr)->type=o->type;
     (*ptr)->_rNode=o;
 }

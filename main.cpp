@@ -138,7 +138,7 @@ void buildExe() {
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, MOVI, 10000000), ecx);
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, MOVL, 2));
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, MOVI, 1), egx);
-    executable << (char)0x05; executable << mi64_tostr(SET_Ci(i, NEW, abs(nativeint), 1, egx));
+    executable << (char)0x05; executable << mi64_tostr(SET_Di(i, NEW, egx));
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, MOVL, 2));
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, MOVI, 0), adx);
     executable << (char)0x05; executable << mi64_tostr(SET_Di(i, CHECKLEN, adx));

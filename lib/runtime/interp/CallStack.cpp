@@ -134,7 +134,7 @@ void CallStack::Execute() {
                 case HLT:
 	                hlt
                 case NEW: /* Requires register value */
-                    _new(GET_Ca(*pc),GET_Cb(*pc))
+                    _new(GET_Da(*pc))
                 case CHECK_CAST:
 	                check_cast
                 case MOV8:
