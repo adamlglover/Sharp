@@ -143,8 +143,8 @@ void runtime::parse_class_decl(ast *pAst) {
                 break;
             default: {
                 stringstream err;
-                err << ": unknown ast type: " << trunk->gettype();
-                errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
+                err << ": unknown ast type: " << pAst->gettype();
+                errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
                 break;
             }
         }
