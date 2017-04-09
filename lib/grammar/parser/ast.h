@@ -7,6 +7,7 @@
 
 #include <list>
 #include "tokenizer/tokenentity.h"
+#include "../../util/List2.h"
 
 enum ast_types
 {
@@ -55,6 +56,14 @@ enum ast_types
     ast_modulename,
     ast_literal,
 
+    /**
+     * Encapsulated ast's to make processing expressions easier
+     */
+    ast_literal_e,
+    ast_utype_class_e,
+    ast_refrence_id_e,
+    ast_dot_not_e,
+
     ast_none
 };
 
@@ -70,9 +79,14 @@ public:
             numEntities(0),
             numAsts(0)
     {
-        sub_asts = new list<ast>();
-        entities = new list<token_entity>();
+        sub_asts = new List<ast>();
+        entities = new List<token_entity>();
+        sub_asts->init();
+        entities->init();
     }
+
+    void encapsulate(ast_types at);
+    void unencapsulate();
 
     ast_types gettype();
     ast* getparent();
@@ -100,8 +114,8 @@ public:
 private:
     ast_types type;
     ast *parent;
-    list<ast> *sub_asts;
-    list<token_entity> *entities;
+    List<ast> *sub_asts;
+    List<token_entity> *entities;
 
 };
 

@@ -13,6 +13,12 @@
 
 class ClassObject;
 
+enum field_type {
+    field_class,
+    field_native,
+    field_unresolved,
+};
+
 class Field {
 public:
     Field(NativeField nf, uint64_t uid, string name, ClassObject* parent, list<AccessModifier>* modifiers,
@@ -94,7 +100,12 @@ public:
         modifiers = NULL;
     }
 
-    bool refrence, pointer;
+    bool isField() {
+        return nf != fnof || nf >= fdynamic;
+    }
+
+    bool refrence, pointer, array;
+    field_type type;
     RuntimeNote note;
     NativeField nf;
     ClassObject* klass;

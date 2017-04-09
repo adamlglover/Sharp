@@ -1,9 +1,14 @@
 mod application;
 
-class Main {
+class Base {
+
+}
+
+class Main base Base {
     private var x = ++b;
 
     public static fn main(string[] args) : var {
-
+        base->foo();
+        Base->foo();
     }
 }

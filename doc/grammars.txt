@@ -109,10 +109,10 @@ A value consists of an <expression>
 [.] <refrence-identifier> <value-list> [expression]
 
 <primary-expr>:
-<literal>
-    | [.] <uType> '.' class
-    | <refrence-identifier>
-    |  <dot-notation-call-expr>
+<literal>                       // ast_literal_e
+    | [.] <uType> '.' class     // ast_utype_class_e
+    | <refrence-identifier>     // ast_refrence_id_e
+    |  <dot-notation-call-expr> // ast_dot_not_e
 
 <expression>:
 <primary-expr>
@@ -120,6 +120,7 @@ A value consists of an <expression>
     | 'self' '->' <expression>
     | 'base' '->' <expression>
     | null
+    | expression '->' expression // TODO: add
     | '.' class
     | new uType [([<value-list>] | [VectorArray>])]
     | expression '[' expression ']' [expression]

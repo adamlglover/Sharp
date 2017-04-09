@@ -34,7 +34,7 @@ long ast::getentitycount()
 token_entity ast::getentity(long at)
 {
     if(numEntities == 0) return token_entity();
-    return *std::next(entities->begin(), at);
+    return entities->get(at);
 }
 
 void ast::add_entity(token_entity entity)
@@ -50,13 +50,13 @@ void ast::add_ast(ast _ast)
 }
 
 void ast::free() {
+    this->entities->free();
     delete (this->entities); this->entities = NULL;
 
     ast* pAst;
     for(int64_t i = 0; i < this->sub_asts->size(); i++)
     {
-        pAst = &(*std::next(this->sub_asts->begin(),
-                     i));
+        pAst = &this->sub_asts->get(i);
         pAst->free();
     }
 
@@ -64,7 +64,7 @@ void ast::free() {
     numEntities = 0;
     this->type = ast_none;
     this->parent = NULL;
-    this->sub_asts->clear();
+    this->sub_asts->free();
     delete (this->sub_asts); this->sub_asts = NULL;
 }
 
@@ -72,18 +72,16 @@ void ast::freesubs() {
     ast* pAst;
     for(int64_t i = 0; i < this->sub_asts->size(); i++)
     {
-        pAst = &(*std::next(this->sub_asts->begin(),
-                            i));
+        pAst = &this->sub_asts->get(i);
         pAst->free();
     }
 
     numAsts = 0;
-    this->sub_asts->clear();
+    this->sub_asts->free();
 }
 
 void ast::freelastsub() {
-    ast* pAst = &(*std::next(this->sub_asts->begin(),
-                             this->sub_asts->size()-1));
+    ast* pAst = &this->sub_asts->get(this->sub_asts->size()-1);
     pAst->free();
     numAsts--;
     this->sub_asts->pop_back();
@@ -91,7 +89,7 @@ void ast::freelastsub() {
 
 void ast::freeentities() {
     numEntities = 0;
-    this->entities->clear();
+    this->entities->free();
 }
 
 void ast::freelastentity() {
@@ -109,7 +107,9 @@ bool ast::hassubast(ast_types at) {
 
 bool ast::hasentity(token_type t) {
 
-    for(token_entity &e : *entities) {
+    token_entity e;
+    for(unsigned int i = 0; i < entities->size(); i++) {
+        e = entities->at(i);
         if(e.gettokentype() == t)
             return true;
     }
@@ -117,15 +117,19 @@ bool ast::hasentity(token_type t) {
 }
 
 ast *ast::getsubast(ast_types at) {
-    for(ast &pAst : *sub_asts) {
-        if(pAst.gettype() == at)
-            return &pAst;
+    ast* pAst;
+    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+        pAst = &sub_asts->get(i);
+        if(pAst->gettype() == at)
+            return pAst;
     }
     return NULL;
 }
 
 token_entity ast::getentity(token_type t) {
-    for(token_entity &e : *entities) {
+    token_entity e;
+    for(unsigned int i = 0; i < entities->size(); i++) {
+        e = entities->at(i);
         if(e.gettokentype() == t)
             return e;
     }
@@ -136,11 +140,62 @@ ast *ast::getsubast_after(ast_types at) {
     bool found = false;
     for(unsigned int i = 0; i < sub_asts->size(); i++) {
         if(found)
-            return &element_at(*sub_asts, i);
-        if(element_at(*sub_asts, i).gettype() == at) {
+            return &sub_asts->get(i);
+        if(sub_asts->get(i).gettype() == at) {
             found = true;
         }
     }
     return NULL;
+}
+
+// TODO: call this method for expressions
+void ast::encapsulate(ast_types at) {
+    unencapsulate();
+
+    add_ast(ast(this, at, this->line, this->col));
+    ast* encap = getsubast(getsubastcount()-1);
+
+    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+        if(sub_asts->get(i).type != encap->type)
+            encap->add_ast(sub_asts->get(i));
+    }
+
+    for(unsigned int i = 0; i < entities->size(); i++) {
+            encap->add_entity(entities->get(i));
+    }
+    numAsts = 1;
+    numEntities = 0;
+    this->entities->free();
+    delete (this->entities); this->entities = NULL;
+
+    readjust:
+        for(unsigned int i = 0; i < sub_asts->size(); i++) {
+            if(sub_asts->get(i).type != encap->type) {
+                sub_asts->remove(i);
+                goto readjust;
+            }
+        }
+}
+
+void ast::unencapsulate() {
+    bool unencap = false;
+    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+        if(sub_asts->get(i).type >= ast_literal_e && sub_asts->get(i).type < ast_none)
+            unencap = true;
+    }
+
+    if(unencap) {
+        ast* encap = getsubast(0);
+
+        for(unsigned int i = 0; i < encap->sub_asts->size(); i++) {
+                add_ast(encap->sub_asts->get(i));
+        }
+
+        for(unsigned int i = 0; i < encap->entities->size(); i++) {
+            add_entity(encap->entities->get(i));
+        }
+        encap->free();
+        sub_asts->remove(0); // remove the encap
+    }
 }
 

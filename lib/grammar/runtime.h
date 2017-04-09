@@ -52,7 +52,7 @@ class ResolvedReference {
 public:
     ResolvedReference()
             :
-            refrenceType(NOTRESOLVED),
+            type(NOTRESOLVED),
             field(NULL),
             method(NULL),
             klass(NULL),
@@ -96,7 +96,7 @@ public:
     string refrenceName;
     bool array;
     mem_access_flag mflag;
-    RefrenceType refrenceType;
+    RefrenceType type;
     NativeField nf;
     ClassObject* klass;
     Field* field;
@@ -106,13 +106,12 @@ public:
 
 enum expression_type {
     expression_var=1,
-    expression_vararray=2,
     expression_class=3,
-    expression_classarray=4,
     expression_dynamicclass=5,
-    expression_dynamicclass_array=6,
     expression_expression=7,
     expression_string=8,
+    expression_native=9,
+    expression_field=10,
     expression_unknown=0x900f
 };
 
@@ -181,6 +180,87 @@ struct context {
     }
 };
 
+enum scope_type {
+    scope_global,
+    scope_class,
+    scope_instance_block,
+    scope_static_block
+};
+
+struct Scope {
+    Scope()
+    :
+            type(scope_global),
+            klass(NULL)
+    {
+        locals.init();
+    }
+
+    Scope(scope_type type, ClassObject* klass)
+            :
+            type(type),
+            klass(klass)
+    {
+        locals.init();
+    }
+
+    scope_type type;
+    ClassObject* klass;
+    List<Field*> locals;
+};
+
+class ref_ptr {
+public:
+    ref_ptr() {
+        class_heiarchy = new List<string>();
+        class_heiarchy->init();
+        module = "";
+        refname = "";
+    }
+
+    void operator=(ref_ptr ptr) {
+        this->module = ptr.module;
+        this->refname = ptr.refname;
+
+        delete (class_heiarchy);
+        this->class_heiarchy = ptr.class_heiarchy;
+        ptr.class_heiarchy = NULL;
+    }
+
+    void free() {
+        if(class_heiarchy != NULL) {
+            class_heiarchy->free();
+            delete (class_heiarchy);
+        }
+        class_heiarchy = NULL;
+    }
+
+    void print() {
+        // dev code
+        cout << "refrence pointer -----" << endl;
+        cout << "id: " << refname << endl;
+        cout << "mod: " << module << endl;
+        cout << "class: ";
+        for(int i = 0; i < class_heiarchy->size(); i++)
+            cout << class_heiarchy->at(i) << ".";
+        cout << endl;
+    }
+
+    string module;
+    List<string>* class_heiarchy;
+    string refname;
+
+    string toString() {
+        stringstream ss;
+        if(module != "")
+            ss << module << "#";
+        for(int i = 0; i < class_heiarchy->size(); i++)
+            ss << class_heiarchy->at(i) << ".";
+        ss << refname << endl;
+        return ss.str();
+    }
+};
+
 #define init_constructor_postfix "()<init>"
 
 class runtime
@@ -212,6 +292,8 @@ public:
         assembler = new m64Assembler();
 
         contexts = new list<context>();
+        scope_map = new List<Scope>();
+        scope_map->init();
         interpret();
     }
 
@@ -242,6 +324,7 @@ private:
     list<keypair<string, std::list<string>>>*  import_map;
     List<string> string_map;
     list<context>* contexts;
+    List<Scope>* scope_map;
     m64Assembler* assembler;
     int64_t ctp;
     uint64_t uid;
@@ -402,6 +485,30 @@ private:
     void pre_incdec_expression(Expression &expression, ast *pAst);
 
     void parse_class_cast(ResolvedReference &reference, Expression &expression, ast *pAst);
+
+    Scope *current_scope();
+
+    Scope* add_scope(Scope scope);
+
+    void remove_scope();
+
+    Expression parse_utype_expression(ast *pAst);
+
+    Expression resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst);
+
+    bool parse_block_utype(ref_ptr& ptr, Expression& expression, ast* pAst);
+
+    bool parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst);
+
+    bool parse_global_utype(ref_ptr &ptr, Expression &expression, ast* pAst);
+
+    void resolveAllFields();
+
+    void resolveClassDecl(ast *pAst);
+
+    void resolveVarDecl(ast *pAst);
+
+    Expression parsePrimaryExpression(ast *pAst);
 };
 
 #define progname "bootstrap"
@@ -493,56 +600,5 @@ inline bool element_has(list<T>& l, T search) {
     }
     return false;
 }
-
-class ref_ptr {
-public:
-    ref_ptr() {
-        class_heiarchy = new List<string>();
-        class_heiarchy->init();
-        module = "";
-        refname = "";
-    }
-
-    void operator=(ref_ptr ptr) {
-        this->module = ptr.module;
-        this->refname = ptr.refname;
-
-        delete (class_heiarchy);
-        this->class_heiarchy = ptr.class_heiarchy;
-        ptr.class_heiarchy = NULL;
-    }
-
-    void free() {
-        if(class_heiarchy != NULL) {
-            class_heiarchy->free();
-            delete (class_heiarchy);
-        }
-        class_heiarchy = NULL;
-    }
-
-    void print() {
-        // dev code
-        cout << "refrence pointer -----" << endl;
-        cout << "id: " << refname << endl;
-        cout << "mod: " << module << endl;
-        cout << "class: ";
-        for(int i = 0; i < class_heiarchy->size(); i++)
-            cout << class_heiarchy->at(i) << ".";
-        cout << endl;
-    }
-
-    string module;
-    List<string>* class_heiarchy;
-    string refname;
-
-    string toString() {
-        stringstream ss;
-        ss << module << "#";
-        for(int i = 0; i < class_heiarchy->size(); i++)
-            ss << class_heiarchy->at(i) << ".";
-        ss << refname << endl;
-        return ss.str();
-    }
-};
 
 #endif //SHARP_RUNTIME_H

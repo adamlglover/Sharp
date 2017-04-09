@@ -12,6 +12,7 @@
 template <class T>
 class List {
 public:
+
     void init(){
         _Data=NULL;
         len=0;
@@ -105,6 +106,10 @@ public:
     void copy(List<int64_t> list) {
         free();
 
+    }
+
+    void pop_back() {
+        __shrink();
     }
 
 private:

@@ -20,19 +20,15 @@ public:
     {
     }
 
-    Param(Field field)
+    Param(Field* field)
     {
-        this->field = new Field();
-        *this->field = field;
+        this->field = field;
     }
 
     bool match(Param& param);
     static bool match(list<Param>& p1, list<Param>& p2);
     void free() {
-        if(field == NULL) return;
-
-        field->free();
-        delete (field); field = NULL;
+        field = NULL;
     }
 
 

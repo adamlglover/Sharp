@@ -483,7 +483,7 @@ void parser::parse_variabledecl(ast *pAst) {
         partialdecl++;
         expect(COMMA, "`,`");
 
-        parse_variabledecl(pAst->getparent()->gettype() == ast_var_decl ? pAst->getparent() : pAst);
+        parse_variabledecl(partialdecl <= 1 ? pAst : pAst->getparent());
     } else if(partialdecl == 0)
         expect(SEMICOLON, "`;`");
 }
