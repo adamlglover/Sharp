@@ -1,14 +1,12 @@
 mod application;
 
-class Base {
+import io;
 
-}
+class Main {
 
-class Main base Base {
-    private var x = ++b;
+    var x = 3_888_888_888_888_888.99989999999999999999999999999999999999999_999_555;
 
     public static fn main(string[] args) : var {
-        base->foo();
-        Base->foo();
+        Console.write("Hello, World!");
     }
 }

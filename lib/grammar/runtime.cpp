@@ -185,17 +185,17 @@ void runtime::parse_class_decl(ast *pAst) {
 }
 
 void runtime::parse_var_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=0;
 
     parse_access_decl(pAst, modifiers, startpos);
 
     string name =  pAst->getentity(startpos).gettoken();
-    Field* field = Context->super->getField(name);
+    Field* field = scope->klass->getField(name);
 
     if(pAst->hassubast(ast_value)) {
-        Expression expression ;//= parse_value(pAst->getsubast(ast_value));
+        Expression expression = parse_value(pAst->getsubast(ast_value));
         // TODO: do something based on the assign expression
     }
 
@@ -220,11 +220,7 @@ void runtime::parse_import_decl(ast *pAst) {
 }
 
 Expression runtime::parse_value(ast *pAst) {
-    context* Context = get_context();
-    add_context(context(true, Context));
-    Expression e = parse_expression(pAst->getsubast(ast_expression));
-    remove_context();
-    return e;
+    return parse_expression(pAst->getsubast(ast_expression));
 }
 
 Expression runtime::parse_literal(ast *pAst) {
@@ -263,7 +259,7 @@ Expression runtime::parse_literal(ast *pAst) {
 
 Expression runtime::parse_primary_expression(ast *pAst) {
     Expression expression;
-    context* Context = get_context();
+    Scope* scope = current_scope();
     int64_t i64;
     ast* a = pAst->getsubast(0);
 
@@ -272,11 +268,6 @@ Expression runtime::parse_primary_expression(ast *pAst) {
     }
 
     if(pAst->hasentity(DOT)) {
-        if(!Context->expression_head) {
-            errors->newerror(GENERIC, pAst->getentity(DOT), "unexpected token " + pAst->getentity(DOT).gettoken());
-        } else {
-            // TODO: write assembly to get next field in pointer
-        }
     }
 
     if(pAst->hassubast(ast_utype)) {
@@ -432,8 +423,6 @@ bool runtime::parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst)
                 if(!field->isField()) {
                     goto _parse_class; // maybe a class
                 }
-                Class
-                for(int )
                 expression.type = expression_field;
                 expression.utype.type = ResolvedReference::FIELD;
                 expression.utype.field = scope->klass->getField(ptr.refname);
@@ -441,6 +430,7 @@ bool runtime::parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst)
                 return true;
             } else {
                 _parse_class:
+                int i = 0;
                     // not a field, maybe a class
             }
         }
@@ -498,16 +488,16 @@ Expression runtime::resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst) {
                     // do nothing
                 }
                 break;
-            case scope_block:
-                if(!parse_block_utype(ptr, expression, pAst)) {
-                    if(parse_class_utype(ptr, expression, pAst)){
-                        // do nothing
-                    }
-                    if(parse_global_utype(ptr, expression, pAst)) {
-                        // do nothing
-                    }
-                } // implementz
-                break;
+//            case scope_block:
+//                if(!parse_block_utype(ptr, expression, pAst)) {
+//                    if(parse_class_utype(ptr, expression, pAst)){
+//                        // do nothing
+//                    }
+//                    if(parse_global_utype(ptr, expression, pAst)) {
+//                        // do nothing
+//                    }
+//                } // implementz
+//                break;
             case scope_global:
                 parse_global_utype(ptr, expression, pAst);
                 break;
@@ -516,68 +506,180 @@ Expression runtime::resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst) {
     }
 }
 
-Expression runtime::parse_utype_expression(ast *pAst) {
-    Scope* scope = current_scope();
-    ref_ptr pointer = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+//Expression runtime::parse_utype_expression(ast *pAst) {
+//    Scope* scope = current_scope();
+//    ref_ptr pointer = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+//    Expression expression;
+//
+//
+//    if(pointer.module == "" && pointer.class_heiarchy->size() == 0 && parser::isnative_type(pointer.refname)) {
+//        expression.utype.nf = token_tonativefield(pointer.refname);
+//        expression.utype.type = ResolvedReference::NATIVE;
+//        expression.utype.refrenceName = pointer.refname;
+//        expression.type = expression_native;
+//
+//        if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(RIGHTBRACE)) {
+//            expression.utype.array = true;
+//        }
+//
+//        if(pAst->hassubast(ast_mem_access_flag)) {
+//            expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
+//        }
+//        pointer.free();
+//        return expression;
+//    }
+//
+//    expression = resolve_refrence_ptr_expression(pointer, pAst);
+//
+//    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
+//    ResolvedReference refrence;
+//
+//    if(ptr.module == "" && parser::isnative_type(ptr.refname)) {
+//        refrence.nf = token_tonativefield(ptr.refname);
+//        refrence.type = ResolvedReference::NATIVE;
+//        refrence.refrenceName = ptr.toString();
+//        ptr.free();
+//        return refrence;
+//    }
+//
+//    refrence = resolve_refrence_ptr(ptr);
+//    refrence.refrenceName = ptr.toString();
+//
+//    if(refrence.type == ResolvedReference::NOTRESOLVED) {
+//        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
+//                                                                                 (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
+//    }
+//
+//    ptr.free();
+//    return refrence;
+//}
+
+void runtime::parseCharLiteral(token_entity token, Expression& expression) {
+    int64_t  i64;
+    if(token.gettoken().size() > 1) {
+        switch(token.gettoken().at(1)) {
+            case 'n':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\n'), ebx);
+                break;
+            case 't':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\t'), ebx);
+                break;
+            case 'b':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\b'), ebx);
+                break;
+            case 'v':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\v'), ebx);
+                break;
+            case 'r':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\r'), ebx);
+                break;
+            case 'f':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\f'), ebx);
+                break;
+            case '\\':
+                expression.code.push_i64(SET_Di(i64, MOVI, '\\'), ebx);
+                break;
+            default:
+                expression.code.push_i64(SET_Di(i64, MOVI, token.gettoken().at(1)), ebx);
+                break;
+        }
+    } else {
+        expression.code.push_i64(SET_Di(i64, MOVI, token.gettoken().at(0)), ebx);
+    }
+}
+
+void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
+    int64_t i64;
+    double var;
+    string int_string = invalidate_underscores(token.gettoken());
+
+    if(all_integers(int_string)) {
+        var = std::strtod (int_string.c_str(), NULL);
+        if(var > DA_MAX || var < DA_MIN) {
+            stringstream ss;
+            ss << "integral number too large: " + int_string;
+            errors->newerror(GENERIC, token.getline(), token.getcolumn(), ss.str());
+        }
+        expression.code.push_i64(SET_Di(i64, MOVI, var), ebx);
+    }else {
+        var = std::strtod (int_string.c_str(), NULL);
+        if((int64_t )var > DA_MAX || get_low_bytes(var) > DA_MAX
+           || (int64_t )var < DA_MIN) {
+            stringstream ss;
+            ss << "integral number too large: " + int_string;
+            errors->newerror(GENERIC, token.getline(), token.getcolumn(), ss.str());
+        }
+
+        expression.code.push_i64(SET_Di(i64, MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
+    }
+}
+
+void runtime::parseHexLiteral(token_entity token, Expression& expression) {
+    int64_t i64;
+    double var;
+    string hex_string = invalidate_underscores(token.gettoken());
+
+    var = std::strtod (hex_string.c_str(), NULL);
+    if(var > DA_MAX || var < DA_MIN) {
+        stringstream ss;
+        ss << "integral number too large: " + hex_string;
+        errors->newerror(GENERIC, token.getline(), token.getcolumn(), ss.str());
+    }
+    expression.code.push_i64(SET_Di(i64, MOVI, var), ebx);
+}
+
+Expression runtime::parseLiteral(ast* pAst) {
     Expression expression;
+    expression.type = expression_var;
 
+    switch(pAst->getentity(0).getid()) {
+        case CHAR_LITERAL:
+            parseCharLiteral(pAst->getentity(0), expression);
+            break;
+        case INTEGER_LITERAL:
+            parseIntegerLiteral(pAst->getentity(0), expression);
+            break;
+        case HEX_LITERAL:
+            parseHexLiteral(pAst->getentity(0), expression);
+            break;
+        case STRING_LITERAL:
+            parseStringLiteral(pAst->getentity(0), expression);
+            break;
+        default:
+            if(pAst->getentity(0).gettoken() == "true") {
 
-    if(pointer.module == "" && pointer.class_heiarchy->size() == 0 && parser::isnative_type(pointer.refname)) {
-        expression.utype.nf = token_tonativefield(pointer.refname);
-        expression.utype.type = ResolvedReference::NATIVE;
-        expression.utype.refrenceName = pointer.refname;
-        expression.type = expression_native;
+            } else if(pAst->getentity(0).gettoken() == "true") {
 
-        if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(RIGHTBRACE)) {
-            expression.utype.array = true;
-        }
-
-        if(pAst->hassubast(ast_mem_access_flag)) {
-            expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-        }
-        pointer.free();
-        return expression;
+            }
+            break;
     }
-
-    expression = resolve_refrence_ptr_expression(pointer, pAst);
-
-    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
-    ResolvedReference refrence;
-
-    if(ptr.module == "" && parser::isnative_type(ptr.refname)) {
-        refrence.nf = token_tonativefield(ptr.refname);
-        refrence.type = ResolvedReference::NATIVE;
-        refrence.refrenceName = ptr.toString();
-        ptr.free();
-        return refrence;
-    }
-
-    refrence = resolve_refrence_ptr(ptr);
-    refrence.refrenceName = ptr.toString();
-
-    if(refrence.type == ResolvedReference::NOTRESOLVED) {
-        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
-                                                                                 (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
-    }
-
-    ptr.free();
-    return refrence;
+    return expression;
 }
 
 Expression runtime::parsePrimaryExpression(ast* pAst) {
     Scope* scope = current_scope();
     pAst = pAst->getsubast(0);
+    int i = 0;
 
     switch(pAst->gettype()) {
-
+        case ast_literal_e:
+            return parseLiteral(pAst->getsubast(ast_literal));
+            break;
+        case ast_utype_class_e:
+            break;
+        case ast_dot_not_e:
+            break;
     }
+    return Expression();
 }
 
+int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
 Expression runtime::parse_expression(ast *pAst) {
+    ast* encap = pAst->getsubast(0);
 
-    switch(pAst->gettype()) {
+    switch(encap->gettype()) {
         case ast_primary_expr:
-            return parsePrimaryExpression(pAst);
+            return parsePrimaryExpression(encap);
             break;
         default:
             stringstream err;
@@ -659,9 +761,6 @@ Expression runtime::parse_expression(ast *pAst) {
 
     }
     */
-
-    remove_context();
-    return expression;
 }
 
 ref_ptr runtime::parse_type_identifier(ast *pAst) {
@@ -944,7 +1043,7 @@ bool runtime::partial_parse() {
         list<string> imports;
 
         ast* trunk;
-        add_context(context());
+        add_scope(Scope(scope_global, NULL));
         for(int i = 0; i < p->treesize(); i++) {
             trunk = p->ast_at(i);
 
@@ -993,7 +1092,7 @@ bool runtime::partial_parse() {
 
         errors->free();
         delete (errors); this->errors = NULL;
-        remove_context();
+        remove_scope();
     }
 
     return !semtekerrors;
@@ -1739,7 +1838,7 @@ void runtime::remove_context() {
 }
 
 void runtime::partial_parse_class_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     ast* astBlock = pAst->getsubast(pAst->getsubastcount()-1);
     list<AccessModifier> modifiers;
     ClassObject* klass;
@@ -1753,13 +1852,13 @@ void runtime::partial_parse_class_decl(ast *pAst) {
 
     string className =  pAst->getentity(startpos).gettoken();
 
-    if(Context->super == NULL)
+    if(scope->klass == NULL)
         klass = addGlobalClassObject(className, modifiers, pAst);
     else
-        klass = addChildClassObject(className, modifiers, pAst, Context->super);
+        klass = addChildClassObject(className, modifiers, pAst, scope->klass);
 
 
-    add_context(context(klass));
+    add_scope(Scope(scope_class, klass));
      for(long i = 0; i < astBlock->getsubastcount(); i++) {
         pAst = astBlock->getsubast(i);
 
@@ -1789,11 +1888,11 @@ void runtime::partial_parse_class_decl(ast *pAst) {
                  break;
          }
     }
-    remove_context();
+    remove_scope();
 }
 
 void runtime::partial_parse_macros_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=1;
 
@@ -1811,15 +1910,15 @@ void runtime::partial_parse_macros_decl(ast *pAst) {
                                    pAst->line, pAst->col);
     Method macro = Method(name, current_module, NULL, params, modifiers, NULL, note);
 
-    if(Context->super == NULL) {
+    if(scope->klass == NULL) {
         addGlobalMacros(macro, pAst);
     } else {
-        addChildMacros(macro, pAst, Context->super);
+        addChildMacros(macro, pAst, scope->klass);
     }
 }
 
 void runtime::partial_parse_constructor_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=0;
 
@@ -1833,15 +1932,15 @@ void runtime::partial_parse_constructor_decl(ast *pAst) {
     list<Param> params;
     string name = pAst->getentity(startpos).gettoken();
 
-    if(name == Context->super->getName()) {
+    if(name == scope->klass->getName()) {
         params = partial_parse_utype_arglist(pAst->getsubast(0));
         RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                        pAst->line, pAst->col);
 
-        if(!Context->super->addConstructor(Method(name, current_module, Context->super, params, modifiers, NULL, note))) {
+        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");
-            printnote(Context->super->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
+            printnote(scope->klass->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
         }
     } else
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
@@ -1849,7 +1948,7 @@ void runtime::partial_parse_constructor_decl(ast *pAst) {
 }
 
 void runtime::partial_parse_operator_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=2;
 
@@ -1865,15 +1964,15 @@ void runtime::partial_parse_operator_decl(ast *pAst) {
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!Context->super->addOperatorOverload(OperatorOverload(note, Context->super, params, modifiers, NULL, string_toop(op)))) {
+    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modifiers, NULL, string_toop(op)))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
-        printnote(Context->super->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
+        printnote(scope->klass->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
     }
 }
 
 void runtime::partial_parse_fn_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=1;
 
@@ -1889,15 +1988,15 @@ void runtime::partial_parse_fn_decl(ast *pAst) {
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!Context->super->addFunction(Method(name, current_module, Context->super, params, modifiers, NULL, note))) {
+    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
-        printnote(Context->super->getFunction(name, params)->note, "function `" + name + "` previously defined here");
+        printnote(scope->klass->getFunction(name, params)->note, "function `" + name + "` previously defined here");
     }
 }
 
 void runtime::partial_parse_var_decl(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=0;
 
@@ -1912,10 +2011,10 @@ void runtime::partial_parse_var_decl(ast *pAst) {
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
-    if(!Context->super->addField(Field(NULL, uid++, name, Context->super, &modifiers, note))) {
+    if(!scope->klass->addField(Field(NULL, uid++, name, scope->klass, &modifiers, note))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "field `" + name + "` is already defined in the scope");
-        printnote(Context->super->getField(name)->note, "field `" + name + "` previously defined here");
+        printnote(scope->klass->getField(name)->note, "field `" + name + "` previously defined here");
     }
 }
 
@@ -2068,7 +2167,7 @@ void runtime::parse_var_access_modifiers(std::list <AccessModifier> &modifiers, 
 }
 
 list <Param> runtime::partial_parse_utype_arglist(ast *pAst) {
-    context* Context = get_context();
+    Scope* scope = current_scope();
     list<Param> params;
 
     if(pAst->gettype() != ast_utype_arg_list || pAst->getsubastcount() == 0)
@@ -2082,8 +2181,7 @@ list <Param> runtime::partial_parse_utype_arglist(ast *pAst) {
             RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                         pAst->line, pAst->col);
 
-            params.push_back(Param(Field(
-                    NULL, uid++,name, Context->super, NULL, note)));
+            params.push_back(Param(NULL));
         } else {
             this->errors->newerror(GENERIC, pAst->line, pAst->col, "function parameter with name '" + name + "' already exists.");
         }
@@ -2419,24 +2517,24 @@ void Expression::utype_refrence_toexpression(ResolvedReference ref) {
         this->type = expression_unknown;
     } else {
         switch(ref.type) {
-            case ResolvedReference::RefrenceType::FIELD:
-                this->type = ref.array ? expression_classarray : expression_class;
-                break;
-            case ResolvedReference::RefrenceType::CLASS:
-                this->type = ref.array ? expression_classarray : expression_class;
-                break;
-            case ResolvedReference::RefrenceType::METHOD:
-                break;
-            case ResolvedReference::RefrenceType::MACROS:
-                break;
-            case ResolvedReference::RefrenceType::OO:
-                break;
-            case ResolvedReference::RefrenceType::NATIVE:
-                if(ref.nf == fdynamic)
-                    this->type = ref.array ? expression_dynamicclass_array : expression_dynamicclass;
-                else
-                this->type = ref.array ? expression_vararray : expression_var;
-                break;
+//            case ResolvedReference::RefrenceType::FIELD:
+//                this->type = ref.array ? expression_classarray : expression_class;
+//                break;
+//            case ResolvedReference::RefrenceType::CLASS:
+//                this->type = ref.array ? expression_classarray : expression_class;
+//                break;
+//            case ResolvedReference::RefrenceType::METHOD:
+//                break;
+//            case ResolvedReference::RefrenceType::MACROS:
+//                break;
+//            case ResolvedReference::RefrenceType::OO:
+//                break;
+//            case ResolvedReference::RefrenceType::NATIVE:
+//                if(ref.nf == fdynamic)
+//                    this->type = ref.array ? expression_dynamicclass_array : expression_dynamicclass;
+//                else
+//                this->type = ref.array ? expression_vararray : expression_var;
+//                break;
             default:
                 break;
         }

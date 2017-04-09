@@ -61,7 +61,6 @@ enum ast_types
      */
     ast_literal_e,
     ast_utype_class_e,
-    ast_refrence_id_e,
     ast_dot_not_e,
 
     ast_none
@@ -76,6 +75,21 @@ public:
             parent(parent),
             line(line),
             col(col),
+            numEntities(0),
+            numAsts(0)
+    {
+        sub_asts = new List<ast>();
+        entities = new List<token_entity>();
+        sub_asts->init();
+        entities->init();
+    }
+
+    ast()
+            :
+            type(ast_none),
+            parent(NULL),
+            line(0),
+            col(0),
             numEntities(0),
             numAsts(0)
     {

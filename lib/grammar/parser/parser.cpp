@@ -558,10 +558,12 @@ bool parser::parse_utype(ast *pAst) {
 bool parser::parse_primaryexpr(ast *pAst) {
     pAst = get_ast(pAst, ast_primary_expr);
 
+
     errors->enablecheck_mode();
     if(parse_literal(pAst))
     {
         errors->fail();
+        pAst->encapsulate(ast_literal_e);
         return true;
     }
     errors->pass();
@@ -584,6 +586,7 @@ bool parser::parse_primaryexpr(ast *pAst) {
 
             this->dumpstate();
             errors->fail();
+            pAst->encapsulate(ast_utype_class_e);
             return true;
         }else
             pAst = this->rollback();
@@ -596,6 +599,7 @@ bool parser::parse_primaryexpr(ast *pAst) {
     if(parse_dot_notation_call_expr(pAst)) {
         this->dumpstate();
         errors->fail();
+        pAst->encapsulate(ast_dotnotation_call_expr);
         return true;
     } else {
         errors->pass();

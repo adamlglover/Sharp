@@ -509,10 +509,18 @@ private:
     void resolveVarDecl(ast *pAst);
 
     Expression parsePrimaryExpression(ast *pAst);
+
+    Expression parseLiteral(ast *pAst);
+
+    void parseCharLiteral(token_entity token, Expression& expression);
+
+    void parseIntegerLiteral(token_entity token, Expression &expression);
+
+    void parseHexLiteral(token_entity token, Expression &expression);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.17"
+#define progvers "0.1.22"
 
 struct options {
     /*

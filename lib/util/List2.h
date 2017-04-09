@@ -23,6 +23,11 @@ public:
         _Data[len-1]=data;
     }
 
+    void add(T data) {
+        __expand();
+        _Data[len-1]=data;
+    }
+
     void push_back() {
         __expand();
     }

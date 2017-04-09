@@ -23,7 +23,7 @@ long ast::getsubastcount()
 ast* ast::getsubast(long at)
 {
     if(numAsts == 0) return NULL;
-    return &(*std::next(sub_asts->begin(), at));
+    return &sub_asts->get(at);
 }
 
 long ast::getentitycount()
@@ -40,18 +40,20 @@ token_entity ast::getentity(long at)
 void ast::add_entity(token_entity entity)
 {
     numEntities++;
-    entities->push_back(entity);
+    entities->add(entity);
 }
 
 void ast::add_ast(ast _ast)
 {
     numAsts++;
-    sub_asts->push_back(_ast);
+    sub_asts->add(_ast);
 }
 
 void ast::free() {
-    this->entities->free();
-    delete (this->entities); this->entities = NULL;
+    if(this->entities != NULL) {
+        this->entities->free();
+        delete (this->entities); this->entities = NULL;
+    }
 
     ast* pAst;
     for(int64_t i = 0; i < this->sub_asts->size(); i++)
@@ -64,8 +66,10 @@ void ast::free() {
     numEntities = 0;
     this->type = ast_none;
     this->parent = NULL;
-    this->sub_asts->free();
-    delete (this->sub_asts); this->sub_asts = NULL;
+    if(this->sub_asts != NULL) {
+        this->sub_asts->free();
+        delete (this->sub_asts); this->sub_asts = NULL;
+    }
 }
 
 void ast::freesubs() {
@@ -98,8 +102,10 @@ void ast::freelastentity() {
 }
 
 bool ast::hassubast(ast_types at) {
-    for(ast &pAst : *sub_asts) {
-        if(pAst.gettype() == at)
+    ast* pAst;
+    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+        pAst = &sub_asts->get(i);
+        if(pAst->gettype() == at)
             return true;
     }
     return false;
@@ -156,7 +162,7 @@ void ast::encapsulate(ast_types at) {
     ast* encap = getsubast(getsubastcount()-1);
 
     for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        if(sub_asts->get(i).type != encap->type)
+        if(sub_asts->get(i).type != at)
             encap->add_ast(sub_asts->get(i));
     }
 
@@ -166,11 +172,10 @@ void ast::encapsulate(ast_types at) {
     numAsts = 1;
     numEntities = 0;
     this->entities->free();
-    delete (this->entities); this->entities = NULL;
 
     readjust:
         for(unsigned int i = 0; i < sub_asts->size(); i++) {
-            if(sub_asts->get(i).type != encap->type) {
+            if(sub_asts->get(i).type != at) {
                 sub_asts->remove(i);
                 goto readjust;
             }
