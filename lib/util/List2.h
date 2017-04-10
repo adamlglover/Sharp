@@ -117,6 +117,28 @@ public:
         __shrink();
     }
 
+    void addif(T _V) {
+        for(unsigned int i = 0; i < len; i++) {
+            if(_V == _Data[i])
+                return;
+        }
+        push_back(_V);
+    }
+
+    void removefirst(T _V) {
+        unsigned int iter = -1;
+        for(unsigned int i = 0; i < len; i++) {
+            if(_V == _Data[i]){
+                iter = i;
+                break;
+            }
+        }
+
+        if(iter != -1) {
+            remove(iter);
+        }
+    }
+
 private:
     CXX11_INLINE
     void __expand() {

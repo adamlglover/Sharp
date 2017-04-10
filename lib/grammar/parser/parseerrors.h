@@ -36,6 +36,7 @@ enum p_errors
     REDUNDANT_IMPORT = 21,
     UNEXPECTED_TOKEN = 22,
     INVALID_ACCESS = 23,
+    SYMBOL_ALREADY_DEFINED = 24,
 
     NO_ERR = 999
 };

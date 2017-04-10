@@ -12,16 +12,16 @@
 using namespace std;
 
 options c_options;
-size_t succeeded, failed;
 _operator string_toop(string op);
 
 unsigned int runtime::classUID = 0;
 
 void runtime::interpret() {
+
     if(partial_parse()) {
-        succeeded = 0; /* There were no errors to stop the files that succeeded */
 
         resolveAllFields();
+        resolveAllMethods();
         // TODO: then start from the beginning and work my way down with creating scopes and remove contex*
 
         for(parser* p : parsers) {
@@ -55,9 +55,12 @@ void runtime::interpret() {
             if(errors->_errs()){
                 errs+= errors->error_count();
                 uo_errs+= errors->uoerror_count();
-                failed++;
-            } else
-                succeeded++;
+                parse_map.key.addif(p->sourcefile);
+                parse_map.value.removefirst(p->sourcefile);
+            } else {
+                parse_map.value.addif(p->sourcefile);
+                parse_map.key.removefirst(p->sourcefile);
+            }
 
             remove_scope();
             errors->free();
@@ -259,112 +262,6 @@ Expression runtime::parse_literal(ast *pAst) {
     return expression;
 }
 
-Expression runtime::parse_primary_expression(ast *pAst) {
-    Expression expression;
-    Scope* scope = current_scope();
-    int64_t i64;
-    ast* a = pAst->getsubast(0);
-
-    if(pAst->hassubast(ast_literal)) {
-        return parse_literal(pAst->getsubast(ast_literal));
-    }
-
-    if(pAst->hasentity(DOT)) {
-    }
-
-    if(pAst->hassubast(ast_utype)) {
-        ResolvedReference utype = parse_utype(pAst->getsubast(ast_utype));
-        expression.utype_refrence_toexpression(utype);
-        expression.utype = utype;
-
-        if(pAst->getsubast(ast_utype)->hasentity(DOT)) {
-            expression.type = expression_var;
-            int64_t classid = 0;
-
-            if(utype.mflag.ptr) {
-                errors->newerror(REDUNDANT_TOKEN, pAst->getentity(DOT), " '*'");
-            } else if(utype.mflag.ref) {
-                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '&'");
-            } else if(utype.array) {
-                errors->newerror(REDUNDANT_TOKEN, pAst->getentity(DOT), " '[]'");
-            }
-
-            switch(utype.type) {
-                case ResolvedReference::FIELD:
-                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'class' instead of 'field'");
-                    break;
-                case ResolvedReference::CLASS:
-                    classid = utype.klass->getUID();
-                    expression.code.push_i64(SET_Ei(i64, _OPT)); // This tells the optimizer to omit this instruction and certain ones before it
-                    expression.code.push_i64(SET_Di(i64, MOVI, classid), ebx);
-                    break;
-                case ResolvedReference::METHOD:
-                    break;
-                case ResolvedReference::MACROS:
-                    break;
-                case ResolvedReference::OO:
-                    break;
-                case ResolvedReference::NATIVE:
-                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'class' instead of 'native type'");
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            if(utype.mflag.ptr) {
-                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '*'");
-            } else if(utype.mflag.ref) {
-                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '&'");
-            } else if(utype.array) {
-                errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), " '[]'");
-            }
-
-            switch(utype.type) {
-                case ResolvedReference::FIELD:
-                    expression.code.push_i64(SET_Di(i64, MOVX, ecx), cx);
-                    break;
-                case ResolvedReference::CLASS:
-                    errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getentity(DOT), "expected type of 'field' instead of 'class'");
-                    break;
-                case ResolvedReference::METHOD:
-                    break;
-                case ResolvedReference::MACROS:
-                    break;
-                case ResolvedReference::OO:
-                    break;
-                case ResolvedReference::NATIVE:
-                    errors->newerror(UNEXPECTED_TOKEN, pAst->getentity(DOT), ", expected type of 'field' instead of 'native type'");
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    if(pAst->hassubast(ast_dotnotation_call_expr)) {
-
-    }
-
-    return expression;
-}
-Expression runtime::parse_cast_expression(context *pContext, ast *pAst) {
-    Expression expression;
-
-    ResolvedReference utype = parse_utype(pAst->getsubast(ast_utype));
-    expression = parse_expression(pAst->getsubast(ast_expression));
-
-    if(utype.type == ResolvedReference::NATIVE) {
-        parse_native_cast(utype, expression, pAst->getsubast(ast_expression));
-        expression.type = expression_var;
-    } else if(utype.type == ResolvedReference::CLASS) {
-        parse_class_cast(utype, expression, pAst->getsubast(ast_expression));
-    } else {
-        errors->newerror(GENERIC, pAst->getsubast(ast_expression)->line,
-                         pAst->getsubast(ast_expression)->col, "expected class ");
-    }
-    return expression;
-}
-
 void runtime::parse_native_cast(ResolvedReference utype, Expression expression, ast *pAst) {
     int64_t i64;
     if(utype.nf >= fi8 && utype.nf <= fui64) {
@@ -441,22 +338,6 @@ bool runtime::parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst)
     return false;
 }
 
-bool runtime::parse_block_utype(ref_ptr& ptr, Expression& expression, ast* pAst) {
-    Scope* scope = current_scope();
-
-    for(unsigned int i = scope->locals.size()-1; i > 0; i--) {
-        if(scope->locals.at(i)->name == ptr.refname) {
-            expression.type = expression_field;
-            expression.utype.type = ResolvedReference::FIELD;
-            expression.utype.field = scope->locals.at(i);
-            expression.utype.refrenceName = ptr.refname;
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool runtime::parse_global_utype(ref_ptr& ptr, Expression& expression, ast* pAst) {
     Scope* scope = current_scope();
 
@@ -469,43 +350,6 @@ bool runtime::parse_global_utype(ref_ptr& ptr, Expression& expression, ast* pAst
     }
 
     return false;
-}
-
-Expression runtime::resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst) {
-    Scope* scope = current_scope();
-    Expression expression;
-
-    if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(LEFTBRACE)) {
-        expression.utype.array = true;
-    }
-
-    if(pAst->hassubast(ast_mem_access_flag)) {
-        expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-    }
-
-    if(ptr.class_heiarchy->size() == 0) {
-        switch(scope->type) {
-            case scope_class:
-                if(!parse_class_utype(ptr, expression, pAst)) {
-                    // do nothing
-                }
-                break;
-//            case scope_block:
-//                if(!parse_block_utype(ptr, expression, pAst)) {
-//                    if(parse_class_utype(ptr, expression, pAst)){
-//                        // do nothing
-//                    }
-//                    if(parse_global_utype(ptr, expression, pAst)) {
-//                        // do nothing
-//                    }
-//                } // implementz
-//                break;
-            case scope_global:
-                parse_global_utype(ptr, expression, pAst);
-                break;
-        }
-
-    }
 }
 
 //Expression runtime::parse_utype_expression(ast *pAst) {
@@ -748,14 +592,12 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
             // field?
             if((field = klass->getField(object_name)) != NULL) {
                 // is static?
-                if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
-                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is an instance variable");
-                }
-
                 if(!lastRefrence && field->pointer) {
-                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `field->`");
+                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `" + field->name + "->`?");
                 } else if(!lastRefrence && field->array) {
                     errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
+                } else if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is an instance variable");
                 }
 
 
@@ -978,28 +820,48 @@ Expression runtime::parseUtype(ast* pAst) {
 }
 
 Expression runtime::psrseUtypeClass(ast* pAst) {
-    Expression expression = parseUtype(pAst);
+    Expression expression = parseUtype(pAst->getsubast(ast_utype));
+
+    if(pAst->hasentity(DOT)) {
+        expression.dot = true;
+    }
 
     if(expression.type == expression_class) {
         // TODO: add asm to push class id
     } else {
-        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "expected class");
+        errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
+    return expression;
+}
+
+Expression runtime::parseDotNotationCall(ast* pAst) {
+    string method_name="";
+    Expression expression;
+
+    if(pAst->hassubast(ast_value_list)) {
+        //List<Param> = parse
+    } else {
+        expression = parseUtype(pAst->getsubast(ast_utype));
+    }
+
+    if(pAst->hasentity(DOT)) {
+        expression.dot = true;
+    }
+
     return expression;
 }
 
 Expression runtime::parsePrimaryExpression(ast* pAst) {
     Scope* scope = current_scope();
     pAst = pAst->getsubast(0);
-    int i = 0;
 
     switch(pAst->gettype()) {
         case ast_literal_e:
             return parseLiteral(pAst->getsubast(ast_literal));
         case ast_utype_class_e:
-            return psrseUtypeClass(pAst->getsubast(ast_utype));
+            return psrseUtypeClass(pAst);
         case ast_dot_not_e:
-            break;
+            return parseDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
     }
     return Expression();
 }
@@ -1185,28 +1047,27 @@ ResolvedReference runtime::parse_utype(ast *pAst) {
     ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
     ResolvedReference refrence;
 
-    if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(LEFTBRACE)) {
-        refrence.array = true;
-    }
-
-    if(pAst->hassubast(ast_mem_access_flag)) {
-        refrence.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-    }
 
     if(ptr.module == "" && parser::isnative_type(ptr.refname)) {
         refrence.nf = token_tonativefield(ptr.refname);
         refrence.type = ResolvedReference::NATIVE;
         refrence.refrenceName = ptr.toString();
-        ptr.free();
-        return refrence;
+    }else {
+        refrence = resolve_refrence_ptr(ptr);
+        refrence.refrenceName = ptr.toString();
+
+        if(refrence.type == ResolvedReference::NOTRESOLVED) {
+            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
+                                                                                     (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
+        }
     }
 
-    refrence = resolve_refrence_ptr(ptr);
-    refrence.refrenceName = ptr.toString();
+    if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(RIGHTBRACE)) {
+        refrence.array = true;
+    }
 
-    if(refrence.type == ResolvedReference::NOTRESOLVED) {
-        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
-                                                                   (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
+    if(pAst->hassubast(ast_mem_access_flag)) {
+        refrence.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
     }
 
     ptr.free();
@@ -1295,6 +1156,184 @@ void runtime::resolveVarDecl(ast* pAst) {
     field->array = utype.array;
 }
 
+Field runtime::fieldMapToField(string param_name, ResolvedReference utype) {
+    Field field;
+
+    field.modifiers = new list<AccessModifier>();
+    if(utype.type == ResolvedReference::FIELD) {
+        errors->newerror(COULD_NOT_RESOLVE, utype.field->note.getLine(), utype.field->note.getCol(), " `" + utype.field->name + "`");
+        field.type = field_unresolved;
+        field.note = utype.field->note;
+        *field.modifiers = *utype.field->modifiers;
+    } else if(utype.type == ResolvedReference::CLASS) {
+        field.type = field_class;
+        field.note = utype.klass->note;
+        field.klass = utype.klass;
+        field.modifiers->push_back(utype.klass->getAccessModifier());
+    } else {
+        field.type = field_unresolved;
+    }
+
+    field.fullName = param_name;
+    field.uid = uid++;
+    field.pointer = (bool)utype.mflag.ptr;
+    field.refrence = (bool)utype.mflag.ref;
+    field.name = param_name;
+    field.array = utype.array;
+
+    if(utype.type == ResolvedReference::FIELD)
+        return *utype.field;
+
+    return field;
+}
+
+keypair<string, ResolvedReference> runtime::parseUtypeArg(ast* pAst) {
+    keypair<string, ResolvedReference> utype_arg;
+    utype_arg.value = parseUtype(pAst->getsubast(ast_utype)).utype;
+    utype_arg.key = pAst->getentity(0).gettoken();
+
+    return utype_arg;
+}
+
+keypair<List<string>, List<ResolvedReference>> runtime::parseUtypeArgList(ast* pAst) {
+    keypair<List<string>, List<ResolvedReference>> utype_argmap;
+    keypair<string, ResolvedReference> utype_arg;
+    utype_argmap.key.init();
+    utype_argmap.value.init();
+
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        utype_arg = parseUtypeArg(pAst->getsubast(i));
+        utype_argmap.key.push_back(utype_arg.key);
+        utype_argmap.value.push_back(utype_arg.value);
+    }
+
+    return utype_argmap;
+}
+
+bool runtime::containsParam(list<Param> params, string param_name) {
+    for(Param& param : params) {
+        if(param.field.name == param_name)
+            return true;
+    }
+    return false;
+}
+
+void runtime::parseMethodParams(list<Param>& params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst) {
+    for(unsigned int i = 0; i < fields.key.size(); i++) {
+        if(containsParam(params, fields.key.get(i))) {
+            errors->newerror(SYMBOL_ALREADY_DEFINED, pAst->line, pAst->col, " symbol `" + fields.key.get(i) + "` already defined in the scope");
+        } else
+            params.push_back(Param(fieldMapToField(fields.key.get(i), fields.value.get(i))));
+    }
+}
+
+void runtime::resolveMethodDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_fn_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string name =  pAst->getentity(startpos).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    // TODO: parse return type
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "function `" + name + "` is already defined in the scope");
+        printnote(scope->klass->getFunction(name, params)->note, "function `" + name + "` previously defined here");
+    }
+}
+
+void runtime::resolveMacrosDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_macros_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string name =  pAst->getentity(startpos).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+
+    // TODO: parse return type
+    Method macro = Method(name, current_module, scope->klass, params, modifiers, NULL, note);
+
+    if(scope->klass == NULL) {
+        addGlobalMacros(macro, pAst);
+    } else {
+        addChildMacros(macro, pAst, scope->klass);
+    }
+}
+
+void runtime::resolveOperatorDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=2;
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_fn_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string op =  pAst->getentity(startpos).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modifiers, NULL, string_toop(op)))) {
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "function `" + op + "` is already defined in the scope");
+        printnote(scope->klass->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
+    }
+}
+
+void runtime::resolveConstructorDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=0;
+
+
+    if(parse_access_decl(pAst, modifiers, startpos)){
+        parse_constructor_access_modifiers(modifiers, pAst);
+    } else {
+        modifiers.push_back(mPublic);
+    }
+
+    list<Param> params;
+    string name = pAst->getentity(startpos).gettoken();
+
+    if(name == scope->klass->getName()) {
+        parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+        RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                       pAst->line, pAst->col);
+
+        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
+            this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                                   "constructor `" + name + "` is already defined in the scope");
+            printnote(scope->klass->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
+        }
+    } else
+        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
+                               "constructor `" + name + "` must be the same name as its parent");
+}
+
 void runtime::resolveClassDecl(ast* pAst) {
     Scope* scope = current_scope();
     ast* astBlock = pAst->getsubast(ast_block);
@@ -1319,7 +1358,24 @@ void runtime::resolveClassDecl(ast* pAst) {
                 resolveClassDecl(pAst);
                 break;
             case ast_var_decl:
-                resolveVarDecl(pAst);
+                if(!resolvedFields)
+                    resolveVarDecl(pAst);
+                break;
+            case ast_method_decl:
+                if(resolvedFields)
+                    resolveMethodDecl(pAst);
+                break;
+            case ast_macros_decl:
+                if(resolvedFields)
+                    resolveMacrosDecl(pAst);
+                break;
+            case ast_operator_decl:
+                if(resolvedFields)
+                    resolveOperatorDecl(pAst);
+                break;
+            case ast_construct_decl:
+                if(resolvedFields)
+                    resolveConstructorDecl(pAst);
                 break;
             default:
                 stringstream err;
@@ -1330,6 +1386,14 @@ void runtime::resolveClassDecl(ast* pAst) {
     }
 
     remove_scope();
+}
+
+void runtime::resolveAllMethods() {
+    resolvedFields = true;
+    /*
+     * All fields have been processed, so we are good to fully parse utypes for method params
+     */
+    resolveAllFields();
 }
 
 void runtime::resolveAllFields() {
@@ -1354,11 +1418,29 @@ void runtime::resolveAllFields() {
                 case ast_class_decl:
                     resolveClassDecl(trunk);
                     break;
+                case ast_macros_decl:
+                    if(resolvedFields)
+                        resolveMacrosDecl(trunk);
+                    break;
                 default:
                     /* ignore */
                     break;
             }
         }
+
+        if(errors->_errs()){
+            errs+= errors->error_count();
+            uo_errs+= errors->uoerror_count();
+
+            parse_map.key.addif(p->sourcefile);
+            parse_map.value.removefirst(p->sourcefile);
+        } else {
+            parse_map.value.addif(p->sourcefile);
+            parse_map.key.removefirst(p->sourcefile);
+        }
+
+        errors->free();
+        delete (errors); this->errors = NULL;
         remove_scope();
     }
 }
@@ -1396,8 +1478,7 @@ bool runtime::partial_parse() {
                 case ast_import_decl:
                     imports.push_back(parse_modulename(trunk));
                     break;
-                case ast_macros_decl:
-                    partial_parse_macros_decl(trunk);
+                case ast_macros_decl: /* Will be parsed later */
                     break;
                 case ast_module_decl: /* fail-safe */
                     errors->newerror(GENERIC, trunk->line, trunk->col, "file module cannot be declared more than once");
@@ -1417,9 +1498,12 @@ bool runtime::partial_parse() {
             uo_errs+= errors->uoerror_count();
 
             semtekerrors = true;
-            failed++;
-        } else
-            succeeded++;
+            parse_map.key.addif(p->sourcefile);
+            parse_map.value.removefirst(p->sourcefile);
+        } else {
+            parse_map.value.addif(p->sourcefile);
+            parse_map.key.removefirst(p->sourcefile);
+        }
 
         errors->free();
         delete (errors); this->errors = NULL;
@@ -1718,7 +1802,7 @@ void _srt_start(list<string> files)
     tokenizer* t;
     file::stream source;
     size_t errors=0, uo_errors=0;
-    succeeded=0, failed=0;
+    int succeeded=0, failed=0;
 
     for(string file : files) {
         source.begin();
@@ -1766,6 +1850,9 @@ void _srt_start(list<string> files)
     if(errors == 0 && uo_errors == 0) {
         failed = 0, succeeded=0;
         runtime rt(c_options.out, parsers);
+
+        failed = rt.parse_map.key.size();
+        succeeded = rt.parse_map.value.size();
 
         errors+=rt.errs;
         uo_errors+=rt.uo_errs;
@@ -1923,26 +2010,6 @@ ClassObject* runtime::try_class_resolve(string intmodule, string name) {
 
                 for(string mod : map.value) {
                     if((ref = getClass(mod, name)) != NULL)
-                        return ref;
-                }
-
-                break;
-            }
-        }
-    }
-
-    return ref;
-}
-
-Method* runtime::try_macro_resolve(string intmodule, string name, list<Param> params) {
-    Method* ref = NULL;
-
-    if((ref = getmacros(intmodule, name, params)) == NULL) {
-        for(keypair<string, std::list<string>> &map : *import_map) {
-            if(map.key == _current->sourcefile) {
-
-                for(string mod : map.value) {
-                    if((ref = getmacros(mod, name, params)) != NULL)
                         return ref;
                 }
 
@@ -2141,22 +2208,6 @@ string runtime::nativefield_tostr(NativeField nf) {
 //    }
 //}
 
-context *runtime::get_context() {
-    return &element_at(*contexts, ctp);
-}
-
-context *runtime::add_context(context ctx) {
-    contexts->push_back(ctx);
-    ctp++;
-    return get_context();
-}
-
-void runtime::remove_context() {
-    get_context()->clear();
-    contexts->pop_back();
-    ctp--;
-}
-
 void runtime::partial_parse_class_decl(ast *pAst) {
     Scope* scope = current_scope();
     ast* astBlock = pAst->getsubast(pAst->getsubastcount()-1);
@@ -2189,17 +2240,13 @@ void runtime::partial_parse_class_decl(ast *pAst) {
              case ast_var_decl:
                  partial_parse_var_decl(pAst);
                  break;
-             case ast_method_decl:
-                 partial_parse_fn_decl(pAst);
+             case ast_method_decl: /* Will be parsed later */
                  break;
-             case ast_operator_decl:
-                 partial_parse_operator_decl(pAst);
+             case ast_operator_decl: /* Will be parsed later */
                  break;
-             case ast_construct_decl:
-                 partial_parse_constructor_decl(pAst);
+             case ast_construct_decl: /* Will be parsed later */
                  break;
-             case ast_macros_decl:
-                 partial_parse_macros_decl(pAst);
+             case ast_macros_decl: /* Will be parsed later */
                  break;
              default:
                  stringstream err;
@@ -2209,110 +2256,6 @@ void runtime::partial_parse_class_decl(ast *pAst) {
          }
     }
     remove_scope();
-}
-
-void runtime::partial_parse_macros_decl(ast *pAst) {
-    Scope* scope = current_scope();
-    list<AccessModifier> modifiers;
-    int startpos=1;
-
-    if(parse_access_decl(pAst, modifiers, startpos)){
-        parse_macros_access_modifiers(modifiers, pAst);
-    } else {
-        modifiers.push_back(mPublic);
-    }
-
-    list<Param> params;
-    string name =  pAst->getentity(startpos).gettoken();
-
-    params = partial_parse_utype_arglist(pAst->getsubast(0));
-    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                   pAst->line, pAst->col);
-    Method macro = Method(name, current_module, NULL, params, modifiers, NULL, note);
-
-    if(scope->klass == NULL) {
-        addGlobalMacros(macro, pAst);
-    } else {
-        addChildMacros(macro, pAst, scope->klass);
-    }
-}
-
-void runtime::partial_parse_constructor_decl(ast *pAst) {
-    Scope* scope = current_scope();
-    list<AccessModifier> modifiers;
-    int startpos=0;
-
-
-    if(parse_access_decl(pAst, modifiers, startpos)){
-        parse_constructor_access_modifiers(modifiers, pAst);
-    } else {
-        modifiers.push_back(mPublic);
-    }
-
-    list<Param> params;
-    string name = pAst->getentity(startpos).gettoken();
-
-    if(name == scope->klass->getName()) {
-        params = partial_parse_utype_arglist(pAst->getsubast(0));
-        RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                       pAst->line, pAst->col);
-
-        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
-            this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                                   "constructor `" + name + "` is already defined in the scope");
-            printnote(scope->klass->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
-        }
-    } else
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "constructor `" + name + "` must be the same name as its parent");
-}
-
-void runtime::partial_parse_operator_decl(ast *pAst) {
-    Scope* scope = current_scope();
-    list<AccessModifier> modifiers;
-    int startpos=2;
-
-    if(parse_access_decl(pAst, modifiers, startpos)){
-        parse_fn_access_modifiers(modifiers, pAst);
-    } else {
-        modifiers.push_back(mPublic);
-    }
-
-    list<Param> params;
-    string op =  pAst->getentity(startpos).gettoken();
-    params = partial_parse_utype_arglist(pAst->getsubast(0));
-
-    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                   pAst->line, pAst->col);
-    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modifiers, NULL, string_toop(op)))) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "function `" + op + "` is already defined in the scope");
-        printnote(scope->klass->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
-    }
-}
-
-void runtime::partial_parse_fn_decl(ast *pAst) {
-    Scope* scope = current_scope();
-    list<AccessModifier> modifiers;
-    int startpos=1;
-
-    if(parse_access_decl(pAst, modifiers, startpos)){
-        parse_fn_access_modifiers(modifiers, pAst);
-    } else {
-        modifiers.push_back(mPublic);
-    }
-
-    list<Param> params;
-    string name =  pAst->getentity(startpos).gettoken();
-    params = partial_parse_utype_arglist(pAst->getsubast(0));
-
-    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                                   pAst->line, pAst->col);
-    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
-        this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
-                               "function `" + name + "` is already defined in the scope");
-        printnote(scope->klass->getFunction(name, params)->note, "function `" + name + "` previously defined here");
-    }
 }
 
 void runtime::partial_parse_var_decl(ast *pAst) {
@@ -2486,42 +2429,6 @@ void runtime::parse_var_access_modifiers(std::list <AccessModifier> &modifiers, 
     }
 }
 
-list <Param> runtime::partial_parse_utype_arglist(ast *pAst) {
-    Scope* scope = current_scope();
-    list<Param> params;
-
-    if(pAst->gettype() != ast_utype_arg_list || pAst->getsubastcount() == 0)
-        return params;
-
-    string name;
-    for(int i = 0; i < pAst->getsubastcount(); i++) {
-        name = partial_parse_utypearg(pAst->getsubast(i));
-
-        if(!partial_contains_param(params, name)) {
-            RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
-                        pAst->line, pAst->col);
-
-            params.push_back(Param(NULL));
-        } else {
-            this->errors->newerror(GENERIC, pAst->line, pAst->col, "function parameter with name '" + name + "' already exists.");
-        }
-    }
-
-    return params;
-}
-
-string runtime::partial_parse_utypearg(ast *pAst) {
-    return pAst->getentity(0).gettoken();
-}
-
-bool runtime::partial_contains_param(list <Param> &list, string name) {
-    for(Param &param : list) {
-        if(param.field->name == name)
-            return true;
-    }
-    return false;
-}
-
 mem_access_flag runtime::parse_mem_accessflag(ast *pAst) {
     mem_access_flag flag;
     if(pAst->hasentity(AND)) {
@@ -2541,16 +2448,6 @@ mem_access_flag runtime::parse_mem_accessflag(ast *pAst) {
     }
 
     return flag;
-}
-
-bool runtime::isnative_type(string type) {
-    return type == "var"
-           /*
-            * This is not a native type but we want this to be
-            * able to be set as a variable
-            */
-           || type == "dynamic_object"
-            ;
 }
 
 /*
@@ -2748,17 +2645,6 @@ void runtime::mov_field(Expression &expression, ast* pAst) {
         expression.code.push_i64(SET_Ci(i64, MOVX, ebx,0, egx));
     } else {
         errors->newerror(GENERIC, pAst->line, pAst->col, "variable expected");
-    }
-}
-
-void runtime::pre_incdec_expression(Expression &expression, ast *pAst) {
-    int64_t i64;
-    if(expression.type == expression_var) {
-        errors->newerror(GENERIC, pAst->getsubast(ast_expression)->line,
-                         pAst->getsubast(ast_expression)->col, "variable expected");
-    } else if(expression.type == expression_class) {
-        mov_field(expression, pAst->getsubast(ast_expression));
-        expression.code.push_i64(SET_Di(i64, INC, ebx));
     }
 }
 

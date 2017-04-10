@@ -6,10 +6,8 @@
 #include "runtime.h"
 
 bool Param::match(Param &param) {
-    if(field == NULL || param.field == NULL)
-        return false;
 
-    return *field == *param.field;
+    return field == param.field;
 }
 
 bool Param::match(list<Param>& p1, list<Param>& p2) {

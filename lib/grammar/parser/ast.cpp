@@ -102,10 +102,8 @@ void ast::freelastentity() {
 }
 
 bool ast::hassubast(ast_types at) {
-    ast* pAst;
     for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        pAst = &sub_asts->get(i);
-        if(pAst->gettype() == at)
+        if(sub_asts->get(i).gettype() == at)
             return true;
     }
     return false;

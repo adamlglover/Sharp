@@ -16,11 +16,11 @@ class Param
 public:
     Param()
     :
-            field(NULL)
+            field()
     {
     }
 
-    Param(Field* field)
+    Param(Field field)
     {
         this->field = field;
     }
@@ -28,11 +28,11 @@ public:
     bool match(Param& param);
     static bool match(list<Param>& p1, list<Param>& p2);
     void free() {
-        field = NULL;
+        field.free();
     }
 
 
-    Field* field;
+    Field field;
 };
 
 #endif //SHARP_PARAM_H

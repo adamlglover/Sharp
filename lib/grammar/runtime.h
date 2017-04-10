@@ -120,7 +120,8 @@ struct Expression {
     :
             type(expression_unknown),
             utype(),
-            code()
+            code(),
+            dot(false)
     {
     }
 
@@ -129,6 +130,7 @@ struct Expression {
     expression_type type;
     ResolvedReference utype;
     m64Assembler code;
+    bool dot;
 
     void free() {
         code.free();
@@ -302,7 +304,8 @@ public:
             current_module(""),
             last_note("","",0,0),
             last_notemsg(""),
-            ctp(-1)
+            ctp(-1),
+            resolvedFields(false)
     {
         for(parser* p : parsers) {
             if(!p->parsed)
@@ -319,6 +322,8 @@ public:
 
         contexts = new list<context>();
         scope_map = new List<Scope>();
+        parse_map.key.init();
+        parse_map.value.init();
         scope_map->init();
         interpret();
     }
@@ -339,6 +344,7 @@ public:
     static string nativefield_tostr(NativeField nf);
     static unsigned int  classUID;
 
+    keypair<List<string>, List<string>> parse_map;
 private:
     Environment* env;
     parser* _current;
@@ -353,6 +359,7 @@ private:
     list<context>* contexts;
     List<Scope>* scope_map;
     m64Assembler* assembler;
+    bool resolvedFields;
     int64_t ctp;
     uint64_t uid;
 
@@ -423,8 +430,6 @@ private:
 
     void partial_parse_class_decl(ast *pAst);
 
-    context *get_context();
-
     bool parse_access_decl(ast *pAst, list <AccessModifier> &list, int &startpos);
 
     void parse_class_access_modifiers(list <AccessModifier> &list, ast* pAst);
@@ -433,31 +438,13 @@ private:
 
     ClassObject *addChildClassObject(string name, std::list <AccessModifier>& modifiers, ast *pAst, ClassObject* super);
 
-    context *add_context(context ctx);
-
-    void remove_context();
-
     void partial_parse_var_decl(ast *pAst);
 
     void parse_var_access_modifiers(std::list <AccessModifier> &list, ast *pAst);
 
-    void partial_parse_fn_decl(ast *pAst);
-
     void parse_fn_access_modifiers(list <AccessModifier> &list, ast *pAst);
 
-    list <Param> partial_parse_utype_arglist(ast *pAst);
-
-    string partial_parse_utypearg(ast *pAst);
-
-    bool partial_contains_param(std::list <Param> &list, string name);
-
-    void partial_parse_operator_decl(ast *pAst);
-
-    void partial_parse_constructor_decl(ast *pAst);
-
     void parse_constructor_access_modifiers(list <AccessModifier> &list, ast *pAst);
-
-    void partial_parse_macros_decl(ast *pAst);
 
     void parse_macros_access_modifiers(std::list<AccessModifier> &list, ast *pAst);
 
@@ -472,12 +459,6 @@ private:
     void setHeadClass(ClassObject *pObject);
 
     mem_access_flag parse_mem_accessflag(ast *pAst);
-
-    bool isnative_type(string type);
-
-    Method *try_macro_resolve(string intmodule, string name, list <Param> params);
-
-    Expression parse_primary_expression(ast *pAst);
 
     Expression parse_literal(ast *pAst);
 
@@ -503,13 +484,9 @@ private:
 
     void parse_boolliteral(string basic_string, m64Assembler &assembler);
 
-    Expression parse_cast_expression(context *pContext, ast *pAst);
-
     void parse_native_cast(ResolvedReference reference, Expression expression, ast *pAst);
 
     void mov_field(Expression &expression, ast* pAst);
-
-    void pre_incdec_expression(Expression &expression, ast *pAst);
 
     void parse_class_cast(ResolvedReference &reference, Expression &expression, ast *pAst);
 
@@ -518,12 +495,6 @@ private:
     Scope* add_scope(Scope scope);
 
     void remove_scope();
-
-    Expression parse_utype_expression(ast *pAst);
-
-    Expression resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst);
-
-    bool parse_block_utype(ref_ptr& ptr, Expression& expression, ast* pAst);
 
     bool parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst);
 
@@ -558,10 +529,32 @@ private:
     void resolveClassHeiarchy(ClassObject *klass, ref_ptr& refrence, Expression& expression, ast* pAst, bool requireStatic = true);
 
     void resolveFieldHeiarchy(Field *field, ref_ptr &refrence, Expression &expression, ast *pAst);
+
+    Expression parseDotNotationCall(ast *pAst);
+
+    void resolveMethodDecl(ast *pAst);
+
+    void resolveAllMethods();
+
+    void parseMethodParams(list <Param> &params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst);
+
+    Field fieldMapToField(string param_name, ResolvedReference utype);
+
+    keypair<List<string>, List<ResolvedReference>> parseUtypeArgList(ast *pAst);
+
+    keypair<string, ResolvedReference> parseUtypeArg(ast *pAst);
+
+    bool containsParam(list <Param> params, string param_name);
+
+    void resolveMacrosDecl(ast *pAst);
+
+    void resolveOperatorDecl(ast *pAst);
+
+    void resolveConstructorDecl(ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.23"
+#define progvers "0.1.24"
 
 struct options {
     /*

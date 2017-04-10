@@ -106,12 +106,11 @@ A value consists of an <expression>
     | '==' // must return bool
 
 <dot-notation-call-expr>:
-[.] <refrence-identifier> <value-list> [expression]
+[.] <utype> [<value-list> [expression]]
 
 <primary-expr>:
 <literal>                       // ast_literal_e
     | [.] <uType> '.' class     // ast_utype_class_e
-    | <refrence-identifier>     // ast_refrence_id_e
     |  <dot-notation-call-expr> // ast_dot_not_e
 
 <expression>:

@@ -599,7 +599,7 @@ bool parser::parse_primaryexpr(ast *pAst) {
     if(parse_dot_notation_call_expr(pAst)) {
         this->dumpstate();
         errors->fail();
-        pAst->encapsulate(ast_dotnotation_call_expr);
+        pAst->encapsulate(ast_dot_not_e);
         return true;
     } else {
         errors->pass();
@@ -670,7 +670,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
         pAst->add_entity(current());
     }
 
-    if(parse_reference_pointer(pAst)) {
+    if(parse_utype(pAst)) {
         if(peek(1).gettokentype() == LEFTPAREN) {
             parse_valuelist(pAst);
 

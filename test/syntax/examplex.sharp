@@ -3,15 +3,23 @@ mod application;
 import io;
 
 class X {
-    X yy;
+    X* yy;
     var xx;
 }
 
 class Main {
 
-    var x = X.yy.yy.class;
+    var x = X.yy.yy;
     var y=0;
     X b;
+
+    fn foo(Main x) {
+
+    }
+
+    fn foo(Main x) {
+
+    }
 
     public static fn main(string[] args) : var {
         Console.write("Hello, World!");
