@@ -18,7 +18,7 @@ class x {
 class Start base x // add 'base <refid>' to class decl
 {
 
-    int x = 9.class;
+    int x = x.class;
 
     private class X base Start.X.g {
         dynamic_object v=9;
@@ -75,7 +75,7 @@ class Start base x // add 'base <refid>' to class decl
                 do {
                     label:
                     break;
-                    int i = (short) x[3]++ + 6;
+                    int i = ((short) x[3])++ + 6;
                     int i = ((short) x[3]++) + 6/9;
                     int b = --arr[9];
                 }while(Main.v-- > 0);

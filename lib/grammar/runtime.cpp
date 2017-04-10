@@ -22,7 +22,6 @@ void runtime::interpret() {
 
         resolveAllFields();
         resolveAllMethods();
-        // TODO: then start from the beginning and work my way down with creating scopes and remove contex*
 
         for(parser* p : parsers) {
             errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
@@ -1262,6 +1261,10 @@ void runtime::resolveMacrosDecl(ast* pAst) {
     } else {
         modifiers.push_back(mPublic);
     }
+
+    if(element_has(modifiers, mStatic))
+        warning(REDUNDANT_TOKEN, pAst->getentity(element_index(modifiers, mStatic)).getline(),
+                pAst->getentity(element_index(modifiers, mStatic)).getcolumn(), " `static`, macros are static by default");
 
     list<Param> params;
     string name =  pAst->getentity(startpos).gettoken();

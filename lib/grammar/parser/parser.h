@@ -214,6 +214,8 @@ private:
     void parse_forstmnt(ast *pAst);
 
     void parse_foreachstmnt(ast *pAst);
+
+    bool parse_utype_naked(ast *pAst);
 };
 
 #endif //SHARP_PARRSER_H

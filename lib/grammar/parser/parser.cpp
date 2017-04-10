@@ -555,6 +555,18 @@ bool parser::parse_utype(ast *pAst) {
     return false;
 }
 
+bool parser::parse_utype_naked(ast *pAst) {
+    pAst = get_ast(pAst, ast_utype);
+
+    if(parse_type_identifier(pAst)) {
+        return true;
+    }
+    else
+        errors->newerror(GENERIC, current(), "expected native type or reference pointer");
+
+    return false;
+}
+
 bool parser::parse_primaryexpr(ast *pAst) {
     pAst = get_ast(pAst, ast_primary_expr);
 
@@ -670,7 +682,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
         pAst->add_entity(current());
     }
 
-    if(parse_utype(pAst)) {
+    if(parse_utype_naked(pAst)) {
         if(peek(1).gettokentype() == LEFTPAREN) {
             parse_valuelist(pAst);
 
@@ -1386,6 +1398,7 @@ void parser::parse_labeldecl(ast *pAst) {
 
 }
 
+int commas=0;
 void parser::parse_statement(ast* pAst) {
     pAst = get_ast(pAst, ast_statement);
 
@@ -1490,7 +1503,11 @@ void parser::parse_statement(ast* pAst) {
     else if(current().gettokentype() == SEMICOLON)
     {
         /* we don't care about empty statements but we allow them */
-        errors->newwarning(GENERIC, current().getline(), current().getcolumn(), "unnessicary comment");
+        if(commas > 1) {
+            commas = 0;
+            errors->newwarning(GENERIC, current().getline(), current().getcolumn(), "unnecessary semicolon ';'");
+        } else
+            commas++;
     }
     else
     {

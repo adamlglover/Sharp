@@ -58,6 +58,9 @@ A value consists of an <expression>
 <uType>:
 <typeidentifier> [([])] [<MemAccessFlag>]
 
+<utype-naked>:
+<typeidentifier>
+
 <MemAccessFlag>:
 '&'
     | '*'
@@ -106,7 +109,7 @@ A value consists of an <expression>
     | '==' // must return bool
 
 <dot-notation-call-expr>:
-[.] <utype> [<value-list> [expression]]
+[.] <utype-naked> [<value-list> [expression]]
 
 <primary-expr>:
 <literal>                       // ast_literal_e
