@@ -204,6 +204,24 @@ struct Scope {
         locals.init();
     }
 
+    Field* getLocalField(string field_name) {
+        for(unsigned int i = locals.size()-1; i > 0; i--) {
+            if(locals.at(i)->name == field_name) {
+                return locals.at(i);
+            }
+        }
+        return NULL;
+    }
+
+    int getLocalFieldIndex(string field_name) {
+        for(unsigned int i = locals.size()-1; i > 0; i--) {
+            if(locals.at(i)->name == field_name) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
     scope_type type;
     ClassObject* klass;
     List<Field*> locals;
@@ -233,6 +251,14 @@ public:
             delete (class_heiarchy);
         }
         class_heiarchy = NULL;
+    }
+
+    bool singleRefrence() {
+        return module == "" && class_heiarchy->size() == 0;
+    }
+
+    bool singleRefrenceModule() {
+        return module != "" && class_heiarchy->size() == 0;
     }
 
     void print() {
@@ -311,6 +337,7 @@ public:
     size_t errs, uo_errs;
 
     static string nativefield_tostr(NativeField nf);
+    static unsigned int  classUID;
 
 private:
     Environment* env;
@@ -517,10 +544,24 @@ private:
     void parseIntegerLiteral(token_entity token, Expression &expression);
 
     void parseHexLiteral(token_entity token, Expression &expression);
+
+    void parseStringLiteral(token_entity token, Expression &expression);
+
+    Expression psrseUtypeClass(ast *pAst);
+
+    Expression parseUtype(ast *pAst);
+
+    void resolveUtype(ref_ptr& refrence, Expression &expression, ast* pAst);
+
+    ClassObject *getClassGlobal(string module, string class_name);
+
+    void resolveClassHeiarchy(ClassObject *klass, ref_ptr& refrence, Expression& expression, ast* pAst, bool requireStatic = true);
+
+    void resolveFieldHeiarchy(Field *field, ref_ptr &refrence, Expression &expression, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.22"
+#define progvers "0.1.23"
 
 struct options {
     /*

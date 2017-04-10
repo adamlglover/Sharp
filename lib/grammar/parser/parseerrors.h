@@ -35,6 +35,7 @@ enum p_errors
     REDUNDANT_CAST = 20,
     REDUNDANT_IMPORT = 21,
     UNEXPECTED_TOKEN = 22,
+    INVALID_ACCESS = 23,
 
     NO_ERR = 999
 };

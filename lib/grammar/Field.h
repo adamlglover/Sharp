@@ -104,12 +104,22 @@ public:
         return nf != fnof || nf >= fdynamic;
     }
 
+    bool isStatic() {
+        if(modifiers == NULL) return false;
+
+        for(AccessModifier modifier : *modifiers) {
+            if(modifier == mStatic)
+                return true;
+        }
+        return false;
+    }
+
     bool refrence, pointer, array;
     field_type type;
     RuntimeNote note;
     NativeField nf;
     ClassObject* klass;
-    uint64_t uid, vaddr;
+    int64_t uid, vaddr;
     string name, fullName;
     ClassObject* parent;
     list<AccessModifier>* modifiers; // 3 max modifiers

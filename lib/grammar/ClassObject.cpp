@@ -17,6 +17,7 @@ bool ClassObject::addChildClass(ClassObject klass) {
         return false;
     }
 
+    klass.vaddr = runtime::classUID++;
     childClasses->push_back(klass);
     return true;
 }
@@ -88,7 +89,7 @@ bool ClassObject::addField(Field field) {
     if(getField(field.name) != NULL)
         return false;
 
-    field.vaddr = this->fieldCount()-1;
+    field.vaddr = this->fieldCount()==0?0:this->fieldCount()-1;
     field.fullName = this->fullName + "." + name;
     fields->push_back(field);
     return true;

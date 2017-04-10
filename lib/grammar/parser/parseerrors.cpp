@@ -77,6 +77,9 @@ void int_errs()
 
     err.set(UNEXPECTED_TOKEN, "unexpected token");
     predefined_errs.push_back(err);
+
+    err.set(INVALID_ACCESS, "invalid access of");
+    predefined_errs.push_back(err);
 }
 
 void Errors::print_error(parseerror &err) {

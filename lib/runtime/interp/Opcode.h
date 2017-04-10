@@ -177,6 +177,10 @@ enum OPCODE {
     MOVU32=0x2e,
     MOVU64=0x2f,
 
+    MOVN=0x30, /* move ptr = &ptr->_Node[r]; */
+    MOVG=0x31, /* move ptr = &env->objects[r]; */
+    MOVSELF=0x32, /* move ptr = instance; */
+
     _OPT=0xff, /* unused special instruction for compiler */
 };
 

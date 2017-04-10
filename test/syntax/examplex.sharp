@@ -2,9 +2,16 @@ mod application;
 
 import io;
 
+class X {
+    X yy;
+    var xx;
+}
+
 class Main {
 
-    var x = 3_888_888_888_888_888.9933274537999999999999999999999999999_999_555;
+    var x = X.yy.yy.class;
+    var y=0;
+    X b;
 
     public static fn main(string[] args) : var {
         Console.write("Hello, World!");

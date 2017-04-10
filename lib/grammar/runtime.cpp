@@ -15,6 +15,8 @@ options c_options;
 size_t succeeded, failed;
 _operator string_toop(string op);
 
+unsigned int runtime::classUID = 0;
+
 void runtime::interpret() {
     if(partial_parse()) {
         succeeded = 0; /* There were no errors to stop the files that succeeded */
@@ -555,6 +557,7 @@ Expression runtime::resolve_refrence_ptr_expression(ref_ptr& ptr, ast* pAst) {
 //}
 
 void runtime::parseCharLiteral(token_entity token, Expression& expression) {
+    expression.type = expression_var;
     int64_t  i64;
     if(token.gettoken().size() > 1) {
         switch(token.gettoken().at(1)) {
@@ -589,6 +592,7 @@ void runtime::parseCharLiteral(token_entity token, Expression& expression) {
 }
 
 void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
+    expression.type = expression_var;
     int64_t i64;
     double var;
     string int_string = invalidate_underscores(token.gettoken());
@@ -614,6 +618,7 @@ void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
 }
 
 void runtime::parseHexLiteral(token_entity token, Expression& expression) {
+    expression.type = expression_var;
     int64_t i64;
     double var;
     string hex_string = invalidate_underscores(token.gettoken());
@@ -627,9 +632,59 @@ void runtime::parseHexLiteral(token_entity token, Expression& expression) {
     expression.code.push_i64(SET_Di(i64, MOVI, var), ebx);
 }
 
+void runtime::parseStringLiteral(token_entity token, Expression& expression) {
+    expression.type = expression_string;
+    string parsed_string = "";
+    bool slash = false;
+    for(char c : token.gettoken()) {
+        if(slash) {
+            slash = false;
+            switch(c) {
+                case 'n':
+                    parsed_string += '\n';
+                    break;
+                case 't':
+                    parsed_string += '\t';
+                    break;
+                case 'b':
+                    parsed_string += '\b';
+                    break;
+                case 'v':
+                    parsed_string += '\v';
+                    break;
+                case 'r':
+                    parsed_string += '\r';
+                    break;
+                case 'f':
+                    parsed_string += '\f';
+                    break;
+                case '\\':
+                    parsed_string += '\\';
+                    break;
+                default:
+                    parsed_string += c;
+                    break;
+            }
+        }
+
+        if(c == '\\') {
+            slash = true;
+        } else {
+            parsed_string += c;
+        }
+    }
+
+    string_map.push_back(parsed_string);
+}
+
+void parseBoolLiteral(token_entity token, Expression& expression) {
+    expression.type = expression_var;
+    int64_t i64;
+    expression.code.push_i64(SET_Di(i64, MOVI, (token.gettoken() == "true" ? 1 : 0)), ebx);
+}
+
 Expression runtime::parseLiteral(ast* pAst) {
     Expression expression;
-    expression.type = expression_var;
 
     switch(pAst->getentity(0).getid()) {
         case CHAR_LITERAL:
@@ -645,12 +700,290 @@ Expression runtime::parseLiteral(ast* pAst) {
             parseStringLiteral(pAst->getentity(0), expression);
             break;
         default:
-            if(pAst->getentity(0).gettoken() == "true") {
-
-            } else if(pAst->getentity(0).gettoken() == "true") {
-
+            if(pAst->getentity(0).gettoken() == "true" ||
+                    pAst->getentity(0).gettoken() == "true") {
+                parseBoolLiteral(pAst->getentity(0), expression);
             }
             break;
+    }
+    return expression;
+}
+
+ClassObject* runtime::getClassGlobal(string module, string class_name) {
+    ClassObject* klass;
+
+    if((klass = getClass(module, class_name)) == NULL) {
+        for(keypair<std::string, std::list<string>> &map : *import_map) {
+            if(map.key == _current->sourcefile) {
+
+                for(string mod : map.value) {
+                    if((klass = getClass(mod, class_name)) != NULL)
+                        return klass;
+                }
+
+                break;
+            }
+        }
+    }
+    return klass;
+}
+
+void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expression& expression, ast* pAst, bool requireStatic) {
+    int64_t i64;
+    string object_name = "";
+    Field* field = NULL;
+    ClassObject* k;
+    bool lastRefrence = false;
+
+    for(unsigned int i = 1; i < refrence.class_heiarchy->size()+1; i++) {
+        if(i >= refrence.class_heiarchy->size()) {
+            // field? if not then class?
+            lastRefrence = true;
+            object_name = refrence.refname;
+        } else
+            object_name = refrence.class_heiarchy->at(i);
+
+        if((k = klass->getChildClass(object_name)) == NULL) {
+
+            // field?
+            if((field = klass->getField(object_name)) != NULL) {
+                // is static?
+                if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is an instance variable");
+                }
+
+                if(!lastRefrence && field->pointer) {
+                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `field->`");
+                } else if(!lastRefrence && field->array) {
+                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
+                }
+
+
+
+                if(lastRefrence) {
+                    expression.utype.type = ResolvedReference::FIELD;
+                    expression.utype.field = field;
+                    expression.type = expression_field;
+                }
+
+                switch(field->type) {
+                    case field_unresolved:
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = object_name;
+                        return;
+                    case field_native:
+                        if(lastRefrence){}
+                        else {
+                            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is not a class variable");
+                            expression.utype.refrenceName = object_name;
+                            return;
+                        }
+                        break;
+                    case field_class:
+                        klass = field->klass;
+                        break;
+                }
+            } else {
+                errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + object_name + "` " +
+                                                                                                                                           (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = object_name;
+                expression.type = expression_unknown;
+                return;
+            }
+        } else {
+            if(lastRefrence) {
+                expression.code.free();
+                expression.utype.type = ResolvedReference::CLASS;
+                expression.utype.klass = klass;
+                expression.type = expression_class;
+            }
+            klass = k;
+        }
+    }
+}
+
+void runtime::resolveFieldHeiarchy(Field* field, ref_ptr& refrence, Expression& expression, ast* pAst) {
+    switch(field->type) {
+        case field_unresolved:
+            return;
+        case field_native:
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + field->name + "` is not a class variable");
+            expression.utype.type = ResolvedReference::NATIVE;
+            expression.utype.nf = field->nf;
+            return;
+        case field_class:
+            resolveClassHeiarchy(field->klass, refrence, expression, pAst, false);
+            return;
+    }
+}
+
+void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst) {
+    Scope* scope = current_scope();
+    int64_t i64;
+
+    if(refrence.singleRefrence()) {
+        ClassObject* klass=NULL;
+        Field* field=NULL;
+
+        if(scope->type == scope_global) {
+            if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
+                expression.utype.type = ResolvedReference::CLASS;
+                expression.utype.klass = klass;
+                expression.type = expression_class;
+            } else {
+                /* Un resolvable */
+                errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                           (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = refrence.refname;
+                expression.type = expression_unknown;
+            }
+        } else {
+            // scope_class? | scope_instance_block? | scope_static_block?
+            if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                expression.utype.type = ResolvedReference::FIELD;
+                expression.utype.field = field;
+                expression.code.push_i64(SET_Di(i64, MOVL, scope->getLocalFieldIndex(refrence.refname)));
+                expression.type = expression_field;
+            }
+            else if((field = scope->klass->getField(refrence.refname)) != NULL) {
+                // field?
+                expression.utype.type = ResolvedReference::FIELD;
+                expression.utype.field = field;
+                expression.code.push_i64(SET_Di(i64, MOVN, field->vaddr));
+                expression.type = expression_field;
+            } else {
+                if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
+                    // global class ?
+                    expression.utype.type = ResolvedReference::CLASS;
+                    expression.utype.klass = klass;
+                    expression.type = expression_class;
+                } else {
+                    /* Un resolvable */
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = refrence.refname;
+                    expression.type = expression_unknown;
+                }
+            }
+        }
+    } else if(refrence.singleRefrenceModule()){
+        /* Must be a class i.e module#globalClass */
+        ClassObject* klass=NULL;
+
+        // in this case we ignore scope
+        if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
+            expression.utype.type = ResolvedReference::CLASS;
+            expression.utype.klass = klass;
+            expression.type = expression_class;
+        } else {
+            /* Un resolvable */
+            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                       (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = refrence.refname;
+            expression.type = expression_unknown;
+        }
+    } else {
+        /* field? or class? */
+        ClassObject* klass=NULL;
+        Field* field=NULL;
+        string starter_name = refrence.class_heiarchy->at(0);
+
+        if(scope->type == scope_global) {
+            // class?
+            if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
+                resolveClassHeiarchy(klass, refrence, expression, pAst);
+                return;
+            } else {
+                /* un resolvable */
+                errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                           (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = refrence.toString();
+                expression.type = expression_unknown;
+
+            }
+        } else {
+            // scope_class? | scope_instance_block? | scope_static_block?
+            if(refrence.module != "") {
+                if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
+                    resolveClassHeiarchy(klass, refrence, expression, pAst);
+                    return;
+                } else {
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = refrence.toString();
+                    expression.type = expression_unknown;
+                    return;
+                }
+            }
+
+            if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                resolveFieldHeiarchy(field, refrence, expression, pAst);
+                return;
+            }
+            else if((field = scope->klass->getField(starter_name)) != NULL) {
+                resolveFieldHeiarchy(field, refrence, expression, pAst);
+                return;
+            } else {
+                if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
+                    resolveClassHeiarchy(klass, refrence, expression, pAst);
+                    return;
+                } else {
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = refrence.toString();
+                    expression.type = expression_unknown;
+                }
+            }
+        }
+
+    }
+}
+
+Expression runtime::parseUtype(ast* pAst) {
+    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
+    Expression expression;
+
+    if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(LEFTBRACE)) {
+        expression.utype.array = true;
+    }
+
+    if(pAst->hassubast(ast_mem_access_flag)) {
+        expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
+    }
+
+    if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
+        expression.utype.nf = token_tonativefield(ptr.refname);
+        expression.utype.type = ResolvedReference::NATIVE;
+        ptr.free();
+        expression.type = expression_native;
+        expression.utype.refrenceName = ptr.toString();
+        return expression;
+    }
+
+    resolveUtype(ptr, expression, pAst);
+
+    expression.utype.refrenceName = ptr.toString();
+    ptr.free();
+    return expression;
+}
+
+Expression runtime::psrseUtypeClass(ast* pAst) {
+    Expression expression = parseUtype(pAst);
+
+    if(expression.type == expression_class) {
+        // TODO: add asm to push class id
+    } else {
+        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "expected class");
     }
     return expression;
 }
@@ -663,9 +996,8 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
     switch(pAst->gettype()) {
         case ast_literal_e:
             return parseLiteral(pAst->getsubast(ast_literal));
-            break;
         case ast_utype_class_e:
-            break;
+            return psrseUtypeClass(pAst->getsubast(ast_utype));
         case ast_dot_not_e:
             break;
     }
@@ -1496,6 +1828,8 @@ bool runtime::add_macros(Method macro) {
 
 bool runtime::add_class(ClassObject klass) {
     if(!class_exists(klass.getModuleName(), klass.getName())) {
+
+        klass.vaddr = classUID++;
         classes->push_back(klass);
         return true;
     }
@@ -1582,19 +1916,6 @@ void runtime::printnote(RuntimeNote& note, string msg) {
 
 ClassObject* runtime::try_class_resolve(string intmodule, string name) {
     ClassObject* ref = NULL;
-
-    long scope = scope_map->size()-1;
-    Scope* currscope = NULL;
-
-    if(currscope->type == scope_class) {
-        while(scope > 0) {
-            currscope = &scope_map->get(scope--);
-            for(unsigned int i = 0; i < currscope->klass->childClassCount(); i++) {
-                if((ref = currscope->klass->getChildClass(name)) != NULL)
-                    return ref;
-            }
-        }
-    }
 
     if((ref = getClass(intmodule, name)) == NULL) {
         for(keypair<string, std::list<string>> &map : *import_map) {

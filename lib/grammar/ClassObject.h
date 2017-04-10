@@ -119,6 +119,7 @@ public:
 
     bool matchBase(ClassObject *pObject);
 
+    unsigned int vaddr;
 private:
     const AccessModifier modifier;
     const long uid;
