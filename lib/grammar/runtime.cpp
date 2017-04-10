@@ -603,8 +603,7 @@ void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
         expression.code.push_i64(SET_Di(i64, MOVI, var), ebx);
     }else {
         var = std::strtod (int_string.c_str(), NULL);
-        if((int64_t )var > DA_MAX || get_low_bytes(var) > DA_MAX
-           || (int64_t )var < DA_MIN) {
+        if((int64_t )var > DA_MAX || (int64_t )var < DA_MIN) {
             stringstream ss;
             ss << "integral number too large: " + int_string;
             errors->newerror(GENERIC, token.getline(), token.getcolumn(), ss.str());
@@ -2382,9 +2381,12 @@ int64_t runtime::get_low_bytes(double var) {
     ss.precision(16);
     ss << var;
     string num = ss.str(), result = "";
+    int iter=0;
     for(unsigned int i = 0; i < num.size(); i++) {
         if(num.at(i) == '.') {
             for(unsigned int x = i+1; x < num.size(); x++) {
+                if(iter++ > 16)
+                    break;
                 result += num.at(x);
             }
             return strtoll(result.c_str(), NULL, 0);

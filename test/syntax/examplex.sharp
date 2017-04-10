@@ -4,7 +4,7 @@ import io;
 
 class Main {
 
-    var x = 3_888_888_888_888_888.99989999999999999999999999999999999999999_999_555;
+    var x = 3_888_888_888_888_888.9933274537999999999999999999999999999_999_555;
 
     public static fn main(string[] args) : var {
         Console.write("Hello, World!");
