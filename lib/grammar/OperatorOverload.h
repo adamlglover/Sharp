@@ -31,13 +31,13 @@ enum _operator {
 
 class OperatorOverload : public Method {
 public:
-    OperatorOverload(RuntimeNote note, ClassObject *klass, const list<Param> &params,
-                     const list<AccessModifier> &modifiers, NativeField rtype, _operator op) : Method("$operator", "",klass, params, modifiers,
+    OperatorOverload(RuntimeNote note, ClassObject *klass, List<Param> &params,
+                     List<AccessModifier> &modifiers, NativeField rtype, _operator op) : Method("$operator", "",klass, params, modifiers,
                                                                                         rtype, note) {
         this->op = op;
     }
 
-    OperatorOverload(RuntimeNote note, ClassObject* klass, list<Param> params, list<AccessModifier> modifiers,
+    OperatorOverload(RuntimeNote note, ClassObject* klass, List<Param> &params, List<AccessModifier> &modifiers,
                      ClassObject* rtype, _operator op) : Method("$operator", "", klass, params, modifiers, rtype, note) {
         this->op = op;
     }

@@ -1155,7 +1155,7 @@ void runtime::resolveVarDecl(ast* pAst) {
     field->array = utype.array;
 }
 
-Field runtime::fieldMapToField(string param_name, ResolvedReference utype) {
+Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* pAst) {
     Field field;
 
     field.modifiers = new list<AccessModifier>();
@@ -1164,12 +1164,18 @@ Field runtime::fieldMapToField(string param_name, ResolvedReference utype) {
         field.type = field_unresolved;
         field.note = utype.field->note;
         *field.modifiers = *utype.field->modifiers;
+        field.nf = utype.field->nf;
     } else if(utype.type == ResolvedReference::CLASS) {
         field.type = field_class;
         field.note = utype.klass->note;
         field.klass = utype.klass;
         field.modifiers->push_back(utype.klass->getAccessModifier());
-    } else {
+    } else if(utype.type == ResolvedReference::NATIVE) {
+        field.type = field_native;
+        field.modifiers->push_back(mPublic);
+        field.nf = utype.nf;
+    }
+    else {
         field.type = field_unresolved;
     }
 
@@ -1179,6 +1185,7 @@ Field runtime::fieldMapToField(string param_name, ResolvedReference utype) {
     field.refrence = (bool)utype.mflag.ref;
     field.name = param_name;
     field.array = utype.array;
+    field.note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line), pAst->line, pAst->col);
 
     if(utype.type == ResolvedReference::FIELD)
         return *utype.field;
@@ -1209,26 +1216,27 @@ keypair<List<string>, List<ResolvedReference>> runtime::parseUtypeArgList(ast* p
     return utype_argmap;
 }
 
-bool runtime::containsParam(list<Param> params, string param_name) {
-    for(Param& param : params) {
-        if(param.field.name == param_name)
+bool runtime::containsParam(List<Param> params, string param_name) {
+    for(unsigned int i = 0; i < params.size(); i++) {
+        if(params.get(i).field.name == param_name)
             return true;
     }
     return false;
 }
 
-void runtime::parseMethodParams(list<Param>& params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst) {
+void runtime::parseMethodParams(List<Param>& params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst) {
     for(unsigned int i = 0; i < fields.key.size(); i++) {
         if(containsParam(params, fields.key.get(i))) {
             errors->newerror(SYMBOL_ALREADY_DEFINED, pAst->line, pAst->col, " symbol `" + fields.key.get(i) + "` already defined in the scope");
         } else
-            params.push_back(Param(fieldMapToField(fields.key.get(i), fields.value.get(i))));
+            params.add(Param(fieldMapToField(fields.key.get(i), fields.value.get(i), pAst)));
     }
 }
 
 void runtime::resolveMethodDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
     int startpos=1;
 
     if(parse_access_decl(pAst, modifiers, startpos)){
@@ -1237,14 +1245,15 @@ void runtime::resolveMethodDecl(ast* pAst) {
         modifiers.push_back(mPublic);
     }
 
-    list<Param> params;
+    List<Param> params;
     string name =  pAst->getentity(startpos).gettoken();
+    modCompat.addAll(modifiers);
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
     // TODO: parse return type
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
+    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modCompat, NULL, note))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
         printnote(scope->klass->getFunction(name, params)->note, "function `" + name + "` previously defined here");
@@ -1254,6 +1263,7 @@ void runtime::resolveMethodDecl(ast* pAst) {
 void runtime::resolveMacrosDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
     int startpos=1;
 
     if(parse_access_decl(pAst, modifiers, startpos)){
@@ -1266,15 +1276,16 @@ void runtime::resolveMacrosDecl(ast* pAst) {
         warning(REDUNDANT_TOKEN, pAst->getentity(element_index(modifiers, mStatic)).getline(),
                 pAst->getentity(element_index(modifiers, mStatic)).getcolumn(), " `static`, macros are static by default");
 
-    list<Param> params;
+    List<Param> params;
     string name =  pAst->getentity(startpos).gettoken();
+    modCompat.addAll(modifiers);
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
     // TODO: parse return type
-    Method macro = Method(name, current_module, scope->klass, params, modifiers, NULL, note);
+    Method macro = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
 
     if(scope->klass == NULL) {
         addGlobalMacros(macro, pAst);
@@ -1286,6 +1297,7 @@ void runtime::resolveMacrosDecl(ast* pAst) {
 void runtime::resolveOperatorDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
     int startpos=2;
 
     if(parse_access_decl(pAst, modifiers, startpos)){
@@ -1294,13 +1306,14 @@ void runtime::resolveOperatorDecl(ast* pAst) {
         modifiers.push_back(mPublic);
     }
 
-    list<Param> params;
+    List<Param> params;
     string op =  pAst->getentity(startpos).gettoken();
+    modCompat.addAll(modifiers);
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modifiers, NULL, string_toop(op)))) {
+    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modCompat, NULL, string_toop(op)))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
         printnote(scope->klass->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
@@ -1310,6 +1323,7 @@ void runtime::resolveOperatorDecl(ast* pAst) {
 void runtime::resolveConstructorDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
     int startpos=0;
 
 
@@ -1319,15 +1333,16 @@ void runtime::resolveConstructorDecl(ast* pAst) {
         modifiers.push_back(mPublic);
     }
 
-    list<Param> params;
+    List<Param> params;
     string name = pAst->getentity(startpos).gettoken();
+    modCompat.addAll(modifiers);
 
     if(name == scope->klass->getName()) {
         parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
         RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                        pAst->line, pAst->col);
 
-        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modifiers, NULL, note))) {
+        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modCompat, NULL, note))) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");
             printnote(scope->klass->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
@@ -1895,7 +1910,7 @@ bool runtime::class_exists(string module, string name) {
     return false;
 }
 
-Method *runtime::getmacros(string module, string name, list<Param> params) {
+Method *runtime::getmacros(string module, string name, List<Param>& params) {
     for(Method& macro : *macros) {
         if(Param::match(*macro.getParams(), params) && name == macro.getName()) {
             if(module != "")

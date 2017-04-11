@@ -14,9 +14,9 @@
 class ClassObject;
 
 enum field_type {
-    field_class,
-    field_native,
-    field_unresolved,
+    field_class=0,
+    field_native=1,
+    field_unresolved=2,
 };
 
 class Field {
@@ -80,6 +80,7 @@ public:
     {
         free();
 
+        type = f.type;
         nf = f.nf;
         klass = f.klass;
         uid = f.uid;

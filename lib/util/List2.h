@@ -6,12 +6,14 @@
 #define SHARP_LIST_H
 
 #include <algorithm>
-#include "../../stdimports.h"
 #include "../runtime/oo/Exception.h"
 
 template <class T>
 class List {
 public:
+    List(){
+        init();
+    }
 
     void init(){
         _Data=NULL;
@@ -30,6 +32,10 @@ public:
 
     void push_back() {
         __expand();
+    }
+
+    ~List() {
+        free();
     }
 
     /*
@@ -107,12 +113,6 @@ public:
     CXX11_INLINE
     unsigned long size() { return len; }
 
-
-    void copy(List<int64_t> list) {
-        free();
-
-    }
-
     void pop_back() {
         __shrink();
     }
@@ -136,6 +136,20 @@ public:
 
         if(iter != -1) {
             remove(iter);
+        }
+    }
+
+    void addAll(List<T> &list) {
+        free();
+        for(unsigned int i = 0; i < list.size(); i++) {
+            push_back(list.get(i));
+        }
+    }
+
+    void addAll(list<T> &list) {
+        free();
+        for(T& t : list) {
+            push_back(t);
         }
     }
 

@@ -8,6 +8,7 @@
 #include <list>
 #include "Field.h"
 #include "NativeField.h"
+#include "../util/List2.h"
 
 class ClassObject;
 
@@ -26,7 +27,7 @@ public:
     }
 
     bool match(Param& param);
-    static bool match(list<Param>& p1, list<Param>& p2);
+    static bool match(List<Param>& p1, List<Param>& p2);
     void free() {
         field.free();
     }

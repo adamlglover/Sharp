@@ -84,17 +84,17 @@ public:
 
     size_t constructorCount();
     Method* getConstructor(int p);
-    Method* getConstructor(list<Param>& params);
+    Method* getConstructor(List<Param>& params);
     bool addConstructor(Method constr);
 
     size_t functionCount();
     Method* getFunction(int p);
-    Method* getFunction(string name, list<Param>& params);
+    Method* getFunction(string name, List<Param>& params);
     bool addFunction(Method function);
 
     size_t overloadCount();
     OperatorOverload* getOverload(size_t p);
-    OperatorOverload* getOverload(_operator op, list<Param>& params);
+    OperatorOverload* getOverload(_operator op, List<Param>& params);
     bool addOperatorOverload(OperatorOverload overload);
 
     size_t fieldCount();
@@ -104,7 +104,7 @@ public:
 
     size_t macrosCount();
     Method* getMacros(int p);
-    Method* getMacros(string name, list<Param>& params);
+    Method* getMacros(string name, List<Param>& params);
     bool addMacros(Method macros);
 
     size_t childClassCount();

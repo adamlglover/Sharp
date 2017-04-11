@@ -335,7 +335,7 @@ public:
     bool add_macros(Method macro);
     void add_module(string name);
     ClassObject* getClass(string module, string name);
-    Method* getmacros(string module, string name, list<Param> params);
+    Method* getmacros(string module, string name, List<Param> &params);
     void cleanup();
 
     Errors* errors;
@@ -536,15 +536,15 @@ private:
 
     void resolveAllMethods();
 
-    void parseMethodParams(list <Param> &params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst);
+    void parseMethodParams(List <Param> &params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst);
 
-    Field fieldMapToField(string param_name, ResolvedReference utype);
+    Field fieldMapToField(string param_name, ResolvedReference utype, ast* pAst);
 
     keypair<List<string>, List<ResolvedReference>> parseUtypeArgList(ast *pAst);
 
     keypair<string, ResolvedReference> parseUtypeArg(ast *pAst);
 
-    bool containsParam(list <Param> params, string param_name);
+    bool containsParam(List <Param> params, string param_name);
 
     void resolveMacrosDecl(ast *pAst);
 
@@ -554,7 +554,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.26"
+#define progvers "0.1.27"
 
 struct options {
     /*

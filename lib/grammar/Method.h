@@ -8,13 +8,14 @@
 #include <list>
 #include "../../stdimports.h"
 #include "Param.h"
+#include "../util/List2.h"
 
 class ClassObject;
 
 class Method {
 
 public:
-    Method(string name, string module, ClassObject* klass, list<Param> params, list<AccessModifier> modifiers,
+    Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
            ClassObject* rtype, RuntimeNote note)
     :
             name(name),
@@ -24,14 +25,13 @@ public:
             module(module),
             note(note)
     {
-        this->params = new list<Param>();
-
-        for(Param &param : params){
-            this->params->push_back(param);
-        }
+        this->modifiers.init();
+        this->params.init();
+        this->params.addAll(params);
+        this->modifiers.addAll(modifiers);
     }
 
-    Method(string name, string module, ClassObject* klass, list<Param> params, list<AccessModifier> modifiers,
+    Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
            NativeField rtype, RuntimeNote note)
             :
             name(name),
@@ -41,37 +41,36 @@ public:
             module(module),
             note(note)
     {
-        this->params = new list<Param>();
-
-        for(Param &param : params){
-            this->params->push_back(param);
-        }
+        this->modifiers.init();
+        this->params.init();
+        this->params.addAll(params);
+        this->modifiers.addAll(modifiers);
     }
 
     ClassObject* getParentClass() { return pklass; }
     ClassObject* getReturnType() { return rType; }
     string getName() { return name; }
     string getModule() { return module; }
-    size_t paramCount() { return params->size(); }
-    list<Param>* getParams() { return params; }
-    Param getParam(int p) { return *std::next(params->begin(), p); }
+    size_t paramCount() { return params.size(); }
+    List<Param>* getParams() { return &params; }
+    Param& getParam(int p) { return params.get(p); }
     void clear() {
-        modifiers.clear();
+        modifiers.free();
 
-        for(Param& param : *params) {
-            param.free();
+        for(unsigned int i = 0; i < params.size(); i++) {
+            params.get(i).free();
         }
-        delete (params); params = NULL;
+        params.free();
     }
 
     RuntimeNote note;
     uint64_t vaddr;
 private:
-    list<AccessModifier> modifiers; // 3 max modifiers
+    List<AccessModifier> modifiers; // 3 max modifiers
     ClassObject* pklass;
     string name;
     string module;
-    list<Param>* params;
+    List<Param> params;
     ClassObject* rType;
     NativeField n_rType;
 };

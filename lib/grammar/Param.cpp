@@ -10,13 +10,13 @@ bool Param::match(Param &param) {
     return field == param.field;
 }
 
-bool Param::match(list<Param>& p1, list<Param>& p2) {
+bool Param::match(List<Param>& p1, List<Param>& p2) {
     if(p1.size() != p2.size())
         return false;
 
     size_t iter = 0;
-    for(Param& param : p1) {
-        if(!param.match(*std::next(p2.begin(), iter++)))
+    for(unsigned int i = 0; i < p1.size(); i++) {
+        if(!p1.get(i).match(p2.get(iter++)))
             return false;
     }
 

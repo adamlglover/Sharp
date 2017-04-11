@@ -26,7 +26,7 @@ Method* ClassObject::getConstructor(int p) {
     return &(*std::next(constructors->begin(), p));
 }
 
-Method *ClassObject::getConstructor(list<Param>& params) {
+Method *ClassObject::getConstructor(List<Param>& params) {
     for(Method& function : *constructors) {
         if(Param::match(*function.getParams(), params))
             return &function;
@@ -51,7 +51,7 @@ Method* ClassObject::getFunction(int p) {
     return &(*std::next(functions->begin(), p));
 }
 
-Method *ClassObject::getFunction(string name, list<Param>& params) {
+Method *ClassObject::getFunction(string name, List<Param>& params) {
     for(Method& function : *functions) {
         if(Param::match(*function.getParams(), params) && name == function.getName())
             return &function;
@@ -124,7 +124,7 @@ OperatorOverload *ClassObject::getOverload(size_t p) {
     return &element_at(*overloads, p);
 }
 
-OperatorOverload *ClassObject::getOverload(_operator op, list<Param> &params) {
+OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params) {
     for(OperatorOverload& oper : *overloads) {
         if(Param::match(*oper.getParams(), params) && op == oper.getOperator())
             return &oper;
@@ -149,7 +149,7 @@ Method *ClassObject::getMacros(int p) {
     return &element_at(*macros,p);
 }
 
-Method *ClassObject::getMacros(string name, list<Param> &params) {
+Method *ClassObject::getMacros(string name, List<Param> &params) {
     for(Method& macro : *macros) {
         if(Param::match(*macro.getParams(), params) && name == macro.getName())
             return &macro;
