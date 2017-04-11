@@ -3,7 +3,7 @@ mod examples_x.b.x;
 import examples_x.b.x;
 
 
-        static macros _get_addr_info (int x, char c)
+        static macros _get_addr_info (int& x, char c)
         {
             string n = null; // cannot assign null to native string
             label:
@@ -50,7 +50,7 @@ class Start base x // add 'base <refid>' to class decl
 
     fn foo()
     {
-        int* z = &x;
+        int& z = x;
         examples.B.a x;
         uInt64 u = new uInt64(foo() == foo()++ ? 1 : 0);
         short squery = SQL.query(cursor, x /9 ? 504 : 403, io.READ)/113;

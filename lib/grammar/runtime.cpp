@@ -805,9 +805,9 @@ Expression runtime::parseUtype(ast* pAst) {
     if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
         expression.utype.nf = token_tonativefield(ptr.refname);
         expression.utype.type = ResolvedReference::NATIVE;
-        ptr.free();
         expression.type = expression_native;
         expression.utype.refrenceName = ptr.toString();
+        ptr.free();
         return expression;
     }
 

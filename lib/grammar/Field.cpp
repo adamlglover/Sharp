@@ -6,8 +6,13 @@
 
 bool Field::operator==(const Field& f)
 {
-    if(nf == fnof)
-        return klass != NULL && klass->match(f.klass);
-    else
-        return (nf == f.nf) && name == f.name;
+    if(f.type == this->type) {
+        if(type == field_class)
+            return klass != NULL && klass->match(f.klass);
+        else if(type == field_native)
+            return (nf == f.nf);
+        else
+            return true;
+    }
+    return false;
 }

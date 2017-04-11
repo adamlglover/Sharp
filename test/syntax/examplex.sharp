@@ -13,11 +13,11 @@ class Main {
     var y=0;
     X b;
 
-    fn foo(Main x) {
+    fn foo(var x) {
 
     }
 
-    fn foo(Main x) {
+    fn foo(var x) {
 
     }
 
