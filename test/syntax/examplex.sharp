@@ -3,9 +3,23 @@ mod application;
 import io;
 
 class X {
-    X* yy;
+    X yy;
     var xx;
 }
+
+/*
+* Refrence design
+*/
+fn foo(Main x) {
+	x = new Main(); // the original x is perserved x in stack frame is dererefrenced and created
+}
+
+fn foobar() {
+	Main x = new Main(); // x is created
+	foo(x); // the values of x are preserved
+	x = new Main(); // x is recreated here values are dropped
+}
+
 
 class Main {
 

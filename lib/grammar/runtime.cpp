@@ -981,7 +981,10 @@ ref_ptr runtime::parse_refrence_ptr(ast *pAst) {
         }
 
         if(hash && !hashfound && !last) {
-            ptr.module +=id;
+            if(ptr.module == "")
+                ptr.module =id;
+            else
+                ptr.module += "." + id;
         } else if(!last) {
             ptr.class_heiarchy->push_back(id);
         } else {
