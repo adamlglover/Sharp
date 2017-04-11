@@ -11,6 +11,7 @@
 #include <sstream>
 #include <list>
 #include <stdexcept>
+#include <string.h>
 
 
 using namespace std;

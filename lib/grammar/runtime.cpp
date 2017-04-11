@@ -135,10 +135,10 @@ void runtime::parse_class_decl(ast *pAst) {
         setHeadClass(klass);
     }
 
+    add_scope(Scope(scope_class, klass));
     klass->setBaseClass(parse_base_class(pAst, ++startpos));
     assembler->addinjector(klass->getFullName() + init_constructor_postfix);
 
-    add_scope(Scope(scope_class, klass));
     for(long i = 0; i < trunk->getsubastcount(); i++) {
         pAst = trunk->getsubast(i);
 
@@ -592,7 +592,7 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
             if((field = klass->getField(object_name)) != NULL) {
                 // is static?
                 if(!lastRefrence && field->pointer) {
-                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `" + field->name + "->`?");
+                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `" + field->name.str() + "->`?");
                 } else if(!lastRefrence && field->array) {
                     errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
                 } else if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
@@ -649,7 +649,7 @@ void runtime::resolveFieldHeiarchy(Field* field, ref_ptr& refrence, Expression& 
         case field_unresolved:
             return;
         case field_native:
-            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + field->name + "` is not a class variable");
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + field->name.str() + "` is not a class variable");
             expression.utype.type = ResolvedReference::NATIVE;
             expression.utype.nf = field->nf;
             return;
@@ -1158,21 +1158,20 @@ void runtime::resolveVarDecl(ast* pAst) {
 Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* pAst) {
     Field field;
 
-    field.modifiers = new list<AccessModifier>();
     if(utype.type == ResolvedReference::FIELD) {
-        errors->newerror(COULD_NOT_RESOLVE, utype.field->note.getLine(), utype.field->note.getCol(), " `" + utype.field->name + "`");
+        errors->newerror(COULD_NOT_RESOLVE, utype.field->note.getLine(), utype.field->note.getCol(), " `" + utype.field->name.str() + "`");
         field.type = field_unresolved;
         field.note = utype.field->note;
-        *field.modifiers = *utype.field->modifiers;
+        field.modifiers.addAll(utype.field->modifiers);
         field.nf = utype.field->nf;
     } else if(utype.type == ResolvedReference::CLASS) {
         field.type = field_class;
         field.note = utype.klass->note;
         field.klass = utype.klass;
-        field.modifiers->push_back(utype.klass->getAccessModifier());
+        field.modifiers.add(utype.klass->getAccessModifier());
     } else if(utype.type == ResolvedReference::NATIVE) {
         field.type = field_native;
-        field.modifiers->push_back(mPublic);
+        field.modifiers.add(mPublic);
         field.nf = utype.nf;
     }
     else {
@@ -2279,6 +2278,7 @@ void runtime::partial_parse_class_decl(ast *pAst) {
 void runtime::partial_parse_var_decl(ast *pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
     int startpos=0;
 
 
@@ -2289,10 +2289,11 @@ void runtime::partial_parse_var_decl(ast *pAst) {
     }
 
     string name =  pAst->getentity(startpos).gettoken();
+    modCompat.addAll(modifiers);
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
-    if(!scope->klass->addField(Field(NULL, uid++, name, scope->klass, &modifiers, note))) {
+    if(!scope->klass->addField(Field(NULL, uid++, name, scope->klass, modCompat, note))) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "field `" + name + "` is already defined in the scope");
         printnote(scope->klass->getField(name)->note, "field `" + name + "` previously defined here");

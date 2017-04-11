@@ -86,7 +86,7 @@ Field* ClassObject::getField(string name) {
 }
 
 bool ClassObject::addField(Field field) {
-    if(getField(field.name) != NULL)
+    if(getField(field.name.str()) != NULL)
         return false;
 
     field.vaddr = this->fieldCount()==0?0:this->fieldCount()-1;

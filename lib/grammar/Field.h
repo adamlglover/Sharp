@@ -9,6 +9,7 @@
 #include "NativeField.h"
 #include "AccessModifier.h"
 #include "RuntimeNote.h"
+#include "../util/List2.h"
 #include <list>
 
 class ClassObject;
@@ -21,7 +22,7 @@ enum field_type {
 
 class Field {
 public:
-    Field(NativeField nf, uint64_t uid, string name, ClassObject* parent, list<AccessModifier>* modifiers,
+    Field(NativeField nf, uint64_t uid, string name, ClassObject* parent, List<AccessModifier>& modifiers,
           RuntimeNote note)
     :
             nf(nf),
@@ -34,14 +35,11 @@ public:
             refrence(false),
             pointer(false)
     {
-        this->modifiers = new list<AccessModifier>();
-        if(modifiers == NULL)
-            this->modifiers = NULL;
-        else
-            *this->modifiers = *modifiers;
+        this->modifiers.init();
+        this->modifiers.addAll(modifiers);
     }
 
-    Field(ClassObject* klass, uint64_t uid, string name, ClassObject* parent, list<AccessModifier>* modifiers,
+    Field(ClassObject* klass, uint64_t uid, string name, ClassObject* parent, List<AccessModifier>& modifiers,
           RuntimeNote note)
             :
             nf(fnof),
@@ -54,11 +52,8 @@ public:
             refrence(false),
             pointer(false)
     {
-        this->modifiers = new list<AccessModifier>();
-        if(modifiers == NULL)
-            this->modifiers = NULL;
-        else
-            *this->modifiers = *modifiers;
+        this->modifiers.init();
+        this->modifiers.addAll(modifiers);
     }
 
     Field()
@@ -67,7 +62,7 @@ public:
             uid(0),
             name(""),
             fullName(""),
-            modifiers(NULL),
+            modifiers(),
             note("","",0,0),
             refrence(false),
             pointer(false)
@@ -76,7 +71,7 @@ public:
 
     bool operator==(const Field& f);
 
-    void operator=(const Field& f)
+    void operator=(Field& f)
     {
         free();
 
@@ -87,18 +82,14 @@ public:
         name = f.name;
         fullName = f.fullName;
         parent = f.parent;
-        modifiers = f.modifiers;
+        modifiers.addAll(f.modifiers);
         refrence = f.refrence;
     }
     void free(){
         klass = NULL;
         parent = NULL;
 
-        if(modifiers != NULL) {
-            modifiers->clear();
-            delete (modifiers);
-        }
-        modifiers = NULL;
+        modifiers.free();
     }
 
     bool isField() {
@@ -106,10 +97,8 @@ public:
     }
 
     bool isStatic() {
-        if(modifiers == NULL) return false;
-
-        for(AccessModifier modifier : *modifiers) {
-            if(modifier == mStatic)
+        for(unsigned int i = 0; i < modifiers.size(); i++) {
+            if(modifiers.at(i) == mStatic)
                 return true;
         }
         return false;
@@ -121,9 +110,9 @@ public:
     NativeField nf;
     ClassObject* klass;
     int64_t uid, vaddr;
-    string name, fullName;
+    nString name, fullName;
     ClassObject* parent;
-    list<AccessModifier>* modifiers; // 3 max modifiers
+    List<AccessModifier> modifiers; // 3 max modifiers
 };
 
 

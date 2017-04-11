@@ -139,7 +139,7 @@ public:
         }
     }
 
-    void addAll(List<T> &list) {
+    void addAll(List<T>& list) {
         free();
         for(unsigned int i = 0; i < list.size(); i++) {
             push_back(list.get(i));
