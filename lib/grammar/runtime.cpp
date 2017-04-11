@@ -1139,20 +1139,20 @@ void runtime::resolveVarDecl(ast* pAst) {
     parse_access_decl(pAst, modifiers, startpos);
     string name =  pAst->getentity(startpos).gettoken();
     Field* field = scope->klass->getField(name);
-    ResolvedReference utype = parse_utype(pAst->getsubast(ast_utype));
-    if(utype.type == ResolvedReference::CLASS) {
-        field->klass = utype.klass;
+    Expression expression = parseUtype(pAst->getsubast(ast_utype));
+    if(expression.utype.type == ResolvedReference::CLASS) {
+        field->klass = expression.utype.klass;
         field->type = field_class;
-    } else if(utype.type == ResolvedReference::NATIVE) {
-        field->nf = utype.nf;
+    } else if(expression.utype.type == ResolvedReference::NATIVE) {
+        field->nf = expression.utype.nf;
         field->type = field_native;
     } else {
         field->type = field_unresolved;
     }
 
-    field->pointer = (bool)utype.mflag.ptr;
-    field->refrence = (bool)utype.mflag.ref;
-    field->array = utype.array;
+    field->pointer = (bool)expression.utype.mflag.ptr;
+    field->refrence = (bool)expression.utype.mflag.ref;
+    field->array = expression.utype.array;
 }
 
 Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* pAst) {
@@ -1226,7 +1226,7 @@ bool runtime::containsParam(List<Param> params, string param_name) {
 void runtime::parseMethodParams(List<Param>& params, keypair<List<string>, List<ResolvedReference>> fields, ast* pAst) {
     for(unsigned int i = 0; i < fields.key.size(); i++) {
         if(containsParam(params, fields.key.get(i))) {
-            errors->newerror(SYMBOL_ALREADY_DEFINED, pAst->line, pAst->col, " symbol `" + fields.key.get(i) + "` already defined in the scope");
+            errors->newerror(SYMBOL_ALREADY_DEFINED, pAst->line, pAst->col, "symbol `" + fields.key.get(i) + "` already defined in the scope");
         } else
             params.add(Param(fieldMapToField(fields.key.get(i), fields.value.get(i), pAst)));
     }
@@ -1286,7 +1286,7 @@ void runtime::resolveMacrosDecl(ast* pAst) {
     // TODO: parse return type
     Method macro = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
 
-    if(scope->klass == NULL) {
+    if(scope->type == scope_global) {
         addGlobalMacros(macro, pAst);
     } else {
         addChildMacros(macro, pAst, scope->klass);
@@ -1444,6 +1444,7 @@ void runtime::resolveAllFields() {
                     break;
             }
         }
+        remove_scope();
 
         if(errors->_errs()){
             errs+= errors->error_count();
@@ -1458,7 +1459,6 @@ void runtime::resolveAllFields() {
 
         errors->free();
         delete (errors); this->errors = NULL;
-        remove_scope();
     }
 }
 

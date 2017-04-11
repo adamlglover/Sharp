@@ -22,7 +22,7 @@ long ast::getsubastcount()
 
 ast* ast::getsubast(long at)
 {
-    if(numAsts == 0) return NULL;
+    if(numAsts == 0 || at >= numAsts) return NULL;
     return &sub_asts->get(at);
 }
 

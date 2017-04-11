@@ -34,9 +34,6 @@ public:
         __expand();
     }
 
-    ~List() {
-        free();
-    }
 
     /*
      * Programmer must be responsible

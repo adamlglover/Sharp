@@ -3,22 +3,9 @@ mod examples_x.b.x;
 import examples_x.b.x;
 
 
-        static macros _get_addr_info (int& x, char c)
-        {
-            string n = null; // cannot assign null to native string
-            label:
-            int portid = x;
-            sys.io.open((short)c, sys.io.PORT)[9];
-        };
-
-class x {
-
-}
-
-class Start base x // add 'base <refid>' to class decl
+class Start
 {
 
-    int x = x.class;
 
     private class X base Start.X.g {
         dynamic_object v=9;
