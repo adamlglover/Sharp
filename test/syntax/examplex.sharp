@@ -3,27 +3,17 @@ mod application;
 import io;
 
 class X {
-    X yy;
-    var xx;
-}
+    static X yy;
 
-/*
-* Refrence design
-*/
-fn foo(Main x) {
-	x = new Main(); // the original x is perserved x in stack frame is dererefrenced and created
-}
+    fn operator+(var x) {
 
-fn foobar() {
-	Main x = new Main(); // x is created
-	foo(x); // the values of x are preserved
-	x = new Main(); // x is recreated here values are dropped
+    }
 }
 
 
 class Main {
 
-    var x = X.yy.yy.operator+(8);
+    var x = X.yy.yy.operator+("");
     var y=0;
     X b;
 

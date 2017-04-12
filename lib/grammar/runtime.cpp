@@ -612,7 +612,7 @@ void runtime::resolveFieldHeiarchy(Field* field, ref_ptr& refrence, Expression& 
         case field_unresolved:
             return;
         case field_native:
-            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + field->name.str() + "` is not a class variable");
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + field->name + "` is not a class variable");
             expression.utype.type = ResolvedReference::NATIVE;
             expression.utype.nf = field->nf;
             return;
@@ -832,8 +832,10 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
         }
 
         if(expression->type == expression_var) {
-            // literal
-            params.add(Param(Field(fvar, 0, "", NULL, mods, note)));
+            field = Field(fvar, 0, "", NULL, mods, note);
+            field.type = field_native;
+
+            params.add(Param(field));
         } else if(expression->type == expression_string) {
             field = Field(fvar, 0, "", NULL, mods, note);
             field.array = true;
@@ -855,6 +857,7 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
             errors->newerror(GENERIC, expression->lnk->line, expression->lnk->col, " unexpected symbol `" + expression->utype.refrenceName + "`");
         } else if(expression->type == expression_dynamicclass) {
             field = Field(fdynamic, 0, "", NULL, mods, note);
+            field.type = field_native;
             params.add(field);
         } else {
             /* Unknown expression */
@@ -891,18 +894,27 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
     if(splitMethodUtype(methodName, ptr)) {
         // accessor
         resolveUtype(ptr, expression, pAst);
-        if(expression.type == expression_class) {
-            if((fn = expression.utype.klass->getMacros(methodName, params)) != NULL){}
-            else if((fn = expression.utype.klass->getFunction(methodName, params)) != NULL){}
-            else if((fn = expression.utype.klass->getOverload(string_toop(methodName), params)) != NULL){}
-            else if((fn = expression.utype.klass->getConstructor(params)) != NULL) {}
-            else {
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName = "`");
+        if(expression.type == expression_class || (expression.type == expression_field && expression.utype.field->type == field_class)) {
+            ClassObject* klass;
+            if(expression.type == expression_class) {
+                klass = expression.utype.klass;
+            } else {
+                klass = expression.utype.field->klass;
             }
+
+            if((fn = klass->getMacros(methodName, params)) != NULL){}
+            else if((fn = klass->getFunction(methodName, params)) != NULL){}
+            else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
+            else if((fn = klass->getConstructor(params)) != NULL) {}
+            else {
+                if(string_toop(methodName) != op_NO) methodName = "operator" + methodName;
+
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + "`");
+            }
+        } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
-        else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {}
         else {
-            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName = "`");
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "`");
         }
     } else {
         // method or global macros
@@ -910,7 +922,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
             if(scope->type == scope_global) {
                 // must be macros
                 if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
-                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname + "`");
                 }
             } else {
 
@@ -920,14 +932,17 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
                     else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params)) != NULL){}
                     else if((fn = scope->klass->getConstructor(params)) != NULL) {}
                     else {
-                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+                        if(string_toop(methodName) != op_NO) methodName = "operator" + ptr.refname;
+                        else methodName = ptr.refname;
+
+                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + "`");
                     }
                 }
             }
         } else {
             // must be macros
             if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname + "`");
             }
         }
     }
@@ -1286,7 +1301,7 @@ Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* 
     Field field;
 
     if(utype.type == ResolvedReference::FIELD) {
-        errors->newerror(COULD_NOT_RESOLVE, utype.field->note.getLine(), utype.field->note.getCol(), " `" + utype.field->name.str() + "`");
+        errors->newerror(COULD_NOT_RESOLVE, utype.field->note.getLine(), utype.field->note.getCol(), " `" + utype.field->name + "`");
         field.type = field_unresolved;
         field.note = utype.field->note;
         field.modifiers.addAll(utype.field->modifiers);

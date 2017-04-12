@@ -108,7 +108,7 @@ public:
     NativeField nf;
     ClassObject* klass;
     int64_t uid, vaddr;
-    nString name, fullName;
+    string name, fullName;
     ClassObject* parent;
     List<AccessModifier> modifiers; // 3 max modifiers
 };
