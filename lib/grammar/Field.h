@@ -32,8 +32,7 @@ public:
             parent(parent),
             klass(NULL),
             note(note),
-            refrence(false),
-            pointer(false)
+            array(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -49,8 +48,7 @@ public:
             parent(parent),
             klass(klass),
             note(note),
-            refrence(false),
-            pointer(false)
+            array(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -64,8 +62,7 @@ public:
             fullName(""),
             modifiers(),
             note("","",0,0),
-            refrence(false),
-            pointer(false)
+            array(false)
     {
     }
 
@@ -83,7 +80,7 @@ public:
         fullName = f.fullName;
         parent = f.parent;
         modifiers.addAll(f.modifiers);
-        refrence = f.refrence;
+        array = f.array;
     }
     void free(){
         klass = NULL;
@@ -104,7 +101,7 @@ public:
         return false;
     }
 
-    bool refrence, pointer, array;
+    bool array;
     field_type type;
     RuntimeNote note;
     NativeField nf;

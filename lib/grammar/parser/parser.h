@@ -147,10 +147,6 @@ private:
 
     bool isexprsymbol(string basic_string);
 
-    void parse_memaccess_flag(ast *pAst);
-
-    bool ismemaccess_flag(string basic_string);
-
     bool ismacros_decl(token_entity entity);
 
     void parse_macrosdecl(ast *pAst);

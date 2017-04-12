@@ -262,11 +262,14 @@ void Errors::fail() {
 
         for(parseerror &err : *gettesterrorlist())
         {
-            errors->push_back(err);
-            uo_errors->push_back(err);
+            if(shouldreport(NULL, lasterr, err)) {
+                errors->push_back(err);
+                lasterr = err;
+                uo_errors->push_back(err);
+            }
         }
 
-        if(teCursor < 0) {
+        if(teCursor <= 0) {
             lasterr = lastcheckederr;
             _err = true;
         }

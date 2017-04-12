@@ -56,14 +56,10 @@ An <nativetype> or <refrence-identifier>
 A value consists of an <expression>
 
 <uType>:
-<typeidentifier> [([])] [<MemAccessFlag>]
+<typeidentifier> [([])]
 
 <utype-naked>:
 <typeidentifier>
-
-<MemAccessFlag>:
-'&'
-    | '*'
 
 <value-list>:
 [ '(' <value> (',' <value>)* ')']
@@ -176,7 +172,7 @@ Operator Declaration:
 `[<accesstype>] fn operator <override-operator> <uTypeArg-list> [: <uType>] <block>
 
 Variable Declaration statement:
-`[<accesstype>] <uType> <identifier = name> <MemAccessFlag> [ <assign-expr> <value>] [, <variable-decl>] ;`
+`[<accesstype>] <uType> <identifier = name> [ <assign-expr> <value>] [, <variable-decl>] ;`
 
 Single Line comment Declaration:
 `//`

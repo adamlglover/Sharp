@@ -6,6 +6,7 @@ import examples_x.b.x;
 class Start
 {
 
+    var i = SQL.q(cursor, x /9 ? 504 : 403, io.READ)/113;
 
     private class X base Start.X.g {
         dynamic_object v=9;
@@ -37,10 +38,10 @@ class Start
 
     fn foo()
     {
-        int& z = x;
+        int z = x;
         examples.B.a x;
         uInt64 u = new uInt64(foo() == foo()++ ? 1 : 0);
-        short squery = SQL.query(cursor, x /9 ? 504 : 403, io.READ)/113;
+        short squery = SQL.q(cursor, x /9 ? 504 : 403, io.READ)/113;
         short query = x>>9 ? 103 : (x<<2)-9;
         int q = i ^ 8 && ((x << 2) | 1);
         i = 5<3/8%8+8/8*8;
@@ -112,11 +113,11 @@ class Start
         );
     }
 
-    private fn foobar(int i) {
+    private fn foobar(int i, y yy) {
 
     }
 
-    private fn foobar(int i) {
+    private fn foobar(int i, f xy) {
 
     }
 
@@ -124,7 +125,7 @@ class Start
     /*
     * Main function
     */
-    private static override fn main(examples.b#Class.v& b6, Integer#Int[] x,
+    private static override fn main(examples.b#Class.v b6, Integer#Int[] x,
             List lst,Int b, Int.c z) : int
     { // close up gap with processing xpression after function call (parse '++' and '--'
         {

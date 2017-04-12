@@ -301,42 +301,6 @@ void runtime::parse_native_cast(ResolvedReference utype, Expression expression, 
     }
 }
 
-bool runtime::parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst) {
-    Scope* scope = current_scope();
-
-    if(scope->klass != NULL && ptr.module == "" && ptr.class_heiarchy->size() == 0) {
-        if(scope->klass->getField(ptr.refname) != NULL) {
-            expression.type = expression_field;
-            expression.utype.type = ResolvedReference::FIELD;
-            expression.utype.field = scope->klass->getField(ptr.refname);
-            expression.utype.refrenceName = ptr.refname;
-            return true;
-        } // check local field in class
-    } else {
-        if(ptr.module != "" && ptr.class_heiarchy->size() == 0) {
-            return parse_global_utype(ptr, expression, pAst);
-        } else {
-            Field* field = scope->klass->getField(ptr.class_heiarchy->at(0));
-            if(field != NULL) {
-                if(!field->isField()) {
-                    goto _parse_class; // maybe a class
-                }
-                expression.type = expression_field;
-                expression.utype.type = ResolvedReference::FIELD;
-                expression.utype.field = scope->klass->getField(ptr.refname);
-                expression.utype.refrenceName = ptr.refname;
-                return true;
-            } else {
-                _parse_class:
-                int i = 0;
-                    // not a field, maybe a class
-            }
-        }
-    }
-
-    return false;
-}
-
 bool runtime::parse_global_utype(ref_ptr& ptr, Expression& expression, ast* pAst) {
     Scope* scope = current_scope();
 
@@ -591,9 +555,7 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
             // field?
             if((field = klass->getField(object_name)) != NULL) {
                 // is static?
-                if(!lastRefrence && field->pointer) {
-                    errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field*, did you mean to put `" + field->name.str() + "->`?");
-                } else if(!lastRefrence && field->array) {
+                if(!lastRefrence && field->array) {
                     errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
                 } else if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
                     errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is an instance variable");
@@ -798,10 +760,6 @@ Expression runtime::parseUtype(ast* pAst) {
         expression.utype.array = true;
     }
 
-    if(pAst->hassubast(ast_mem_access_flag)) {
-        expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-    }
-
     if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
         expression.utype.nf = token_tonativefield(ptr.refname);
         expression.utype.type = ResolvedReference::NATIVE;
@@ -833,11 +791,21 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     return expression;
 }
 
+Method* runtime::resolveMethodUtype(ast* pAst) {
+    Method* fn = NULL;
+
+
+    return fn;
+}
+
 Expression runtime::parseDotNotationCall(ast* pAst) {
     string method_name="";
     Expression expression;
+    Method* fn;
 
     if(pAst->hassubast(ast_value_list)) {
+        fn = resolveMethodUtype(pAst->getsubast(ast_utype));
+        // function call
         //List<Param> = parse
     } else {
         expression = parseUtype(pAst->getsubast(ast_utype));
@@ -861,8 +829,12 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
             return psrseUtypeClass(pAst);
         case ast_dot_not_e:
             return parseDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
+        default:
+            stringstream err;
+            err << ": unknown ast type: " << pAst->gettype();
+            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
+            return Expression(); // not an expression!
     }
-    return Expression();
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
@@ -1068,10 +1040,6 @@ ResolvedReference runtime::parse_utype(ast *pAst) {
         refrence.array = true;
     }
 
-    if(pAst->hassubast(ast_mem_access_flag)) {
-        refrence.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-    }
-
     ptr.free();
     return refrence;
 }
@@ -1153,8 +1121,6 @@ void runtime::resolveVarDecl(ast* pAst) {
         field->type = field_unresolved;
     }
 
-    field->pointer = (bool)expression.utype.mflag.ptr;
-    field->refrence = (bool)expression.utype.mflag.ref;
     field->array = expression.utype.array;
 }
 
@@ -1183,8 +1149,6 @@ Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* 
 
     field.fullName = param_name;
     field.uid = uid++;
-    field.pointer = (bool)utype.mflag.ptr;
-    field.refrence = (bool)utype.mflag.ref;
     field.name = param_name;
     field.array = utype.array;
     field.note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line), pAst->line, pAst->col);
@@ -2449,27 +2413,6 @@ void runtime::parse_var_access_modifiers(std::list <AccessModifier> &modifiers, 
        && element_has(modifiers, mProtected)) {
         modifiers.push_back(mPublic);
     }
-}
-
-mem_access_flag runtime::parse_mem_accessflag(ast *pAst) {
-    mem_access_flag flag;
-    if(pAst->hasentity(AND)) {
-        flag.ptr = 0;
-        flag.ref = 1;
-    } else if(pAst->hasentity(MULT)) {
-        if(!c_options.unsafe) {
-            errors->newerror(GENERIC, pAst->getentity(MULT),
-                             "using explicit reference pointer requires unsafe mode (-unsafe) to be turned on");
-        }
-
-        flag.ptr = 1;
-        flag.ref = 0;
-    } else {
-        flag.ptr = 0;
-        flag.ref = 0;
-    }
-
-    return flag;
 }
 
 /*

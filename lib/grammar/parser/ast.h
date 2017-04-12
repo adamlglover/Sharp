@@ -25,7 +25,6 @@ enum ast_types
     ast_utype_arg_list,
     ast_utype_arg_list_opt,
     ast_vector_array,
-    ast_mem_access_flag,
     ast_utype_arg,
     ast_utype_arg_opt,
     ast_expression,

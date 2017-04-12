@@ -16,17 +16,6 @@
 class ref_ptr;
 class ResolvedReference;
 
-struct mem_access_flag {
-    mem_access_flag()
-    :
-            ref(0),
-            ptr(0)
-    {
-    }
-    int ref;
-    int ptr;
-};
-
 /*
  *
         switch(type) {
@@ -95,7 +84,6 @@ public:
 
     string refrenceName;
     bool array;
-    mem_access_flag mflag;
     RefrenceType type;
     NativeField nf;
     ClassObject* klass;
@@ -458,8 +446,6 @@ private:
 
     void setHeadClass(ClassObject *pObject);
 
-    mem_access_flag parse_mem_accessflag(ast *pAst);
-
     Expression parse_literal(ast *pAst);
 
     void parse_charliteral(string basic_string, m64Assembler &assembler);
@@ -495,8 +481,6 @@ private:
     Scope* add_scope(Scope scope);
 
     void remove_scope();
-
-    bool parse_class_utype(ref_ptr& ptr, Expression& expression, ast* pAst);
 
     bool parse_global_utype(ref_ptr &ptr, Expression &expression, ast* pAst);
 
@@ -551,10 +535,12 @@ private:
     void resolveOperatorDecl(ast *pAst);
 
     void resolveConstructorDecl(ast *pAst);
+
+    Method *resolveMethodUtype(ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.29"
+#define progvers "0.1.30"
 
 struct options {
     /*

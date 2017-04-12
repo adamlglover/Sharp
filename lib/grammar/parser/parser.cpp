@@ -472,7 +472,6 @@ void parser::parse_variabledecl(ast *pAst) {
             errors->newerror(GENERIC, current(), "expected native type or reference pointer");
     } else {
         partialdecl--;
-        parse_memaccess_flag(pAst);
     }
 
     expectidentifier(pAst);
@@ -546,7 +545,6 @@ bool parser::parse_utype(ast *pAst) {
             expect(RIGHTBRACE, pAst, "`]`");
         }
 
-        parse_memaccess_flag(pAst);
         return true;
     }
     else
@@ -1027,19 +1025,6 @@ bool parser::parse_utypearg_opt(ast* pAst) {
         errors->newerror(GENERIC, current(), "expected native type or reference pointer");
 
     return false;
-}
-
-bool parser::ismemaccess_flag(string token) {
-    return token == "&" || token == "*";
-}
-
-void parser::parse_memaccess_flag(ast *pAst) {
-    if(ismemaccess_flag(peek(1).gettoken()))
-    {
-        pAst = get_ast(pAst, ast_mem_access_flag);
-        advance();
-        pAst->add_entity(current());
-    }
 }
 
 void parser::parse_vectorarray(ast* pAst) {
@@ -1710,7 +1695,7 @@ bool parser::parse_reference_pointer(ast *pAst) {
 
             pAst->add_entity(current());
 
-            expectidentifier(pAst);
+            if(!expectidentifier(pAst)) break;
             advance();
         }
 
