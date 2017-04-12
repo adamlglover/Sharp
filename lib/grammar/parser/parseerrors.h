@@ -37,6 +37,7 @@ enum p_errors
     UNEXPECTED_TOKEN = 22,
     INVALID_ACCESS = 23,
     SYMBOL_ALREADY_DEFINED = 24,
+    INVALID_PARAM = 25,
 
     NO_ERR = 999
 };

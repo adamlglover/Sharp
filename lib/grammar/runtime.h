@@ -109,7 +109,8 @@ struct Expression {
             type(expression_unknown),
             utype(),
             code(),
-            dot(false)
+            dot(false),
+            lnk(NULL)
     {
     }
 
@@ -118,6 +119,7 @@ struct Expression {
     expression_type type;
     ResolvedReference utype;
     m64Assembler code;
+    ast* lnk;
     bool dot;
 
     void free() {
@@ -408,7 +410,7 @@ private:
 
     Expression parse_value(ast *pAst);
 
-    Expression parse_expression(ast *pAst);
+    Expression parseExpression(ast *pAst);
 
 //    void checkCast(ast* pAst, ExprValue value, ResolvedReference cast);
 
@@ -536,11 +538,17 @@ private:
 
     void resolveConstructorDecl(ast *pAst);
 
-    Method *resolveMethodUtype(ast *pAst);
+    Method *resolveMethodUtype(ast *pAst, ast* valueList);
+
+    bool splitMethodUtype(string &name, ref_ptr &ptr);
+
+    List<Expression> parseValueList(ast *pAst);
+
+    bool expressionListToParams(List<Param> &params, List<Expression> expressions);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.30"
+#define progvers "0.1.31"
 
 struct options {
     /*

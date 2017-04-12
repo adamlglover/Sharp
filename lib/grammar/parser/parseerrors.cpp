@@ -83,6 +83,9 @@ void int_errs()
 
     err.set(SYMBOL_ALREADY_DEFINED, "");
     predefined_errs.push_back(err);
+
+    err.set(INVALID_PARAM, "invalid param of type");
+    predefined_errs.push_back(err);
 }
 
 void Errors::print_error(parseerror &err) {

@@ -224,7 +224,7 @@ void runtime::parse_import_decl(ast *pAst) {
 }
 
 Expression runtime::parse_value(ast *pAst) {
-    return parse_expression(pAst->getsubast(ast_expression));
+    return parseExpression(pAst->getsubast(ast_expression));
 }
 
 Expression runtime::parse_literal(ast *pAst) {
@@ -513,6 +513,7 @@ Expression runtime::parseLiteral(ast* pAst) {
             }
             break;
     }
+    expression.lnk = pAst;
     return expression;
 }
 
@@ -788,12 +789,127 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
+    expression.lnk = pAst;
     return expression;
 }
 
-Method* runtime::resolveMethodUtype(ast* pAst) {
-    Method* fn = NULL;
+bool runtime::splitMethodUtype(string& name, ref_ptr& ptr) {
+    if(ptr.singleRefrence() || ptr.singleRefrenceModule()) {
+        return false;
+    } else {
+        name = ptr.refname;
+        ptr.refname = ptr.class_heiarchy->get(ptr.class_heiarchy->size()-1); // assign the last field in the accessor to class
+        ptr.class_heiarchy->remove(ptr.class_heiarchy->size()-1);
+        return true;
+    }
+}
 
+List<Expression> runtime::parseValueList(ast* pAst) {
+    List<Expression> expressions;
+
+    ast* vAst;
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        vAst = pAst->getsubast(i);
+        expressions.add(parse_value(vAst));
+    }
+
+    return expressions;
+}
+
+bool runtime::expressionListToParams(List<Param> &params, List<Expression> expressions) {
+    bool success = true;
+    Expression* expression;
+    List<AccessModifier> mods;
+    RuntimeNote note;
+    Field field;
+
+    for(unsigned int i = 0; i < expressions.size(); i++) {
+        expression = &expressions.get(i);
+        if(expression->lnk != NULL) {
+            note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(expression->lnk->line), expression->lnk->line, expression->lnk->col);
+        }
+
+        if(expression->type == expression_var) {
+            // literal
+            params.add(Param(Field(fvar, 0, "", NULL, mods, note)));
+        } else if(expression->type == expression_string) {
+            field = Field(fvar, 0, "", NULL, mods, note);
+            field.array = true;
+
+            /* Native string is a char array */
+            params.add(Param(field));
+        } else if(expression->type == expression_class) {
+            success = false;
+            errors->newerror(INVALID_PARAM, expression->lnk->line, expression->lnk->col, " `class`, param must be lvalue");
+        } else if(expression->type == expression_field) {
+            params.add(*expression->utype.field);
+        } else if(expression->type == expression_native) {
+            success = false;
+            errors->newerror(GENERIC, expression->lnk->line, expression->lnk->col, " unexpected symbol `" + expression->utype.refrenceName + "`");
+        } else if(expression->type == expression_dynamicclass) {
+            field = Field(fdynamic, 0, "", NULL, mods, note);
+            params.add(field);
+        } else {
+            /* Unknown expression */
+            success = false;
+        }
+    }
+
+    return success;
+}
+
+Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
+    Scope* scope = current_scope();
+    Method* fn = NULL;
+    ClassObject* klass = NULL;
+
+    /* This is a naked utype so we dont haave to worry about brackets */
+    ref_ptr ptr;
+    string methodName = "";
+    List<Param> params;
+    List<Expression> expressions = parseValueList(pAst2);
+
+    if(expressionListToParams(params, expressions)) {
+        ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+
+        if(splitMethodUtype(methodName, ptr)) {
+            // accessor
+        } else {
+            // method or global macros
+            if(ptr.singleRefrence()) {
+                if(scope->type == scope_global) {
+                    // macros?
+                } else {
+
+                }
+            } else {
+                // refrence with module must be a global macros
+            }
+        }
+    } else {
+        // ignore processing
+    }
+
+
+
+    // parse value list
+    if(fn != NULL) {
+        // eval metod
+    }
+
+    if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
+        expression.utype.nf = token_tonativefield(ptr.refname);
+        expression.utype.type = ResolvedReference::NATIVE;
+        expression.type = expression_native;
+        expression.utype.refrenceName = ptr.toString();
+        ptr.free();
+        return expression;
+    }
+
+    resolveUtype(ptr, expression, pAst);
+
+    expression.utype.refrenceName = ptr.toString();
+    ptr.free();
 
     return fn;
 }
@@ -804,7 +920,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
     Method* fn;
 
     if(pAst->hassubast(ast_value_list)) {
-        fn = resolveMethodUtype(pAst->getsubast(ast_utype));
+        fn = resolveMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
         // function call
         //List<Param> = parse
     } else {
@@ -815,6 +931,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
         expression.dot = true;
     }
 
+    expression.lnk = pAst;
     return expression;
 }
 
@@ -838,7 +955,7 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
-Expression runtime::parse_expression(ast *pAst) {
+Expression runtime::parseExpression(ast *pAst) {
     ast* encap = pAst->getsubast(0);
 
     switch(encap->gettype()) {
