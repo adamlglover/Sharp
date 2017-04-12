@@ -821,9 +821,10 @@ bool parser::parse_expression(ast *pAst) {
 
         if(peek(1).gettokentype() == PTR) {
             expect(PTR, pAst, "`->` after self");
-            parse_expression(pAst);
+            parse_dot_notation_call_expr(pAst);
         }
 
+        pAst->encapsulate(ast_self_e);
         if(!isexprsymbol(peek(1).gettoken()))
             return true;
     }
@@ -833,7 +834,7 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         expect_token(pAst, "base", "");
         expect(PTR, pAst, "`->` after base");
-        parse_expression(pAst);
+        parse_dot_notation_call_expr(pAst);
 
         if(!isexprsymbol(peek(1).gettoken()))
             return true;

@@ -115,10 +115,9 @@ A value consists of an <expression>
 <expression>:
 <primary-expr>
     | 'self'
-    | 'self' '->' <expression>
-    | 'base' '->' <expression>
+    | 'self' '->' <dot-notation-call-expr>
+    | 'base' '->' <dot-notation-call-expr>
     | null
-    | expression '->' expression // TODO: add
     | '.' class
     | new uType [([<value-list>] | [VectorArray>])]
     | expression '[' expression ']' [expression]

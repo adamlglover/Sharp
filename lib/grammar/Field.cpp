@@ -6,7 +6,7 @@
 
 bool Field::operator==(const Field& f)
 {
-    if(f.type == this->type) {
+    if(f.type == this->type && f.array == this->array) {
         if(type == field_class)
             return klass != NULL && klass->match(f.klass);
         else if(type == field_native)

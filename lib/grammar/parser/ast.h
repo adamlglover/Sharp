@@ -61,6 +61,7 @@ enum ast_types
     ast_literal_e,
     ast_utype_class_e,
     ast_dot_not_e,
+    ast_self_e,
 
     ast_none
 };

@@ -13,11 +13,11 @@ class X {
 
 class Main {
 
-    var x = X.yy.yy.operator+("");
-    var y=0;
+    var x = 9;
+    var y=self->foo(x, foo(x));
     X b;
 
-    fn foo(var x) {
+    fn foo(var x, var n) : var {
 
     }
 

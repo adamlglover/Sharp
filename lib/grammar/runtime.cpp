@@ -62,6 +62,7 @@ void runtime::interpret() {
             }
 
             remove_scope();
+            errors->print_errors();
             errors->free();
             delete (errors); this->errors = NULL;
         }
@@ -642,7 +643,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
 
                 expression.utype.type = ResolvedReference::NOTRESOLVED;
                 expression.utype.refrenceName = refrence.refname;
-                expression.type = expression_unknown;
+                expression.type = expression_unresolved;
             }
         } else {
             // scope_class? | scope_instance_block? | scope_static_block?
@@ -671,7 +672,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
 
                     expression.utype.type = ResolvedReference::NOTRESOLVED;
                     expression.utype.refrenceName = refrence.refname;
-                    expression.type = expression_unknown;
+                    expression.type = expression_unresolved;
                 }
             }
         }
@@ -691,7 +692,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
 
             expression.utype.type = ResolvedReference::NOTRESOLVED;
             expression.utype.refrenceName = refrence.refname;
-            expression.type = expression_unknown;
+            expression.type = expression_unresolved;
         }
     } else {
         /* field? or class? */
@@ -710,7 +711,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                                                                                                                                            (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
                 expression.utype.type = ResolvedReference::NOTRESOLVED;
                 expression.utype.refrenceName = refrence.toString();
-                expression.type = expression_unknown;
+                expression.type = expression_unresolved;
 
             }
         } else {
@@ -724,7 +725,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                                                                                                                                                (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
                     expression.utype.type = ResolvedReference::NOTRESOLVED;
                     expression.utype.refrenceName = refrence.toString();
-                    expression.type = expression_unknown;
+                    expression.type = expression_unresolved;
                     return;
                 }
             }
@@ -745,7 +746,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                                                                                                                                                (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
                     expression.utype.type = ResolvedReference::NOTRESOLVED;
                     expression.utype.refrenceName = refrence.toString();
-                    expression.type = expression_unknown;
+                    expression.type = expression_unresolved;
                 }
             }
         }
@@ -818,7 +819,7 @@ List<Expression> runtime::parseValueList(ast* pAst) {
     return expressions;
 }
 
-bool runtime::expressionListToParams(List<Param> &params, List<Expression> expressions) {
+bool runtime::expressionListToParams(List<Param> &params, List<Expression>& expressions) {
     bool success = true;
     Expression* expression;
     List<AccessModifier> mods;
@@ -838,6 +839,7 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
             params.add(Param(field));
         } else if(expression->type == expression_string) {
             field = Field(fvar, 0, "", NULL, mods, note);
+            field.type = field_native;
             field.array = true;
 
             /* Native string is a char array */
@@ -859,6 +861,11 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
             field = Field(fdynamic, 0, "", NULL, mods, note);
             field.type = field_native;
             params.add(field);
+        } if(expression->type == expression_void) {
+            field = Field(fvoid, 0, "", NULL, mods, note);
+            field.type = field_native;
+
+            params.add(Param(field));
         } else {
             /* Unknown expression */
             success = false;
@@ -875,6 +882,32 @@ void runtime::__freeList(List<T> &lst) {
     }
 
     lst.free();
+}
+
+string runtime::paramsToString(List<Param> &param) {
+    string message = "(";
+    for(unsigned int i = 0; i < param.size(); i++) {
+        switch(param.get(i).field.type) {
+            case field_native:
+                message += nativefield_tostr(param.get(i).field.nf);
+                break;
+            case field_class:
+                message += param.get(i).field.klass->getFullName();
+                break;
+            case field_unresolved:
+                message += "<unknown-type>";
+                break;
+        }
+
+        if(param.get(i).field.array)
+            message += "[]";
+        if((i+1) < param.size()) {
+            message += ",";
+        }
+    }
+
+    message += ")";
+    return message;
 }
 
 Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
@@ -909,12 +942,12 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
             else {
                 if(string_toop(methodName) != op_NO) methodName = "operator" + methodName;
 
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
             }
         } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
         else {
-            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "`");
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + paramsToString(params) +  "`");
         }
     } else {
         // method or global macros
@@ -922,7 +955,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
             if(scope->type == scope_global) {
                 // must be macros
                 if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
-                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname + "`");
+                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname +  paramsToString(params) + "`");
                 }
             } else {
 
@@ -935,14 +968,14 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
                         if(string_toop(methodName) != op_NO) methodName = "operator" + ptr.refname;
                         else methodName = ptr.refname;
 
-                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + "`");
+                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName +  paramsToString(params) + "`");
                     }
                 }
             }
         } else {
             // must be macros
             if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname +  paramsToString(params) + "`");
             }
         }
     }
@@ -979,7 +1012,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
             if(expression.type == expression_lclass)
                 expression.utype.klass = fn->klass;
         } else
-            expression.type = expression_unknown;
+            expression.type = expression_unresolved;
     } else {
         expression = parseUtype(pAst->getsubast(ast_utype));
     }
@@ -1010,6 +1043,39 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
     }
 }
 
+Expression runtime::parseSelfExpression(ast* pAst) {
+    Scope* scope = current_scope();
+    Expression expression;
+
+
+    if(pAst->hasentity(PTR)) {
+        // self-><expression>
+        Expression e = parseDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
+
+        if(e.type == expression_field) {
+            cout << "field!" << endl;
+        } else if(e.type == expression_unresolved) {}
+        else {
+            cout << "function!" << endl;
+            switch(e.type) {
+
+            }
+        }
+    } else {
+        // self
+        expression.type = expression_lclass;
+        expression.utype.klass = scope->klass;
+    }
+
+    if(scope->type == scope_global) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "refrence to self in static context");
+        expression.type = expression_unknown;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
 Expression runtime::parseExpression(ast *pAst) {
     ast* encap = pAst->getsubast(0);
@@ -1017,6 +1083,9 @@ Expression runtime::parseExpression(ast *pAst) {
     switch(encap->gettype()) {
         case ast_primary_expr:
             return parsePrimaryExpression(encap);
+            break;
+        case ast_self_e:
+            return parseSelfExpression(encap);
             break;
         default:
             stringstream err;

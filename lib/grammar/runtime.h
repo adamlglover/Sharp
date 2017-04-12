@@ -101,7 +101,8 @@ enum expression_type {
     expression_native=9,
     expression_field=10,
     expression_lclass=11,
-    expression_void=11,
+    expression_void=12,
+    expression_unresolved=13,
     expression_unknown=0x900f
 };
 
@@ -556,7 +557,7 @@ private:
 
     List<Expression> parseValueList(ast *pAst);
 
-    bool expressionListToParams(List<Param> &params, List<Expression> expressions);
+    bool expressionListToParams(List<Param> &params, List<Expression>& expressions);
 
     void parseMethodReturnType(Expression &expression, Method &method);
 
@@ -564,6 +565,10 @@ private:
     void __freeList(List<T> &lst);
 
     expression_type methodReturntypeToExpressionType(Method *fn);
+
+    Expression parseSelfExpression(ast *pAst);
+
+    string paramsToString(List<Param> &param);
 };
 
 #define progname "bootstrap"

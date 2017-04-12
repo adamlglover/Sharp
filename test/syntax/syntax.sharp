@@ -6,7 +6,10 @@ import examples_x.b.x;
 class Start
 {
 
+    var x = X.yy.yy.operator+("");
     var i = SQL.q(cursor, x /9 ? 504 : 403, io.READ)/113;
+
+    var y=self->foo(x, foo(x));
 
     private class X base Start.X.g {
         dynamic_object v=9;
