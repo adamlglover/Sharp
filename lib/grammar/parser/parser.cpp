@@ -1695,7 +1695,15 @@ bool parser::parse_reference_pointer(ast *pAst) {
 
             pAst->add_entity(current());
 
-            if(!expectidentifier(pAst)) break;
+            if(peek(1).gettoken() == "operator") {
+                if(isoverride_operator(peek(2).gettoken())) {
+                    advance();
+                    advance();
+                    pAst->add_entity(current());
+                }
+            } else {
+                if(!expectidentifier(pAst)) break;
+            }
             advance();
         }
 

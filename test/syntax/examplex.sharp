@@ -23,7 +23,7 @@ fn foobar() {
 
 class Main {
 
-    var x = X.yy.yy;
+    var x = X.yy.yy.operator+(8);
     var y=0;
     X b;
 

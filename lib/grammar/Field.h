@@ -68,7 +68,7 @@ public:
 
     bool operator==(const Field& f);
 
-    void operator=(Field& f)
+    void operator=(Field f)
     {
         free();
 
@@ -82,6 +82,7 @@ public:
         modifiers.addAll(f.modifiers);
         array = f.array;
     }
+
     void free(){
         klass = NULL;
         parent = NULL;

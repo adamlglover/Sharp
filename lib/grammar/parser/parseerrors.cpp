@@ -191,6 +191,7 @@ void Errors::newerror(p_errors err, int l, int c, string xcmts) {
     if(shouldreport(NULL, last_err, e))
     {
         if(asis) {
+            lasterr = e;
             print_error(e);
         } else if(cm) {
             gettesterrorlist()->push_back(e);

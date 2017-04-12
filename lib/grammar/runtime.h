@@ -100,6 +100,8 @@ enum expression_type {
     expression_string=8,
     expression_native=9,
     expression_field=10,
+    expression_lclass=11,
+    expression_void=11,
     expression_unknown=0x900f
 };
 
@@ -111,6 +113,16 @@ struct Expression {
             code(),
             dot(false),
             lnk(NULL)
+    {
+    }
+
+    Expression(ast* pAst)
+            :
+            type(expression_unknown),
+            utype(),
+            code(),
+            dot(false),
+            lnk(pAst)
     {
     }
 
@@ -545,6 +557,13 @@ private:
     List<Expression> parseValueList(ast *pAst);
 
     bool expressionListToParams(List<Param> &params, List<Expression> expressions);
+
+    void parseMethodReturnType(Expression &expression, Method &method);
+
+    template<class T>
+    void __freeList(List<T> &lst);
+
+    expression_type methodReturntypeToExpressionType(Method *fn);
 };
 
 #define progname "bootstrap"

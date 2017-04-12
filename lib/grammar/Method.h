@@ -12,6 +12,13 @@
 
 class ClassObject;
 
+enum return_type {
+    lclass_object,
+    lnative_object,
+    lvoid,
+    lundefined,
+};
+
 class Method {
 
 public:
@@ -20,8 +27,8 @@ public:
     :
             name(name),
             pklass(klass),
-            rType(rtype),
-            n_rType(fnof),
+            klass(rtype),
+            nobj(fnof),
             module(module),
             note(note)
     {
@@ -36,8 +43,8 @@ public:
             :
             name(name),
             pklass(klass),
-            n_rType(rtype),
-            rType(NULL),
+            nobj(rtype),
+            klass(NULL),
             module(module),
             note(note)
     {
@@ -48,7 +55,6 @@ public:
     }
 
     ClassObject* getParentClass() { return pklass; }
-    ClassObject* getReturnType() { return rType; }
     string getName() { return name; }
     string getModule() { return module; }
     size_t paramCount() { return params.size(); }
@@ -65,14 +71,15 @@ public:
 
     RuntimeNote note;
     uint64_t vaddr;
+    return_type type;
+    ClassObject* klass;
+    NativeField nobj;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
     ClassObject* pklass;
     string name;
     string module;
     List<Param> params;
-    ClassObject* rType;
-    NativeField n_rType;
 };
 
 

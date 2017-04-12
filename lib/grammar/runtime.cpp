@@ -766,12 +766,14 @@ Expression runtime::parseUtype(ast* pAst) {
         expression.utype.type = ResolvedReference::NATIVE;
         expression.type = expression_native;
         expression.utype.refrenceName = ptr.toString();
+        expression.lnk = pAst;
         ptr.free();
         return expression;
     }
 
     resolveUtype(ptr, expression, pAst);
 
+    expression.lnk = pAst;
     expression.utype.refrenceName = ptr.toString();
     ptr.free();
     return expression;
@@ -841,6 +843,11 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
         } else if(expression->type == expression_class) {
             success = false;
             errors->newerror(INVALID_PARAM, expression->lnk->line, expression->lnk->col, " `class`, param must be lvalue");
+        } else if(expression->type == expression_lclass) {
+            field = Field(expression->utype.klass, 0, "", NULL, mods, note);
+            field.type = field_class;
+
+            params.add(Param(field));
         } else if(expression->type == expression_field) {
             params.add(*expression->utype.field);
         } else if(expression->type == expression_native) {
@@ -858,60 +865,91 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression> expre
     return success;
 }
 
+template<class T>
+void runtime::__freeList(List<T> &lst) {
+    for(unsigned int i = 0; i < lst.size(); i++) {
+        lst.get(i).free();
+    }
+
+    lst.free();
+}
+
 Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
     Scope* scope = current_scope();
     Method* fn = NULL;
-    ClassObject* klass = NULL;
 
     /* This is a naked utype so we dont haave to worry about brackets */
     ref_ptr ptr;
     string methodName = "";
     List<Param> params;
     List<Expression> expressions = parseValueList(pAst2);
+    Expression expression;
 
-    if(expressionListToParams(params, expressions)) {
-        ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+    expressionListToParams(params, expressions);
+    ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
 
-        if(splitMethodUtype(methodName, ptr)) {
-            // accessor
-        } else {
-            // method or global macros
-            if(ptr.singleRefrence()) {
-                if(scope->type == scope_global) {
-                    // macros?
-                } else {
-
-                }
-            } else {
-                // refrence with module must be a global macros
+    if(splitMethodUtype(methodName, ptr)) {
+        // accessor
+        resolveUtype(ptr, expression, pAst);
+        if(expression.type == expression_class) {
+            if((fn = expression.utype.klass->getMacros(methodName, params)) != NULL){}
+            else if((fn = expression.utype.klass->getFunction(methodName, params)) != NULL){}
+            else if((fn = expression.utype.klass->getOverload(string_toop(methodName), params)) != NULL){}
+            else if((fn = expression.utype.klass->getConstructor(params)) != NULL) {}
+            else {
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName = "`");
             }
         }
+        else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {}
+        else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName = "`");
+        }
     } else {
-        // ignore processing
+        // method or global macros
+        if(ptr.singleRefrence()) {
+            if(scope->type == scope_global) {
+                // must be macros
+                if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
+                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+                }
+            } else {
+
+                if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
+                    if((fn = scope->klass->getMacros(ptr.refname, params)) != NULL){}
+                    else if((fn = scope->klass->getFunction(ptr.refname, params)) != NULL){}
+                    else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params)) != NULL){}
+                    else if((fn = scope->klass->getConstructor(params)) != NULL) {}
+                    else {
+                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+                    }
+                }
+            }
+        } else {
+            // must be macros
+            if((fn = getmacros(ptr.module, ptr.refname, params)) == NULL) {
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname = "`");
+            }
+        }
     }
 
-
-
-    // parse value list
-    if(fn != NULL) {
-        // eval metod
-    }
-
-    if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
-        expression.utype.nf = token_tonativefield(ptr.refname);
-        expression.utype.type = ResolvedReference::NATIVE;
-        expression.type = expression_native;
-        expression.utype.refrenceName = ptr.toString();
-        ptr.free();
-        return expression;
-    }
-
-    resolveUtype(ptr, expression, pAst);
-
-    expression.utype.refrenceName = ptr.toString();
+    __freeList(params);
+    __freeList(expressions);
     ptr.free();
-
     return fn;
+}
+
+expression_type runtime::methodReturntypeToExpressionType(Method* fn) {
+    if(fn->type == lclass_object)
+        return expression_lclass;
+    else if(fn->type == lnative_object) {
+        if(fn->nobj == fdynamic)
+            return expression_dynamicclass;
+        else
+            return expression_var;
+    } else if(fn->type == lvoid)
+        return expression_void;
+    else
+        return expression_unknown;
 }
 
 Expression runtime::parseDotNotationCall(ast* pAst) {
@@ -921,8 +959,12 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
     if(pAst->hassubast(ast_value_list)) {
         fn = resolveMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
-        // function call
-        //List<Param> = parse
+        if(fn != NULL) {
+            expression.type = methodReturntypeToExpressionType(fn);
+            if(expression.type == expression_lclass)
+                expression.utype.klass = fn->klass;
+        } else
+            expression.type = expression_unknown;
     } else {
         expression = parseUtype(pAst->getsubast(ast_utype));
     }
@@ -936,7 +978,6 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 }
 
 Expression runtime::parsePrimaryExpression(ast* pAst) {
-    Scope* scope = current_scope();
     pAst = pAst->getsubast(0);
 
     switch(pAst->gettype()) {
@@ -950,7 +991,7 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
             errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
-            return Expression(); // not an expression!
+            return Expression(pAst); // not an expression!
     }
 }
 
@@ -966,7 +1007,7 @@ Expression runtime::parseExpression(ast *pAst) {
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
             errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
-            return Expression(); // not an expression!
+            return Expression(encap); // not an expression!
     }
 
     /*
@@ -1333,13 +1374,34 @@ void runtime::resolveMethodDecl(ast* pAst) {
     modCompat.addAll(modifiers);
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
-    // TODO: parse return type
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!scope->klass->addFunction(Method(name, current_module, scope->klass, params, modCompat, NULL, note))) {
+
+    Expression utype;
+    Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+    if(pAst->hassubast(ast_method_return_type)) {
+        utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
+        parseMethodReturnType(utype, method);
+    } else
+        method.type = lvoid;
+
+    if(!scope->klass->addFunction(method)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
         printnote(scope->klass->getFunction(name, params)->note, "function `" + name + "` previously defined here");
+    }
+}
+
+void runtime::parseMethodReturnType(Expression& expression, Method& method) {
+    if(expression.type == expression_class) {
+        method.type = lclass_object;
+        method.klass = expression.utype.klass;
+    } else if(expression.type == expression_native) {
+        method.type = lnative_object;
+        method.nobj = expression.utype.nf;
+    } else {
+        method.type = lundefined;
+        errors->newerror(GENERIC, expression.lnk->line, expression.lnk->col, "expected class or native type for method's return value");
     }
 }
 
@@ -1368,7 +1430,13 @@ void runtime::resolveMacrosDecl(ast* pAst) {
                                    pAst->line, pAst->col);
 
     // TODO: parse return type
+    Expression utype;
     Method macro = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+    if(pAst->hassubast(ast_method_return_type)) {
+        utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
+        parseMethodReturnType(utype, macro);
+    } else
+        macro.type = lvoid;
 
     if(scope->type == scope_global) {
         addGlobalMacros(macro, pAst);
@@ -1396,7 +1464,16 @@ void runtime::resolveOperatorDecl(ast* pAst) {
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
-    if(!scope->klass->addOperatorOverload(OperatorOverload(note, scope->klass, params, modCompat, NULL, string_toop(op)))) {
+
+    Expression utype;
+    OperatorOverload operatorOverload = OperatorOverload(note, scope->klass, params, modCompat, NULL, string_toop(op));
+    if(pAst->hassubast(ast_method_return_type)) {
+        utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
+        parseMethodReturnType(utype, operatorOverload);
+    } else
+        operatorOverload.type = lvoid;
+
+    if(!scope->klass->addOperatorOverload(operatorOverload)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
         printnote(scope->klass->getOverload(string_toop(op), params)->note, "function `" + op + "` previously defined here");
@@ -1425,7 +1502,10 @@ void runtime::resolveConstructorDecl(ast* pAst) {
         RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                        pAst->line, pAst->col);
 
-        if(!scope->klass->addConstructor(Method(name, current_module, scope->klass, params, modCompat, NULL, note))) {
+        Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+        method.type = lvoid;
+
+        if(!scope->klass->addConstructor(method)) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");
             printnote(scope->klass->getConstructor(params)->note, "constructor `" + name + "` previously defined here");
