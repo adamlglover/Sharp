@@ -169,7 +169,7 @@ int Errors::newerror(p_errors err, token_entity token, string xcmts) {
 bool Errors::shouldreport(token_entity *token, const parseerror &last_err,
                           const parseerror &e) const {
     if(last_err.error != e.error && !(last_err.line == e.line && last_err.col == e.col)
-       && (last_err.error.find(e.error) == std::string::npos))
+       && (last_err.error.find(e.error) == std::string::npos) && !has_error(e))
     {
         if(token != NULL && !(token->getid() == SINGLE || token->getid() == CHAR_LITERAL ||
                 token->getid() == STRING_LITERAL || token->getid() == INTEGER_LITERAL))
@@ -300,4 +300,12 @@ void Errors::free() {
     delete (errors); this->errors = NULL;
     delete (warnings); this->warnings = NULL;
     delete (_testerrors); this->_testerrors = NULL;
+}
+
+bool Errors::has_error(const parseerror &e) const {
+    for(parseerror& pe : *errors) {
+        if(pe.error == e.error)
+            return true;
+    }
+    return false;
 }

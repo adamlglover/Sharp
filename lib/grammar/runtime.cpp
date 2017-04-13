@@ -24,7 +24,7 @@ void runtime::interpret() {
         resolveAllMethods();
 
         for(parser* p : parsers) {
-            errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
+            errors = new Errors(p->lines, p->sourcefile, false, c_options.aggressive_errors);
             _current = p;
 
             ast* trunk;

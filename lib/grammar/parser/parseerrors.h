@@ -152,6 +152,8 @@ private:
 
 
     void print_error(parseerror &err);
+
+    bool has_error(const parseerror &e) const;
 };
 
 #endif //SHARP_PARSEERRORS_H
