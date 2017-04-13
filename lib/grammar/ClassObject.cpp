@@ -192,3 +192,20 @@ bool ClassObject::matchBase(ClassObject *pObject) {
     return base != NULL && pObject != NULL && pObject->base != NULL
            && base->match(pObject->base);
 }
+
+bool ClassObject::hasBaseClass(ClassObject *pObject) {
+    if(base == NULL) return true;
+    ClassObject* k, *_klass = this;
+
+    for(;;) {
+        k = _klass->getBaseClass();
+
+        if(k == NULL)
+            return false;
+
+        if(k->match(pObject)) {
+            return true;
+        }else
+            _klass = k;
+    }
+}

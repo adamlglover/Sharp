@@ -120,6 +120,9 @@ public:
     bool matchBase(ClassObject *pObject);
 
     unsigned int vaddr;
+
+    bool hasBaseClass(ClassObject *pObject);
+
 private:
     const AccessModifier modifier;
     const long uid;

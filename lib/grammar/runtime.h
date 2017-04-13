@@ -103,6 +103,7 @@ enum expression_type {
     expression_lclass=11,
     expression_void=12,
     expression_unresolved=13,
+    expression_dynamicclass_array=14,
     expression_unknown=0x900f
 };
 
@@ -196,7 +197,9 @@ struct Scope {
     Scope()
     :
             type(scope_global),
-            klass(NULL)
+            klass(NULL),
+            self(false),
+            base(false)
     {
         locals.init();
     }
@@ -204,15 +207,17 @@ struct Scope {
     Scope(scope_type type, ClassObject* klass)
             :
             type(type),
-            klass(klass)
+            klass(klass),
+            self(false),
+            base(false)
     {
         locals.init();
     }
 
     Field* getLocalField(string field_name) {
         for(unsigned int i = locals.size()-1; i > 0; i--) {
-            if(locals.at(i)->name == field_name) {
-                return locals.at(i);
+            if(locals.at(i).name == field_name) {
+                return &locals.get(i);
             }
         }
         return NULL;
@@ -220,7 +225,7 @@ struct Scope {
 
     int getLocalFieldIndex(string field_name) {
         for(unsigned int i = locals.size()-1; i > 0; i--) {
-            if(locals.at(i)->name == field_name) {
+            if(locals.at(i).name == field_name) {
                 return i;
             }
         }
@@ -229,7 +234,8 @@ struct Scope {
 
     scope_type type;
     ClassObject* klass;
-    List<Field*> locals;
+    List<Field> locals;
+    bool self, base;
 };
 
 class ref_ptr {
@@ -569,10 +575,26 @@ private:
     Expression parseSelfExpression(ast *pAst);
 
     string paramsToString(List<Param> &param);
+
+    void resolveBaseUtype(Scope *scope, ref_ptr& reference, Expression &expression, ast *pAst);
+
+    ResolvedReference getBaseClassOrField(string name, ClassObject *start);
+
+    void resolveSelfUtype(Scope *scope, ref_ptr &reference, Expression &expression, ast *pAst);
+
+    Expression parseSelfDotNotationCall(ast *pAst);
+
+    Method *resolveSelfMethodUtype(ast *pAst, ast *pAst2);
+
+    Expression parseBaseDotNotationCall(ast *pAst);
+
+    Expression parseBaseExpression(ast *pAst);
+
+    Method* resolveBaseMethodUtype(ast *pAst, ast* pAst2);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.32"
+#define progvers "0.1.33"
 
 struct options {
     /*

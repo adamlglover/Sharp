@@ -11,17 +11,18 @@ class X {
 }
 
 
-class Main {
+class Main base X{
 
     var x = 9;
-    var y=self->foo(x, foo(x));
+    var y=self->foo(Main.x, foo(x));
+    var yy = base->application#X.foo("foo");
     X b;
 
     fn foo(var x, var n) : var {
 
     }
 
-    fn foo(var x) {
+    fn foo(var x) : __int8 {
 
     }
 

@@ -153,6 +153,7 @@ ast *ast::getsubast_after(ast_types at) {
 }
 
 // TODO: call this method for expressions
+// tODO: add param bool override (default true) to override the encapsulation
 void ast::encapsulate(ast_types at) {
     unencapsulate();
 

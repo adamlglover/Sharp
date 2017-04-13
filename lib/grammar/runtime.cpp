@@ -559,8 +559,8 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                 // is static?
                 if(!lastRefrence && field->array) {
                     errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
-                } else if(!lastRefrence && requireStatic && !field->isStatic() && field->type != field_unresolved) {
-                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is an instance variable");
+                } else if(requireStatic && !field->isStatic() && field->type != field_unresolved) {
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "static access on instance field field `" + object_name + "`");
                 }
 
 
@@ -579,7 +579,7 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                     case field_native:
                         if(lastRefrence){}
                         else {
-                            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "field `" + object_name + "` is not a class variable");
+                            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "invalid access to non-class field `" + object_name + "`");
                             expression.utype.refrenceName = object_name;
                             return;
                         }
@@ -623,15 +623,328 @@ void runtime::resolveFieldHeiarchy(Field* field, ref_ptr& refrence, Expression& 
     }
 }
 
-void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst) {
-    Scope* scope = current_scope();
-    int64_t i64;
 
-    if(refrence.singleRefrence()) {
+ResolvedReference runtime::getBaseClassOrField(string name, ClassObject* start) {
+    ClassObject* base;
+    Field* field;
+    ResolvedReference reference;
+
+    for(;;) {
+        base = start->getBaseClass();
+
+        if(base == NULL) {
+            // could not resolve
+            return reference;
+        }
+
+        if(name == base->getName()) {
+            reference.klass = base;
+            reference.type = ResolvedReference::CLASS;
+            // base class
+        } else if((field = base->getField(name))) {
+            reference.field = field;
+            reference.type = ResolvedReference::FIELD;
+        } else {
+            start = base; // recursivley assign klass to new base
+        }
+    }
+}
+
+void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& expression, ast* pAst) {
+    ClassObject* klass = scope->klass, *base;
+    Field* field;
+    ResolvedReference ref;
+
+    if(scope->klass->getBaseClass() == NULL) {
+        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + scope->klass->getFullName() + "` does not inherit a base class");
+        expression.utype.type = ResolvedReference::NOTRESOLVED;
+        expression.utype.refrenceName = reference.toString();
+        expression.type = expression_unresolved;
+        return;
+    }
+
+    if(reference.singleRefrence()) {
+        ref = getBaseClassOrField(reference.refname, klass);
+        if(ref.type != ResolvedReference::NOTRESOLVED) {
+            if(ref.type == ResolvedReference::FIELD) {
+                // field!
+            } else {
+                if(scope->klass->hasBaseClass(ref.klass)) {
+                    // base class
+                    expression.utype.type = ResolvedReference::CLASS;
+                    expression.utype.klass = ref.klass;
+                    expression.type = expression_class;
+                } else {
+                    // klass provided is not a base
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + reference.refname + "`" +
+                                                                                                                                     (reference.module == "" ? "" : " in module {" + reference.module + "}")
+                                                                                                                                     + " is not a base class of class " + scope->klass->getName());
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = reference.toString();
+                    expression.type = expression_unresolved;
+                }
+            }
+        } else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
+                                                                                                                                       (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = reference.toString();
+            expression.type = expression_unresolved;
+        }
+    } else if(reference.singleRefrenceModule()) {
+        base = getClass(reference.module, reference.refname);
+
+        if(base != NULL) {
+            if(scope->klass->hasBaseClass(base)) {
+                // base class
+
+                expression.utype.type = ResolvedReference::CLASS;
+                expression.utype.klass = base;
+                expression.type = expression_class;
+                return;
+            } else {
+                // klass provided is not a base
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + reference.refname + "`" +
+                                                                                                                                 (reference.module == "" ? "" : " in module {" + reference.module + "}")
+                                                                                                                                 + " is not a base class of class " + scope->klass->getName());
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = reference.toString();
+                expression.type = expression_unresolved;
+            }
+        }
+
+        /* Un resolvable */
+
+        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
+                                                                                                                                   (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+        expression.utype.type = ResolvedReference::NOTRESOLVED;
+        expression.utype.refrenceName = reference.refname;
+        expression.type = expression_unresolved;
+        return;
+    } else {
+        base = klass->getBaseClass();
+        string starter_name = reference.class_heiarchy->at(0);
+
+        if(base != NULL) {
+
+            if(reference.module != "") {
+                // first must be class
+                if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
+                    if(scope->klass->hasBaseClass(klass)) {
+                        resolveClassHeiarchy(klass, reference, expression, pAst);
+                    } else {
+                        // klass provided is not a base
+                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + starter_name + "`" +
+                                                                                                                                                   (reference.module == "" ? "" : " in module {" + reference.module + "}")
+                                                                                                                                         + " is not a base class of class " + scope->klass->getName());
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = reference.toString();
+                        expression.type = expression_unresolved;
+                    }
+                    return;
+                } else {
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                               (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = reference.toString();
+                    expression.type = expression_unresolved;
+                }
+            } else {
+                ref = getBaseClassOrField(starter_name, klass);
+                if(ref.type != ResolvedReference::NOTRESOLVED) {
+                    if(ref.type == ResolvedReference::FIELD) {
+                        resolveFieldHeiarchy(ref.field, reference, expression, pAst);
+                    } else {
+                        resolveClassHeiarchy(ref.klass, reference, expression, pAst);
+                    }
+                } else {
+                    if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
+                        if(scope->klass->hasBaseClass(klass)) {
+                            resolveClassHeiarchy(klass, reference, expression, pAst);
+                        } else {
+                            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + starter_name + "`" +
+                                                                                                                                             (reference.module == "" ? "" : " in module {" + reference.module + "}")
+                                                                                                                                             + " is not a base class of class " + scope->klass->getName());
+                            expression.utype.type = ResolvedReference::NOTRESOLVED;
+                            expression.utype.refrenceName = reference.toString();
+                            expression.type = expression_unresolved;
+                        }
+                    } else {
+                        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                                   (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = reference.toString();
+                        expression.type = expression_unresolved;
+                    }
+                }
+            }
+        }else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                       (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = reference.toString();
+            expression.type = expression_unresolved;
+        }
+    }
+}
+
+void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& expression, ast* pAst) {
+    if(reference.singleRefrence()) {
         ClassObject* klass=NULL;
         Field* field=NULL;
 
         if(scope->type == scope_global) {
+            /* cannot get self from global refrence */
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line,
+                             pAst->getsubast(ast_type_identifier)->col,
+                             "cannot get object `" + reference.refname + "` from self at global scope");
+
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = reference.refname;
+            expression.type = expression_unresolved;
+        } else {
+            if(scope->type == scope_static_block) {
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + reference.refname + "` from self in static context");
+
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = reference.refname;
+                expression.type = expression_unresolved;
+            } else {
+                if((field = scope->klass->getField(reference.refname)) != NULL) {
+                    // field?
+                    expression.utype.type = ResolvedReference::FIELD;
+                    expression.utype.field = field;
+                    expression.type = expression_field;
+                } else {
+                    /* Un resolvable */
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
+                                                                                                                                               (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = reference.refname;
+                    expression.type = expression_unresolved;
+                }
+            }
+        }
+    } else if(reference.singleRefrenceModule()) {
+        /* Un resolvable */
+        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " use of module {" + reference.module + "} in expression signifies global access of object");
+
+        expression.utype.type = ResolvedReference::NOTRESOLVED;
+        expression.utype.refrenceName = reference.refname;
+        expression.type = expression_unresolved;
+    } else {
+        /* field? or class? */
+        ClassObject* klass=NULL;
+        Field* field=NULL;
+        string starter_name = reference.class_heiarchy->at(0);
+
+        if(scope->type == scope_global) {
+            /* cannot get self from global refrence */
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + reference.refname + "` from self at global scope");
+
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = reference.refname;
+            expression.type = expression_unresolved;
+        } else {
+            if(reference.module != "") {
+                /* Un resolvable */
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " use of module {" + reference.module + "} in expression signifies global access of object");
+
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = reference.refname;
+                expression.type = expression_unresolved;
+                return;
+            }
+
+            if(scope->type == scope_static_block) {
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + reference.refname + "` from self in static context");
+
+                expression.utype.type = ResolvedReference::NOTRESOLVED;
+                expression.utype.refrenceName = reference.refname;
+                expression.type = expression_unresolved;
+            } else {
+                if((field = scope->klass->getField(starter_name)) != NULL) {
+                    resolveFieldHeiarchy(field, reference, expression, pAst);
+                } else {
+                    /* Un resolvable */
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
+                                                                                                                                               (reference.module == "" ? "" : "in module {" + reference.module + "} "));
+
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = reference.refname;
+                    expression.type = expression_unresolved;
+                }
+            }
+        }
+    }
+}
+
+void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst) {
+    Scope* scope = current_scope();
+    int64_t i64;
+
+    if(scope->self) {
+        resolveSelfUtype(scope, refrence, expression, pAst);
+    } else if(scope->base) {
+        resolveBaseUtype(scope, refrence, expression, pAst);
+    } else {
+        if(refrence.singleRefrence()) {
+            ClassObject* klass=NULL;
+            Field* field=NULL;
+
+            if(scope->type == scope_global) {
+
+                if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
+                    expression.utype.type = ResolvedReference::CLASS;
+                    expression.utype.klass = klass;
+                    expression.type = expression_class;
+                } else {
+                    /* Un resolvable */
+                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+                    expression.utype.type = ResolvedReference::NOTRESOLVED;
+                    expression.utype.refrenceName = refrence.refname;
+                    expression.type = expression_unresolved;
+                }
+            } else {
+
+                // scope_class? | scope_instance_block? | scope_static_block?
+                if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                    expression.utype.type = ResolvedReference::FIELD;
+                    expression.utype.field = field;
+                    expression.code.push_i64(SET_Di(i64, MOVL, scope->getLocalFieldIndex(refrence.refname)));
+                    expression.type = expression_field;
+                }
+                else if((field = scope->klass->getField(refrence.refname)) != NULL) {
+                    // field?
+                    expression.utype.type = ResolvedReference::FIELD;
+                    expression.utype.field = field;
+                    expression.code.push_i64(SET_Di(i64, MOVN, field->vaddr));
+                    expression.type = expression_field;
+                } else {
+                    if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
+                        // global class ?
+                        expression.utype.type = ResolvedReference::CLASS;
+                        expression.utype.klass = klass;
+                        expression.type = expression_class;
+                    } else {
+                        /* Un resolvable */
+                        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                                   (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = refrence.refname;
+                        expression.type = expression_unresolved;
+                    }
+                }
+            }
+        } else if(refrence.singleRefrenceModule()){
+            /* Must be a class i.e module#globalClass */
+            ClassObject* klass=NULL;
+
+            // in this case we ignore scope
             if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
                 expression.utype.type = ResolvedReference::CLASS;
                 expression.utype.klass = klass;
@@ -646,111 +959,112 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                 expression.type = expression_unresolved;
             }
         } else {
-            // scope_class? | scope_instance_block? | scope_static_block?
-            if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
-                expression.utype.type = ResolvedReference::FIELD;
-                expression.utype.field = field;
-                expression.code.push_i64(SET_Di(i64, MOVL, scope->getLocalFieldIndex(refrence.refname)));
-                expression.type = expression_field;
-            }
-            else if((field = scope->klass->getField(refrence.refname)) != NULL) {
-                // field?
-                expression.utype.type = ResolvedReference::FIELD;
-                expression.utype.field = field;
-                expression.code.push_i64(SET_Di(i64, MOVN, field->vaddr));
-                expression.type = expression_field;
-            } else {
-                if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
-                    // global class ?
-                    expression.utype.type = ResolvedReference::CLASS;
-                    expression.utype.klass = klass;
-                    expression.type = expression_class;
-                } else {
-                    /* Un resolvable */
-                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
-                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+            /* field? or class? */
+            ClassObject* klass=NULL;
+            Field* field=NULL;
+            string starter_name = refrence.class_heiarchy->at(0);
+
+            if(scope->type == scope_global) {
+                if(scope->self) {
+                    /* cannot get self from global refrence */
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + refrence.refname + "` from self at global scope");
 
                     expression.utype.type = ResolvedReference::NOTRESOLVED;
                     expression.utype.refrenceName = refrence.refname;
                     expression.type = expression_unresolved;
+                    return;
+                } else if(scope->base) {
+                    resolveBaseUtype(scope, refrence, expression, pAst);
+                    return;
                 }
-            }
-        }
-    } else if(refrence.singleRefrenceModule()){
-        /* Must be a class i.e module#globalClass */
-        ClassObject* klass=NULL;
 
-        // in this case we ignore scope
-        if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
-            expression.utype.type = ResolvedReference::CLASS;
-            expression.utype.klass = klass;
-            expression.type = expression_class;
-        } else {
-            /* Un resolvable */
-            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
-                                                                                                                                       (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
-
-            expression.utype.type = ResolvedReference::NOTRESOLVED;
-            expression.utype.refrenceName = refrence.refname;
-            expression.type = expression_unresolved;
-        }
-    } else {
-        /* field? or class? */
-        ClassObject* klass=NULL;
-        Field* field=NULL;
-        string starter_name = refrence.class_heiarchy->at(0);
-
-        if(scope->type == scope_global) {
-            // class?
-            if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
-                resolveClassHeiarchy(klass, refrence, expression, pAst);
-                return;
-            } else {
-                /* un resolvable */
-                errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
-                                                                                                                                           (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
-                expression.utype.type = ResolvedReference::NOTRESOLVED;
-                expression.utype.refrenceName = refrence.toString();
-                expression.type = expression_unresolved;
-
-            }
-        } else {
-            // scope_class? | scope_instance_block? | scope_static_block?
-            if(refrence.module != "") {
+                // class?
                 if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
                     resolveClassHeiarchy(klass, refrence, expression, pAst);
                     return;
                 } else {
+                    /* un resolvable */
                     errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
                                                                                                                                                (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
                     expression.utype.type = ResolvedReference::NOTRESOLVED;
                     expression.utype.refrenceName = refrence.toString();
                     expression.type = expression_unresolved;
+
+                }
+            } else {
+                if(scope->self) {
+                    if(refrence.module != "") {
+                        /* Un resolvable */
+                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " use of module {" + refrence.module + "} in expression signifies global access of object");
+
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = refrence.refname;
+                        expression.type = expression_unresolved;
+                        return;
+                    }
+
+                    if(scope->type == scope_static_block) {
+                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + refrence.refname + "` from self in static context");
+
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = refrence.refname;
+                        expression.type = expression_unresolved;
+                    } else {
+                        if((field = scope->klass->getField(starter_name)) != NULL) {
+                            resolveFieldHeiarchy(field, refrence, expression, pAst);
+                        } else {
+                            /* Un resolvable */
+                            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
+                                                                                                                                                       (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+                            expression.utype.type = ResolvedReference::NOTRESOLVED;
+                            expression.utype.refrenceName = refrence.refname;
+                            expression.type = expression_unresolved;
+                        }
+                    }
+
+                    return;
+                } else if(scope->base) {
+                    resolveBaseUtype(scope, refrence, expression, pAst);
                     return;
                 }
-            }
 
-            if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
-                resolveFieldHeiarchy(field, refrence, expression, pAst);
-                return;
-            }
-            else if((field = scope->klass->getField(starter_name)) != NULL) {
-                resolveFieldHeiarchy(field, refrence, expression, pAst);
-                return;
-            } else {
-                if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
-                    resolveClassHeiarchy(klass, refrence, expression, pAst);
+                // scope_class? | scope_instance_block? | scope_static_block?
+                if(refrence.module != "") {
+                    if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
+                        resolveClassHeiarchy(klass, refrence, expression, pAst);
+                        return;
+                    } else {
+                        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                                   (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = refrence.toString();
+                        expression.type = expression_unresolved;
+                        return;
+                    }
+                }
+
+                if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                    resolveFieldHeiarchy(field, refrence, expression, pAst);
+                    return;
+                }
+                else if((field = scope->klass->getField(starter_name)) != NULL) {
+                    resolveFieldHeiarchy(field, refrence, expression, pAst);
                     return;
                 } else {
-                    errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
-                                                                                                                                               (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
-                    expression.utype.type = ResolvedReference::NOTRESOLVED;
-                    expression.utype.refrenceName = refrence.toString();
-                    expression.type = expression_unresolved;
+                    if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
+                        resolveClassHeiarchy(klass, refrence, expression, pAst);
+                        return;
+                    } else {
+                        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + starter_name + "` " +
+                                                                                                                                                   (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+                        expression.utype.type = ResolvedReference::NOTRESOLVED;
+                        expression.utype.refrenceName = refrence.toString();
+                        expression.type = expression_unresolved;
+                    }
                 }
             }
         }
-
     }
 }
 
@@ -861,13 +1175,17 @@ bool runtime::expressionListToParams(List<Param> &params, List<Expression>& expr
             field = Field(fdynamic, 0, "", NULL, mods, note);
             field.type = field_native;
             params.add(field);
-        } if(expression->type == expression_void) {
+        } else if(expression->type == expression_void) {
             field = Field(fvoid, 0, "", NULL, mods, note);
             field.type = field_native;
 
             params.add(Param(field));
         } else {
             /* Unknown expression */
+            field = Field(fnof, 0, "", NULL, mods, note);
+            field.type = field_unresolved;
+
+            params.add(Param(field));
             success = false;
         }
     }
@@ -1043,32 +1361,274 @@ Expression runtime::parsePrimaryExpression(ast* pAst) {
     }
 }
 
+Method* runtime::resolveSelfMethodUtype(ast* pAst, ast* pAst2) {
+    Scope* scope = current_scope();
+    Method* fn = NULL;
+
+    /* This is a naked utype so we dont haave to worry about brackets */
+    ref_ptr ptr;
+    string methodName = "";
+    List<Param> params;
+    List<Expression> expressions = parseValueList(pAst2);
+    Expression expression;
+
+    expressionListToParams(params, expressions);
+    ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+
+    if(splitMethodUtype(methodName, ptr)) {
+        // accessor
+        if(scope->type == scope_global) {
+
+            errors->newerror(GENERIC, pAst2->line, pAst2->col,
+                             "cannot get object `" + methodName + paramsToString(params) + "` from self at global scope");
+        }
+
+        scope->self = true;
+        resolveUtype(ptr, expression, pAst);
+        scope->self = false;
+        if(expression.type == expression_class || (expression.type == expression_field && expression.utype.field->type == field_class)) {
+            ClassObject* klass;
+            if(expression.type == expression_class) {
+                klass = expression.utype.klass;
+            } else {
+                klass = expression.utype.field->klass;
+            }
+
+            if((fn = klass->getMacros(methodName, params)) != NULL){}
+            else if((fn = klass->getFunction(methodName, params)) != NULL){}
+            else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
+            else if((fn = klass->getConstructor(params)) != NULL) {}
+            else {
+                if(string_toop(methodName) != op_NO) methodName = "operator" + methodName;
+
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+            }
+        } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
+        }
+        else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + paramsToString(params) +  "`");
+        }
+    } else {
+        // method or macros
+        if(ptr.singleRefrence()) {
+            if(scope->type == scope_global) {
+                // must be macros
+                errors->newerror(GENERIC, pAst2->line, pAst2->col,
+                                 "cannot get object `" + ptr.refname + paramsToString(params) + "` from self at global scope");
+            } else {
+
+                if((fn = scope->klass->getMacros(ptr.refname, params)) != NULL){}
+                else if((fn = scope->klass->getFunction(ptr.refname, params)) != NULL){}
+                else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params)) != NULL){}
+                else if((fn = scope->klass->getConstructor(params)) != NULL) {}
+                else {
+                    if(string_toop(methodName) != op_NO) methodName = "operator" + ptr.refname;
+                    else methodName = ptr.refname;
+
+                    errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname +  paramsToString(params) + "`");
+                }
+            }
+        } else {
+            // must be macros
+            errors->newerror(GENERIC, pAst2->line, pAst2->col, " use of module {" + ptr.refname + "} in expression signifies global access of object");
+
+        }
+    }
+
+    __freeList(params);
+    __freeList(expressions);
+    ptr.free();
+    return fn;
+}
+
+Expression runtime::parseSelfDotNotationCall(ast* pAst) {
+    Scope* scope = current_scope();
+    string method_name="";
+    Expression expression;
+    Method* fn;
+
+    if(pAst->hassubast(ast_value_list)) {
+        fn = resolveSelfMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        if(fn != NULL) {
+            expression.type = methodReturntypeToExpressionType(fn);
+            if(expression.type == expression_lclass)
+                expression.utype.klass = fn->klass;
+        } else
+            expression.type = expression_unresolved;
+    } else {
+        scope->self = true;
+        expression = parseUtype(pAst->getsubast(ast_utype));
+        scope->self = false;
+    }
+
+    if(pAst->hasentity(DOT)) {
+        expression.dot = true;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Method* runtime::resolveBaseMethodUtype(ast* pAst, ast* pAst2) {
+    Scope* scope = current_scope();
+    Method* fn = NULL;
+
+    /* This is a naked utype so we dont haave to worry about brackets */
+    ref_ptr ptr;
+    string methodName = "";
+    List<Param> params;
+    List<Expression> expressions = parseValueList(pAst2);
+    Expression expression;
+
+    expressionListToParams(params, expressions);
+    ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+
+    if(splitMethodUtype(methodName, ptr)) {
+        // accessor
+        if(scope->type == scope_global) {
+
+            errors->newerror(GENERIC, pAst2->line, pAst2->col,
+                             "cannot get object `" + methodName + paramsToString(params) + "` from self at global scope");
+        }
+
+        scope->base = true;
+        resolveUtype(ptr, expression, pAst);
+        scope->base = false;
+        if(expression.type == expression_class || (expression.type == expression_field && expression.utype.field->type == field_class)) {
+            ClassObject* klass;
+            if(expression.type == expression_class) {
+                klass = expression.utype.klass;
+            } else {
+                klass = expression.utype.field->klass;
+            }
+
+            if((fn = klass->getMacros(methodName, params)) != NULL){}
+            else if((fn = klass->getFunction(methodName, params)) != NULL){}
+            else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
+            else if((fn = klass->getConstructor(params)) != NULL) {}
+            else {
+                if(string_toop(methodName) != op_NO) methodName = "operator" + methodName;
+
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+            }
+        } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
+        }
+        else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + paramsToString(params) +  "`");
+        }
+    } else {
+        // method or macros
+        if(ptr.singleRefrence()) {
+            if(scope->type == scope_global) {
+                // must be macros
+                errors->newerror(GENERIC, pAst2->line, pAst2->col,
+                                 "cannot get object `" + ptr.refname + paramsToString(params) + "` from self at global scope");
+            } else {
+                ClassObject* base, *start = scope->klass->getBaseClass();
+
+                if(start == NULL) {
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + scope->klass->getFullName() + "` does not inherit a base class");
+                    return NULL;
+                }
+
+                for(;;) {
+                    base = start;
+
+                    if(base == NULL) {
+                        // could not resolve
+                        if(string_toop(methodName) != op_NO) methodName = "operator" + ptr.refname;
+                        else methodName = ptr.refname;
+
+                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname +  paramsToString(params) + "`");
+                        return NULL;
+                    }
+
+                    if((fn = base->getMacros(ptr.refname, params)) != NULL){ return fn; }
+                    else if((fn = base->getFunction(ptr.refname, params)) != NULL){ return fn; }
+                    else if((fn = base->getOverload(string_toop(ptr.refname), params)) != NULL){ return fn; }
+                    else if((fn = base->getConstructor(params)) != NULL) { return fn; }
+                    else {
+                        start = base; // recursivley assign klass to new base
+                    }
+                }
+            }
+        } else {
+            // must be macros
+            errors->newerror(GENERIC, pAst2->line, pAst2->col, " use of module {" + ptr.refname + "} in expression signifies global access of object");
+
+        }
+    }
+
+    __freeList(params);
+    __freeList(expressions);
+    ptr.free();
+    return fn;
+}
+
+Expression runtime::parseBaseDotNotationCall(ast* pAst) {
+    Scope* scope = current_scope();
+    Expression expression;
+    string method_name="";
+    Method* fn;
+
+    if(pAst->hassubast(ast_value_list)) {
+        fn = resolveBaseMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        if(fn != NULL) {
+            expression.type = methodReturntypeToExpressionType(fn);
+            if(expression.type == expression_lclass)
+                expression.utype.klass = fn->klass;
+        } else
+            expression.type = expression_unresolved;
+    } else {
+        scope->base = true;
+        expression = parseUtype(pAst->getsubast(ast_utype));
+        scope->base = false;
+    }
+
+    if(pAst->hasentity(DOT)) {
+        expression.dot = true;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
 Expression runtime::parseSelfExpression(ast* pAst) {
     Scope* scope = current_scope();
     Expression expression;
 
-
     if(pAst->hasentity(PTR)) {
         // self-><expression>
-        Expression e = parseDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
-
-        if(e.type == expression_field) {
-            cout << "field!" << endl;
-        } else if(e.type == expression_unresolved) {}
-        else {
-            cout << "function!" << endl;
-            switch(e.type) {
-
-            }
-        }
+        return parseSelfDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
     } else {
         // self
         expression.type = expression_lclass;
         expression.utype.klass = scope->klass;
     }
 
-    if(scope->type == scope_global) {
-        errors->newerror(GENERIC, pAst->line, pAst->col, "refrence to self in static context");
+    if(scope->type == scope_global || scope->type == scope_static_block) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "illegal reference to self in static context");
+        expression.type = expression_unknown;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseBaseExpression(ast* pAst) {
+    Scope* scope = current_scope();
+    Expression expression;
+
+    if(pAst->hasentity(PTR)) {
+        // base-><expression>
+        return parseBaseDotNotationCall(pAst->getsubast(ast_dotnotation_call_expr));
+    } else {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "'.' expected");
+        expression.type = expression_unknown;
+    }
+
+    if(scope->type == scope_global || scope->type == scope_static_block) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "illegal reference to base in static context");
         expression.type = expression_unknown;
     }
 
@@ -1087,6 +1647,8 @@ Expression runtime::parseExpression(ast *pAst) {
         case ast_self_e:
             return parseSelfExpression(encap);
             break;
+        case ast_base_e:
+            return parseBaseExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();

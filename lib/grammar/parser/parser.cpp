@@ -836,6 +836,7 @@ bool parser::parse_expression(ast *pAst) {
         expect(PTR, pAst, "`->` after base");
         parse_dot_notation_call_expr(pAst);
 
+        pAst->encapsulate(ast_base_e);
         if(!isexprsymbol(peek(1).gettoken()))
             return true;
     }
