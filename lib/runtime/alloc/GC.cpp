@@ -161,7 +161,7 @@ void*
 }
 
 void GC::_GC_run() {
-    const unsigned int sMaxRetries = 10000 * 1000;
+    const unsigned int sMaxRetries = 128 * GC_SPIN_MULTIPLIER;
     unsigned int retryCount = 0;
 
     for(;;) {

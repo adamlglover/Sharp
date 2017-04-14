@@ -42,10 +42,10 @@
 #define CA_MAX 134217727
 #define CA_MIN -134217727
 
-#define DISPATCH() goto *dispatch_table[GET_OP(*pc)]
+#define DISPATCH() goto *opcode_table[GET_OP(*pc)]
 
-#define _brh pc++; DISPATCH();
-#define _brh_NOINCREMENT DISPATCH();
+#define _brh pc++; goto interp;
+#define _brh_NOINCREMENT goto interp;
 
 #define NOP _brh
 
@@ -132,6 +132,55 @@
         throw Exception("in"); \
     }else { _brh }
 
+#define _init_opcode_table \
+    static void* opcode_table[] = { \
+        &&_NOP,	\
+        &&_INT,	\
+        &&MOVI,	\
+        &&RET,	\
+        &&HLT,	\
+        &&NEW,	\
+        &&CHECK_CAST,	\
+		&&MOV8,	\
+		&&MOV16,    \
+		&&MOV32,	\
+		&&MOV64,	\
+		&&PUSHR,	\
+		&&ADD,	\
+		&&SUB,	\
+		&&MUL,	\
+		&&DIV,	\
+		&&MOD,	\
+		&&POP,	\
+		&&INC,	\
+		&&DEC,	\
+		&&MOVR,	\
+		&&MOVX,	\
+		&&LT,	\
+		&&BRH,	\
+		&&BRE,	\
+		&&IFE,	\
+		&&IFNE,	\
+		&&GT,	\
+		&&GTE,	\
+		&&LTE,	\
+		&&MOVL,	\
+		&&OBJECT_NXT,	\
+		&&OBJECT_PREV,	\
+		&&RMOV,	\
+		&&MOV,	\
+		&&MOVD,	\
+		&&MOVBI,	\
+		&&_SIZEOF,	\
+		&&PUT,	\
+		&&PUTC,	\
+		&&CHECKLEN \
+    };
+
+/*
+ * All opcodes removed must be filled with _NOP instruction to prevent
+ * invalid instruction dispatching
+ */
 enum OPCODE {
     op_NOP=0x0,
     op_INT=0x1,

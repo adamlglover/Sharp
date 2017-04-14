@@ -115,26 +115,17 @@ void CallStack::Execute() {
     Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
     pc = &env->bytecode[current->entry];
+    _init_opcode_table
 
-    static void* dispatch_table[] = {
-            &&_NOP, &&_INT, &&MOVI, &&RET,
-            &&HLT, &&NEW, &&CHECK_CAST, &&MOV8
-            , &&MOV16, &&MOV32, &&MOV64, &&PUSHR
-            , &&ADD, &&SUB, &&MUL, &&DIV, &&MOD, &&POP
-            , &&INC, &&DEC, &&MOVR, &&MOVX, &&LT, &&BRH, &&BRE
-            , &&IFE, &&IFNE, &&GT, &&GTE, &&LTE, &&MOVL, &&OBJECT_NXT
-            , &&OBJECT_PREV, &&RMOV, &&MOV, &&MOVD, &&MOVBI, &&_SIZEOF
-            , &&PUT, &&PUTC, &&CHECKLEN};
-
-    DISPATCH();
     try {
         for (;;) {
-            _interp:
+            interp:
             if(self->suspendPending)
                 Thread::suspendSelf();
             if(self->state == thread_killed)
                 return;
 
+            DISPATCH();
             _NOP:
 	            NOP
             _INT:

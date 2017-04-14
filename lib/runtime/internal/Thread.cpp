@@ -120,7 +120,7 @@ void Thread::suspendSelf() {
 }
 
 void Thread::wait() {
-    const long sMaxRetries = 10000 * 1000;
+    const long sMaxRetries = 128 * 1024;
 
     long spinCount = 0;
     long retryCount = 0;
@@ -134,10 +134,10 @@ void Thread::wait() {
             spinCount++;
             retryCount = 0;
 #ifdef WIN32_
-            Sleep(2);
+            Sleep(5);
 #endif
 #ifdef POSIX_
-            usleep(2*POSIX_USEC_INTERVAL);
+            usleep(5*POSIX_USEC_INTERVAL);
 #endif
         } else if(this->state == thread_killed) {
             this->suspended = false;

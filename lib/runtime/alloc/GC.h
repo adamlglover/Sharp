@@ -53,6 +53,13 @@ struct _gc_object{
 
 #define _GC_CAP_THRESHOLD 1.5
 
-#define GC_SLEEP_INTERVAL 8
+#define GC_SLEEP_INTERVAL 10
+
+/**
+ * This number must be low considering that the Garbage collector will
+ * not be collecting data every second. We want the garbage collector
+ * to be asleep as much as possible.
+ */
+#define GC_SPIN_MULTIPLIER 512
 
 #endif //SHARP_GC_H
