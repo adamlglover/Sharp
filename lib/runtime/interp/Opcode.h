@@ -223,6 +223,7 @@ enum OPCODE {
     op_PUT=0x26,
     op_PUTC=0x27,
     op_CHECKLEN=0x28,
+
     op_MOVU8=0x29,
     op_MOVU16=0x2a,
     op_MOVU32=0x2b,
