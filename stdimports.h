@@ -6,12 +6,12 @@
 #define SHARP_STDIMPORTS_H
 
 #include <iostream>
-#include <stdint.h>
+#include <stdint-gcc.h>
 #include <cstdlib>
 #include <sstream>
 #include <list>
 #include <stdexcept>
-#include <string.h>
+#include <string>
 
 
 using namespace std;

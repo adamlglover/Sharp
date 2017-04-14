@@ -42,8 +42,10 @@
 #define CA_MAX 134217727
 #define CA_MIN -134217727
 
-#define _brh pc++; goto _interp;
-#define _brh_NOINCREMENT goto _interp;
+#define DISPATCH() goto *dispatch_table[GET_OP(*pc)]
+
+#define _brh pc++; DISPATCH();
+#define _brh_NOINCREMENT DISPATCH();
 
 #define NOP _brh
 
@@ -131,57 +133,57 @@
     }else { _brh }
 
 enum OPCODE {
-    _NOP=0x0,
-    _INT=0x1,
-    MOVI=0x2,
-    RET=0x3,
-    HLT=0x4,
-    NEW=0x5,
-    CHECK_CAST=0x6,
-    MOV8=0x7,
-    MOV16=0x8,
-    MOV32=0x9,
-    MOV64=0xa,
-    PUSHR=0xb,
-    ADD=0xc,
-    SUB=0xd,
-    MUL=0xe,
-    DIV=0xf,
-    MOD=0x10,
-    POP=0x11,
-    INC=0x12,
-    DEC=0x13,
-    MOVR=0x14,
-    MOVX=0x15,
-    LT=0x16,
-    BRH=0x18,
-    BRE=0x19,
-    IFE=0x1c,
-    IFNE=0x1d,
-    GT=0x1e,
-    GTE=0x1f,
-    LTE=0x20,
-    MOVL=0x21,
-    OBJECT_NXT=0x22,
-    OBJECT_PREV=0x23,
-    RMOV=0x24,
-    MOV=0x25,
-    MOVD=0x26,
-    MOVBI=0x27,
-    _SIZEOF=0x28,
-    PUT=0x29,
-    PUTC=0x2a,
-    CHECKLEN=0x2b,
-    MOVU8=0x2c,
-    MOVU16=0x2d,
-    MOVU32=0x2e,
-    MOVU64=0x2f,
+    op_NOP=0x0,
+    op_INT=0x1,
+    op_MOVI=0x2,
+    op_RET=0x3,
+    op_HLT=0x4,
+    op_NEW=0x5,
+    op_CHECK_CAST=0x6,
+    op_MOV8=0x7,
+    op_MOV16=0x8,
+    op_MOV32=0x9,
+    op_MOV64=0xa,
+    op_PUSHR=0xb,
+    op_ADD=0xc,
+    op_SUB=0xd,
+    op_MUL=0xe,
+    op_DIV=0xf,
+    op_MOD=0x10,
+    op_POP=0x11,
+    op_INC=0x12,
+    op_DEC=0x13,
+    op_MOVR=0x14,
+    op_MOVX=0x15,
+    op_LT=0x16,
+    op_BRH=0x17,
+    op_BRE=0x18,
+    op_IFE=0x19,
+    op_IFNE=0x1a,
+    op_GT=0x1b,
+    op_GTE=0x1c,
+    op_LTE=0x1d,
+    op_MOVL=0x1e,
+    op_OBJECT_NXT=0x1f,
+    op_OBJECT_PREV=0x20,
+    op_RMOV=0x21,
+    op_MOV=0x22,
+    op_MOVD=0x23,
+    op_MOVBI=0x24,
+    op_SIZEOF=0x25,
+    op_PUT=0x26,
+    op_PUTC=0x27,
+    op_CHECKLEN=0x28,
+    op_MOVU8=0x29,
+    op_MOVU16=0x2a,
+    op_MOVU32=0x2b,
+    op_MOVU64=0x2c,
 
-    MOVN=0x30, /* move ptr = &ptr->_Node[r]; */
-    MOVG=0x31, /* move ptr = &env->objects[r]; */
-    MOVSELF=0x32, /* move ptr = instance; */
+    op_MOVN=0x2d, /* move ptr = &ptr->_Node[r]; */
+    op_MOVG=0x2e, /* move ptr = &env->objects[r]; */
+    op_MOVSELF=0x2f, /* move ptr = instance; */
 
-    _OPT=0xff, /* unused special instruction for compiler */
+    op_OPT=0xff, /* unused special instruction for compiler */
 };
 
 #endif //SHARP_OPCODE_H

@@ -352,8 +352,8 @@ int Process_Exe(std::string exe)
 }
 
 bool overflowOp(int op) {
-    return op == MOVI ||
-           op == MOVBI;
+    return op == op_MOVI ||
+           op == op_MOVBI;
 }
 
 ClassObject *findClass(int64_t superClass) {

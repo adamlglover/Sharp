@@ -3,13 +3,15 @@ project(Sharp)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_C_COMPILER "C:/MinGW/bin/gcc.exe")
+
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 
-#set(CMAKE_CXX_FLAGS_DEBUG  " ${CMAKE_CXX_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "-s -Os -O3 -Ofast ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+set(CMAKE_C_FLAGS_DEBUG  "-lstdc++  ${CMAKE_CXX_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS_MINSIZEREL "-lstdc++ -s -Os -O3 -Ofast ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-set(SHARPC "build")
+#set(SHARPC "build")
 
 # compiler
 if (SHARPC)
