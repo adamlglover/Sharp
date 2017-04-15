@@ -8,25 +8,25 @@
 #include "Method.h"
 
 enum _operator {
-    op_PLUS,
-    op_MINUS,
-    op_MULT,
-    op_DIV,
-    op_MOD,
-    op_INC,
-    op_DEC,
-    op_EQUALS,
-    op_EQUALS_EQ,
-    op_PLUS_EQ,
-    op_MIN_EQ,
-    op_MULT_EQ,
-    op_DIV_EQ,
-    op_AND_EQ,
-    op_OR_EQ,
-    op_NOT_EQ,
-    op_MOD_EQ,
+    oper_PLUS,
+    oper_MINUS,
+    oper_MULT,
+    oper_DIV,
+    oper_MOD,
+    oper_INC,
+    oper_DEC,
+    oper_EQUALS,
+    oper_EQUALS_EQ,
+    oper_PLUS_EQ,
+    oper_MIN_EQ,
+    oper_MULT_EQ,
+    oper_DIV_EQ,
+    oper_AND_EQ,
+    oper_OR_EQ,
+    oper_NOT_EQ,
+    oper_MOD_EQ,
 
-    op_NO
+    oper_NO
 };
 
 class OperatorOverload : public Method {

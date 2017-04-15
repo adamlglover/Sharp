@@ -38,6 +38,7 @@ enum p_errors
     INVALID_ACCESS = 23,
     SYMBOL_ALREADY_DEFINED = 24,
     INVALID_PARAM = 25,
+    INCOMPATIBLE_TYPES = 26,
 
     NO_ERR = 999
 };

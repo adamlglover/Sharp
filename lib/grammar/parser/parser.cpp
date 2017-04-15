@@ -539,8 +539,8 @@ bool parser::parse_utype(ast *pAst) {
     {
         if(peek(1).gettokentype() == LEFTBRACE)
         {
-            pAst->add_entity(current());
             advance();
+            pAst->add_entity(current());
 
             expect(RIGHTBRACE, pAst, "`]`");
         }
@@ -845,6 +845,7 @@ bool parser::parse_expression(ast *pAst) {
     {
         advance();
         expect_token(pAst, "null", "");
+        pAst->encapsulate(ast_null_e);
         return true;
     }
 
@@ -856,9 +857,10 @@ bool parser::parse_expression(ast *pAst) {
 
         if(peek(1).gettokentype() == LEFTCURLY)
             parse_vectorarray(pAst);
-        else
+        else if(peek(1).gettokentype() == LEFTPAREN)
             parse_valuelist(pAst);
 
+        pAst->encapsulate(ast_new_e);
         return true;
     }
 

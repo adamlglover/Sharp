@@ -63,6 +63,8 @@ enum ast_types
     ast_dot_not_e,
     ast_self_e,
     ast_base_e,
+    ast_null_e,
+    ast_new_e,
 
     ast_none
 };

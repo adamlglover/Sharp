@@ -90,6 +90,9 @@ public:
     Field* field;
     Method* method;
     OperatorOverload* oo;
+
+    bool nativeInt();
+    bool dynamicObject();
 };
 
 enum expression_type {
@@ -103,7 +106,7 @@ enum expression_type {
     expression_lclass=11,
     expression_void=12,
     expression_unresolved=13,
-    expression_dynamicclass_array=14,
+    expression_null=14,
     expression_unknown=0x900f
 };
 
@@ -114,7 +117,8 @@ struct Expression {
             utype(),
             code(),
             dot(false),
-            lnk(NULL)
+            lnk(NULL),
+            _new(false)
     {
     }
 
@@ -124,7 +128,8 @@ struct Expression {
             utype(),
             code(),
             dot(false),
-            lnk(pAst)
+            lnk(pAst),
+            _new(false)
     {
     }
 
@@ -134,7 +139,7 @@ struct Expression {
     ResolvedReference utype;
     m64Assembler code;
     ast* lnk;
-    bool dot;
+    bool dot, _new;
 
     void free() {
         code.free();
@@ -591,10 +596,20 @@ private:
     Expression parseBaseExpression(ast *pAst);
 
     Method* resolveBaseMethodUtype(ast *pAst, ast* pAst2);
+
+    Expression parseNullExpression(ast *pAst);
+
+    Expression parseNewExpression(ast *pAst);
+
+    void addDefaultConstructor(ClassObject *klass, ast* pAst);
+
+    List<Expression> parseVectorArray(ast *pAst);
+
+    void checkVectorArray(Expression& utype, List <Expression> &vecArry);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.33"
+#define progvers "0.1.34"
 
 struct options {
     /*

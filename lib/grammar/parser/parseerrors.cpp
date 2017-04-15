@@ -86,6 +86,9 @@ void int_errs()
 
     err.set(INVALID_PARAM, "invalid param of type");
     predefined_errs.push_back(err);
+
+    err.set(INCOMPATIBLE_TYPES, "incompatible types");
+    predefined_errs.push_back(err);
 }
 
 void Errors::print_error(parseerror &err) {

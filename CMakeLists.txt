@@ -11,7 +11,7 @@ set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 set(CMAKE_C_FLAGS_DEBUG  "-lstdc++  ${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_MINSIZEREL "-lstdc++ -s -O3 -Ofast ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-#set(SHARPC "build")
+set(SHARPC "build")
 
 # compiler
 if (SHARPC)

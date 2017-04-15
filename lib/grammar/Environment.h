@@ -62,7 +62,7 @@ public:
     int_Method(Method* ref)
     :
             refrence(ref),
-            op(op_NO),
+            op(oper_NO),
             bytecode()
     {
     }

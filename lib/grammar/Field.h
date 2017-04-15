@@ -32,7 +32,8 @@ public:
             parent(parent),
             klass(NULL),
             note(note),
-            array(false)
+            array(false),
+            null(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -48,7 +49,8 @@ public:
             parent(parent),
             klass(klass),
             note(note),
-            array(false)
+            array(false),
+            null(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -62,11 +64,12 @@ public:
             fullName(""),
             modifiers(),
             note("","",0,0),
-            array(false)
+            array(false),
+            null(false)
     {
     }
 
-    bool operator==(const Field& f);
+    bool operator==(Field& f);
 
     void operator=(Field f)
     {
@@ -81,6 +84,7 @@ public:
         parent = f.parent;
         modifiers.addAll(f.modifiers);
         array = f.array;
+        null = f.null;
     }
 
     void free(){
@@ -102,7 +106,7 @@ public:
         return false;
     }
 
-    bool array;
+    bool array, null;
     field_type type;
     RuntimeNote note;
     NativeField nf;

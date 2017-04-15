@@ -118,7 +118,6 @@ A value consists of an <expression>
     | 'self' '->' <dot-notation-call-expr>
     | 'base' '->' <dot-notation-call-expr>
     | null
-    | '.' class
     | new uType [([<value-list>] | [VectorArray>])]
     | expression '[' expression ']' [expression]
     | '(' uType ')' expression
