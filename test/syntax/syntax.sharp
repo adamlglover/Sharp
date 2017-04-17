@@ -124,6 +124,9 @@ class Start
 
     }
 
+    // TODO: check for this
+    var y=[7].foo(89).yt.foo(9)[9].foo(8)[90].foo();
+    var yy = base->application#Main.foo("foo");
 
     /*
     * Main function
