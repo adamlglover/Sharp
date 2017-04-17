@@ -80,6 +80,7 @@ public:
         }
     }
 
+    string typeToString();
     string toString();
 
     string refrenceName;
@@ -627,6 +628,10 @@ private:
     Expression &parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos);
 
     Expression parseArrayExpression(Expression &interm, ast *pAst);
+
+    Expression parseCastExpression(ast *pAst);
+
+    Expression parseNativeCast(Expression &utype, Expression &arg);
 };
 
 #define progname "bootstrap"

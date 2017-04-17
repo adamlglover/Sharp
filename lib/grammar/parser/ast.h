@@ -69,6 +69,7 @@ enum ast_types
     ast_post_inc_e,
     ast_arry_e,
     ast_dot_fn_e,
+    ast_cast_e,
 
     ast_none
 };

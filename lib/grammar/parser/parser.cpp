@@ -771,6 +771,7 @@ bool parser::parse_expression(ast *pAst) {
                 {
                     this->dumpstate();
                     errors->fail();
+                    pAst->encapsulate(ast_cast_e);
                     return true;
                 }
             }else {

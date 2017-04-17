@@ -1728,6 +1728,7 @@ Expression runtime::parseNullExpression(ast* pAst) {
     Scope* scope = current_scope();
     Expression expression(pAst);
 
+    expression.utype.refrenceName = "null";
     expression.type = expression_null;
     return expression;
 }
@@ -2266,6 +2267,95 @@ Expression runtime::parseIntermExpression(ast* pAst) {
     }
 }
 
+Expression runtime::parseNativeCast(Expression& utype, Expression& arg) {
+    Expression expression(utype.lnk);
+    if(arg.type != expression_unresolved) {
+        if(arg.utype.array != utype.utype.array) {
+            errors->newerror(INCOMPATIBLE_TYPES, utype.lnk->line, utype.lnk->col, "; cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
+            expression.type = expression_unresolved;
+            return expression;
+        }
+    }
+
+    switch(utype.utype.nf) {
+        case fi8:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fi16:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fi32:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fi64:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fui8:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fui16:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fui32:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fui64:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fvar:
+            if(arg.type == expression_var) {
+                return expression;
+            }
+            break;
+        case fvoid:
+            errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "type `void` cannot be used as a cast");
+            return expression;
+        case fdynamic:
+            if(arg.type == expression_lclass) {
+                return expression;
+            }
+            break;
+    }
+
+    if(arg.type != expression_unresolved)
+        errors->newerror(INCOMPATIBLE_TYPES, utype.lnk->line, utype.lnk->col, "; cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
+    return Expression(utype.lnk);
+}
+
+Expression runtime::parseCastExpression(ast* pAst) {
+    Expression expression, utype, arg;
+
+    utype = parseUtype(pAst->getsubast(ast_utype));
+    arg = parseExpression(pAst->getsubast(ast_expression));
+
+    if(utype.type != expression_unknown &&
+            utype.type != expression_unresolved) {
+        switch(utype.type) {
+            case expression_native:
+                expression = parseNativeCast(utype, arg);
+                break;
+        }
+    }
+
+    return expression;
+}
+
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
 Expression runtime::parseExpression(ast *pAst) {
     Expression expression;
@@ -2286,6 +2376,8 @@ Expression runtime::parseExpression(ast *pAst) {
             return parsePostInc(encap);
         case ast_arry_e:
             return parseArrayExpression(encap);
+        case ast_cast_e:
+            return parseCastExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -4217,7 +4309,7 @@ string ResolvedReference::toString() {
     } else if(type == NATIVE) {
         return runtime::nativefield_tostr(nf);
     }
-    return "";
+    return refrenceName;
 }
 
 bool ResolvedReference::nativeInt() {
@@ -4226,4 +4318,31 @@ bool ResolvedReference::nativeInt() {
 
 bool ResolvedReference::dynamicObject() {
     return nf == fdynamic;
+}
+
+string ResolvedReference::typeToString() {
+    switch(type) {
+        case FIELD:
+            if(field != NULL) {
+                if(field->type == field_native) {
+                    return runtime::nativefield_tostr(field->nf) + (array ? "[]" : "");
+                } else if(field->type == field_class) {
+                    return field->klass->getFullName() + (array ? "[]" : "");
+                } else
+                    return toString() + (array ? "[]" : "");
+            } else
+                return toString() + (array ? "[]" : "");
+            break;
+        case CLASS:
+            if(klass != NULL) {
+                return klass->getFullName() + (array ? "[]" : "");
+            } else
+                return toString();
+            break;
+        case NATIVE:
+            return runtime::nativefield_tostr(nf) + (array ? "[]" : "");
+        case NOTRESOLVED:
+            return toString() + (array ? "[]" : "");
+    }
+    return toString() + (array ? "[]" : "");
 }

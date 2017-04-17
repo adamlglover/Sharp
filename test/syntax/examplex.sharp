@@ -17,7 +17,7 @@ class X {
 
 class Main base application#X{
 
-    var x = 9;
+    var x = (dynamic_object)foo(89)[0];
     var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo();
     var yy = base->application#Main.foo("foo");
     X[] b;
