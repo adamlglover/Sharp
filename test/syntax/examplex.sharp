@@ -13,16 +13,16 @@ class X {
 
 class Main base application#X{
 
-    var x = 9;
-    var y=self->foo(Main.x, new var[] { new Main() });
+    var x = base->yy.yy().y;
+    var y=self->foo(Main.x, foo(9)[1].x);
     var yy = base->application#X.foo("foo");
-    X b;
+    X[] b;
 
     fn foo(var x, var n) : var {
 
     }
 
-    fn foo(var x) : __int8 {
+    fn foo(var x) : Main[] {
 
     }
 

@@ -174,7 +174,7 @@ private:
             }
 
             T* newbuf = new T[len-1];
-            std::copy_n(_Data, std::min(len, len-1), newbuf);
+            std::copy_n(_Data, std::min(len-1, len-1), newbuf);
             delete[] _Data;
             _Data = newbuf;
             len--;

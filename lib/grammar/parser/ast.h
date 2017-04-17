@@ -65,6 +65,10 @@ enum ast_types
     ast_base_e,
     ast_null_e,
     ast_new_e,
+    ast_not_e,
+    ast_post_inc_e,
+    ast_arry_e,
+    ast_dot_fn_e,
 
     ast_none
 };
@@ -103,7 +107,6 @@ public:
     }
 
     void encapsulate(ast_types at);
-    void unencapsulate();
 
     ast_types gettype();
     ast* getparent();

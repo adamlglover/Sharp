@@ -30,7 +30,8 @@ public:
             klass(rtype),
             nobj(fnof),
             module(module),
-            note(note)
+            note(note),
+            array(false)
     {
         this->modifiers.init();
         this->params.init();
@@ -46,7 +47,8 @@ public:
             nobj(rtype),
             klass(NULL),
             module(module),
-            note(note)
+            note(note),
+            array(false)
     {
         this->modifiers.init();
         this->params.init();
@@ -74,6 +76,7 @@ public:
     return_type type;
     ClassObject* klass;
     NativeField nobj;
+    bool array;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
     ClassObject* pklass;

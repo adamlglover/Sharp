@@ -106,6 +106,15 @@ public:
         return false;
     }
 
+
+    bool nativeInt() {
+        return nf >= fi8 && nf <= fvar;
+    }
+
+    bool dynamicObject() {
+        return nf == fdynamic;
+    }
+
     bool array, null;
     field_type type;
     RuntimeNote note;

@@ -640,10 +640,12 @@ ResolvedReference runtime::getBaseClassOrField(string name, ClassObject* start) 
         if(name == base->getName()) {
             reference.klass = base;
             reference.type = ResolvedReference::CLASS;
+            return reference;
             // base class
         } else if((field = base->getField(name))) {
             reference.field = field;
             reference.type = ResolvedReference::FIELD;
+            return reference;
         } else {
             start = base; // recursivley assign klass to new base
         }
@@ -1288,11 +1290,17 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
             else if((fn = klass->getFunction(methodName, params)) != NULL){}
             else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
             else if((fn = klass->getConstructor(params)) != NULL) {}
+            else if(klass->getField(methodName) != NULL) {
+                errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + methodName + "` is a field");
+            }
             else {
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
                 errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
             }
+        } else if(expression.type == expression_field && expression.utype.field->type != field_class) {
+            errors->newerror(GENERIC, pAst2->line, pAst2->col, " field `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "` is not a class");
+
         } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
         else {
@@ -1313,6 +1321,9 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
                     else if((fn = scope->klass->getFunction(ptr.refname, params)) != NULL){}
                     else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params)) != NULL){}
                     else if((fn = scope->klass->getConstructor(params)) != NULL) {}
+                    else if(scope->klass->getField(methodName) != NULL) {
+                        errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + methodName + "` is a field");
+                    }
                     else {
                         if(string_toop(methodName) != oper_NO) methodName = "operator" + ptr.refname;
                         else methodName = ptr.refname;
@@ -1349,21 +1360,44 @@ expression_type runtime::methodReturntypeToExpressionType(Method* fn) {
         return expression_unknown;
 }
 
+Expression runtime::parseBinaryExpression(Expression& expression, Expression& left) {
+
+    switch(expression.type) {
+        case expression_lclass:
+            if(left.type == expression_array) {
+                if(!expression.utype.array) {
+                }
+            }
+            break;
+    }
+    return expression;
+}
+
 Expression runtime::parseDotNotationCall(ast* pAst) {
     string method_name="";
-    Expression expression;
+    Expression expression, interm;
     Method* fn;
 
-    if(pAst->hassubast(ast_value_list)) {
+    if(pAst->hassubast(ast_dot_fn_e)) {
+        pAst = pAst->getsubast(ast_dot_fn_e);
         fn = resolveMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
             if(expression.type == expression_lclass)
                 expression.utype.klass = fn->klass;
+            expression.utype.array = fn->array;
+
+            // TODO: check for ++ and --
+            // TODO: parse dot_notation_chain expression
         } else
             expression.type = expression_unresolved;
     } else {
         expression = parseUtype(pAst->getsubast(ast_utype));
+    }
+
+    if(pAst->getsubastcount() > 1) {
+        // chained calls
+        parseDotNotationChain(pAst, expression, 1);
     }
 
     if(pAst->hasentity(DOT)) {
@@ -1478,7 +1512,8 @@ Expression runtime::parseSelfDotNotationCall(ast* pAst) {
     Expression expression;
     Method* fn;
 
-    if(pAst->hassubast(ast_value_list)) {
+    if(pAst->hassubast(ast_dot_fn_e)) {
+        pAst = pAst->getsubast(ast_dot_fn_e);
         fn = resolveSelfMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
@@ -1494,6 +1529,12 @@ Expression runtime::parseSelfDotNotationCall(ast* pAst) {
 
     if(pAst->hasentity(DOT)) {
         expression.dot = true;
+    }
+
+
+    if(pAst->getsubastcount() > 1) {
+        // chained calls
+        parseDotNotationChain(pAst, expression, 1);
     }
 
     expression.lnk = pAst;
@@ -1602,7 +1643,8 @@ Expression runtime::parseBaseDotNotationCall(ast* pAst) {
     string method_name="";
     Method* fn;
 
-    if(pAst->hassubast(ast_value_list)) {
+    if(pAst->hassubast(ast_dot_fn_e)) {
+        pAst = pAst->getsubast(ast_dot_fn_e);
         fn = resolveBaseMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
@@ -1618,6 +1660,11 @@ Expression runtime::parseBaseDotNotationCall(ast* pAst) {
 
     if(pAst->hasentity(DOT)) {
         expression.dot = true;
+    }
+
+    if(pAst->getsubastcount() > 1) {
+        // chained calls
+        parseDotNotationChain(pAst, expression, 1);
     }
 
     expression.lnk = pAst;
@@ -1797,9 +1844,320 @@ Expression runtime::parseNewExpression(ast* pAst) {
     return expression;
 }
 
+Expression runtime::parsePostInc(ast* pAst) {
+    Expression expression;
+    cout << "post inc!!" << endl;
+
+
+    return expression;
+}
+
+void runtime::resolveUtypeContext(ClassObject* classContext, ref_ptr& refrence, Expression& expression, ast* pAst) {
+    int64_t i64;
+    Field* field;
+
+    if(refrence.singleRefrence()) {
+        if((field = classContext->getField(refrence.refname)) != NULL) {
+
+            expression.utype.type = ResolvedReference::FIELD;
+            expression.utype.field = field;
+            expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+            expression.type = expression_field;
+        }else {
+            /* Un resolvable */
+            errors->newerror(COULD_NOT_RESOLVE, pAst->line, pAst->col, " `" + refrence.refname + "` " + (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
+
+            expression.utype.type = ResolvedReference::NOTRESOLVED;
+            expression.utype.refrenceName = refrence.refname;
+            expression.type = expression_unresolved;
+        }
+    } else {
+        resolveClassHeiarchy(classContext, refrence, expression, pAst);
+    }
+}
+
+Expression runtime::parseUtypeContext(ClassObject* classContext, ast* pAst) {
+    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
+    Expression expression;
+
+    if(ptr.singleRefrence() && parser::isnative_type(ptr.refname)) {
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + ptr.refname + "`");
+
+        expression.type = expression_unresolved;
+        expression.lnk = pAst;
+        ptr.free();
+        return expression;
+    }
+
+    resolveUtypeContext(classContext, ptr, expression, pAst);
+
+    if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(RIGHTBRACE)) {
+        expression.utype.array = true;
+    }
+
+    expression.lnk = pAst;
+    expression.utype.refrenceName = ptr.toString();
+    ptr.free();
+    return expression;
+}
+
+Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst, ast* pAst2) {
+    Scope* scope = current_scope();
+    Method* fn = NULL;
+
+    /* This is a naked utype so we dont haave to worry about brackets */
+    ref_ptr ptr;
+    string methodName = "";
+    List<Param> params;
+    List<Expression> expressions = parseValueList(pAst2);
+    Expression expression;
+
+    expressionListToParams(params, expressions);
+    ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
+
+    if(ptr.module != "") {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "module name not allowed in nested method call");
+        return NULL;
+    }
+
+    if(splitMethodUtype(methodName, ptr)) {
+        // accessor
+        resolveUtypeContext(classContext, ptr, expression, pAst);
+        if(expression.type == expression_class || (expression.type == expression_field && expression.utype.field->type == field_class)) {
+            ClassObject* klass;
+            if(expression.type == expression_class) {
+                klass = expression.utype.klass;
+            } else {
+                klass = expression.utype.field->klass;
+            }
+
+            if((fn = klass->getMacros(methodName, params)) != NULL){}
+            else if((fn = klass->getFunction(methodName, params)) != NULL){}
+            else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
+            else if(classContext->getField(methodName) != NULL) {
+                errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + methodName + "` is a field");
+            }
+            else {
+                if(klass->getField(methodName)) {
+
+                }
+                if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
+
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+            }
+        }
+        else if(expression.type == expression_field && expression.utype.field->type != field_class) {
+            errors->newerror(GENERIC, pAst2->line, pAst2->col, " field `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "` is not a class");
+
+        }
+        else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
+        }
+        else {
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "`");
+        }
+    } else {
+        // method or global macros
+        if(ptr.singleRefrence()) {
+            if((fn = classContext->getMacros(ptr.refname, params)) != NULL){}
+            else if((fn = classContext->getFunction(ptr.refname, params)) != NULL){}
+            else if((fn = classContext->getOverload(string_toop(ptr.refname), params)) != NULL){}
+            else if(classContext->getField(ptr.refname) != NULL) {
+                errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + ptr.refname + "` is a field");
+            }
+            else {
+                if(string_toop(methodName) != oper_NO) methodName = "operator" + ptr.refname;
+                else methodName = ptr.refname;
+
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName +  paramsToString(params) + "`");
+            }
+        } else {
+            // must be macros but it can be
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname + "`");
+        }
+    }
+
+    __freeList(params);
+    __freeList(expressions);
+    ptr.free();
+    return fn;
+}
+
+Expression runtime::parseDotNotationCallContext(Expression& contextExpression, ast* pAst) {
+    string method_name="";
+    Expression expression, interm;
+    Method* fn;
+
+    if(contextExpression.type == expression_dynamicclass) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "cannot infer function from dynamic class, did you forget to ass a cast? i.e. ((SomeClass)dynamic_class)");
+        expression.type = expression_unresolved;
+        return expression;
+    } else if(contextExpression.type == expression_unresolved) {
+        expression.type= expression_unresolved;
+        return expression;
+    } else if(contextExpression.type != expression_lclass) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "expression does not return a class");
+        expression.type = expression_unresolved;
+        return expression;
+    }
+
+    ClassObject* klass = contextExpression.utype.klass;
+
+    if(pAst->gettype() == ast_dot_fn_e) {
+        fn = resolveContextMethodUtype(klass, pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        if(fn != NULL) {
+            expression.type = methodReturntypeToExpressionType(fn);
+            if(expression.type == expression_lclass)
+                expression.utype.klass = fn->klass;
+            expression.utype.array = fn->array;
+
+            // TODO: check for ++ and --
+            // TODO: parse dot_notation_chain expression
+        } else
+            expression.type = expression_unresolved;
+    } else {
+        // TODO: must evalueste to a field
+        expression = parseUtypeContext(klass, pAst);
+    }
+
+    if(pAst->hasentity(DOT)) {
+        expression.dot = true;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseArrayExpression(ast* pAst) {
+    Expression expression, interm, indexExpr, rightExpr;
+    Field* field;
+
+    interm = parseIntermExpression(pAst->getsubast(0));
+    indexExpr = parseExpression(pAst->getsubast(1));
+
+    expression.type = interm.type;
+    expression.utype = interm.utype;
+    expression.utype.array = false;
+    expression.lnk = pAst;
+
+    switch(interm.type) {
+        case expression_field:
+            if(!interm.utype.field->array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+            }
+            if(interm.utype.field->type == field_class) {
+                expression.utype.klass = interm.utype.field->klass;
+                expression.type = expression_lclass;
+            } else if(interm.utype.field->type == field_native) {
+                expression.type = expression_var;
+            }else {
+                expression.type = expression_unknown;
+            }
+            // TODO: access array at size
+            break;
+        case expression_string:
+            // TODO: add code to get string at index
+            expression.type = expression_var;
+            break;
+        case expression_var:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_lclass:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "null cannot be used as an array");
+            break;
+        case expression_dynamicclass:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "void cannot be used as an array");
+            break;
+        case expression_unresolved:
+            /* do nothing */
+            break;
+        default:
+            errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "invalid array expression before `[`");
+            break;
+    }
+
+    if(indexExpr.type == expression_var) {
+        // we have an integer!
+    } else if(indexExpr.type == expression_field) {
+        if(!indexExpr.utype.field->nativeInt()) {
+            errors->newerror(GENERIC, pAst->getsubast(1)->line, pAst->getsubast(1)->col, "array index is not an integer");
+        }
+    } else if(indexExpr.type == expression_unresolved) {
+    } else {
+        errors->newerror(GENERIC, pAst->getsubast(1)->line, pAst->getsubast(1)->col, "array index is not an integer");
+    }
+
+    if(pAst->getsubastcount() > 2) {
+        // expression after (we may not need this?)
+        expression = parseDotNotationChain(pAst->getsubast(2), expression, 0);
+    }
+
+    return expression;
+}
+
+Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos) {
+
+    ast* utype;
+    Expression rightExpr = expression;
+    for(unsigned int i = startpos; i < pAst->getsubastcount(); i++) {
+            utype = pAst->getsubast(i);
+
+            rightExpr = parseDotNotationCallContext(rightExpr, utype);
+
+            if(rightExpr.type == expression_unresolved || rightExpr.type == expression_unknown)
+                break;
+
+            expression.type = rightExpr.type;
+            expression.utype = rightExpr.utype;
+            expression.utype.array = rightExpr.utype.array;
+        }
+    return expression;
+}
+
+Expression runtime::parseIntermExpression(ast* pAst) {
+
+    switch(pAst->gettype()) {
+        case ast_primary_expr:
+            return parsePrimaryExpression(pAst);
+        case ast_self_e:
+            return parseSelfExpression(pAst);
+        case ast_base_e:
+            return parseBaseExpression(pAst);
+        case ast_null_e:
+            return parseNullExpression(pAst);
+        case ast_new_e:
+            return parseNewExpression(pAst);
+        case ast_post_inc_e:
+            return parsePostInc(pAst);
+        case ast_arry_e:
+            return parseArrayExpression(pAst);
+        default:
+            stringstream err;
+            err << ": unknown ast type: " << pAst->gettype();
+            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
+            return Expression(pAst); // not an expression!
+    }
+}
+
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
 Expression runtime::parseExpression(ast *pAst) {
-    ast* encap = pAst->getsubast(0);
+    Expression expression;
+    ast* encap  = pAst->getsubast(0);
 
     switch(encap->gettype()) {
         case ast_primary_expr:
@@ -1812,6 +2170,10 @@ Expression runtime::parseExpression(ast *pAst) {
             return parseNullExpression(encap);
         case ast_new_e:
             return parseNewExpression(encap);
+        case ast_post_inc_e:
+            return parsePostInc(encap);
+        case ast_arry_e:
+            return parseArrayExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -2202,6 +2564,7 @@ void runtime::resolveMethodDecl(ast* pAst) {
 }
 
 void runtime::parseMethodReturnType(Expression& expression, Method& method) {
+    method.array = expression.utype.array;
     if(expression.type == expression_class) {
         method.type = lclass_object;
         method.klass = expression.utype.klass;

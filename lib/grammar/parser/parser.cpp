@@ -685,6 +685,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
         if(peek(1).gettokentype() == LEFTPAREN) {
             parse_valuelist(pAst);
 
+            pAst->encapsulate(ast_dot_fn_e);
             /* func()++ or func()--
              * This expression rule dosen't process correctly by itsself
              * so we hav to do it ourselves
@@ -697,7 +698,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
             else {
                 errors->enablecheck_mode();
                 this->retainstate(pAst);
-                if(!parse_expression(pAst))
+                if(!parse_dot_notation_call_expr(pAst))
                 {
                     errors->pass();
                     this->rollbacklast();
@@ -770,6 +771,7 @@ bool parser::parse_expression(ast *pAst) {
 
         parse_expression(pAst);
 
+        pAst->encapsulate(ast_not_e);
         if(!isexprsymbol(peek(1).gettoken()))
             return true;
     }
@@ -877,8 +879,8 @@ bool parser::parse_expression(ast *pAst) {
         if(!isexprsymbol(peek(1).gettoken())){
             errors->enablecheck_mode();
             this->retainstate(pAst);
-            if(!parse_expression(pAst)) {
-                this->rollback();
+            if(!parse_dot_notation_call_expr(pAst)) {
+                this->rollbacklast();
                 errors->pass();
             }
             else {
@@ -886,8 +888,10 @@ bool parser::parse_expression(ast *pAst) {
                 this->dumpstate();
             }
 
+            pAst->encapsulate(ast_arry_e);
             return true;
         }
+        pAst->encapsulate(ast_arry_e);
     }
 
 
@@ -898,6 +902,7 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
+        pAst->encapsulate(ast_post_inc_e);
         if(!isexprsymbol(peek(1).gettoken()))
             return true;
     }

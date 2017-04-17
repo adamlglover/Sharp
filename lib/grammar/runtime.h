@@ -107,6 +107,7 @@ enum expression_type {
     expression_void=12,
     expression_unresolved=13,
     expression_null=14,
+    expression_array=15,
     expression_unknown=0x900f
 };
 
@@ -606,6 +607,24 @@ private:
     List<Expression> parseVectorArray(ast *pAst);
 
     void checkVectorArray(Expression& utype, List <Expression> &vecArry);
+
+    Expression parsePostInc(ast *pAst);
+
+    Expression parseArrayExpression(ast *pAst);
+
+    Expression parseIntermExpression(ast *pAst);
+
+    Expression parseBinaryExpression(Expression &expression, Expression &left);
+
+    Expression parseDotNotationCallContext(Expression &contextExpression, ast *pAst);
+
+    Expression parseUtypeContext(ClassObject *classContext, ast *pAst);
+
+    void resolveUtypeContext(ClassObject *classContext, ref_ptr &reference, Expression &expression, ast *pAst);
+
+    Method *resolveContextMethodUtype(ClassObject *classContext, ast *pAst, ast *pAst2);
+
+    Expression &parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos);
 };
 
 #define progname "bootstrap"

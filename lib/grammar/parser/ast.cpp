@@ -155,7 +155,6 @@ ast *ast::getsubast_after(ast_types at) {
 // TODO: call this method for expressions
 // tODO: add param bool override (default true) to override the encapsulation
 void ast::encapsulate(ast_types at) {
-    unencapsulate();
 
     add_ast(ast(this, at, this->line, this->col));
     ast* encap = getsubast(getsubastcount()-1);
@@ -168,9 +167,6 @@ void ast::encapsulate(ast_types at) {
     for(unsigned int i = 0; i < entities->size(); i++) {
             encap->add_entity(entities->get(i));
     }
-    numAsts = 1;
-    numEntities = 0;
-    this->entities->free();
 
     readjust:
         for(unsigned int i = 0; i < sub_asts->size(); i++) {
@@ -179,27 +175,9 @@ void ast::encapsulate(ast_types at) {
                 goto readjust;
             }
         }
-}
 
-void ast::unencapsulate() {
-    bool unencap = false;
-    for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        if(sub_asts->get(i).type >= ast_literal_e && sub_asts->get(i).type < ast_none)
-            unencap = true;
-    }
-
-    if(unencap) {
-        ast* encap = getsubast(0);
-
-        for(unsigned int i = 0; i < encap->sub_asts->size(); i++) {
-                add_ast(encap->sub_asts->get(i));
-        }
-
-        for(unsigned int i = 0; i < encap->entities->size(); i++) {
-            add_entity(encap->entities->get(i));
-        }
-        encap->free();
-        sub_asts->remove(0); // remove the encap
-    }
+    numAsts = 1;
+    numEntities = 0;
+    entities->free();
 }
 
