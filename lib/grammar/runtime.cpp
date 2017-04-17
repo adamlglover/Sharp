@@ -1296,15 +1296,15 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
             else {
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + paramsToString(params) + "`");
             }
         } else if(expression.type == expression_field && expression.utype.field->type != field_class) {
-            errors->newerror(GENERIC, pAst2->line, pAst2->col, " field `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "` is not a class");
+            errors->newerror(GENERIC, pAst2->line, pAst2->col, " field `" +  methodName + "` is not a class");
 
         } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
         else {
-            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + paramsToString(params) +  "`");
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" +  methodName + paramsToString(params) +  "`");
         }
     } else {
         // method or global macros
@@ -1328,7 +1328,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
                         if(string_toop(methodName) != oper_NO) methodName = "operator" + ptr.refname;
                         else methodName = ptr.refname;
 
-                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName +  paramsToString(params) + "`");
+                        errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + ptr.refname +  paramsToString(params) + "`");
                     }
                 }
             }
@@ -1377,14 +1377,18 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
     string method_name="";
     Expression expression, interm;
     Method* fn;
+    ast* pAst2;
 
     if(pAst->hassubast(ast_dot_fn_e)) {
-        pAst = pAst->getsubast(ast_dot_fn_e);
-        fn = resolveMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        pAst2 = pAst->getsubast(ast_dot_fn_e);
+        fn = resolveMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
-            if(expression.type == expression_lclass)
+            if(expression.type == expression_lclass) {
                 expression.utype.klass = fn->klass;
+                expression.utype.type = ResolvedReference::CLASS;
+            }
+
             expression.utype.array = fn->array;
 
             // TODO: check for ++ and --
@@ -1466,12 +1470,12 @@ Method* runtime::resolveSelfMethodUtype(ast* pAst, ast* pAst2) {
             else {
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + paramsToString(params) + "`");
             }
         } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
         else {
-            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + paramsToString(params) +  "`");
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + paramsToString(params) +  "`");
         }
     } else {
         // method or macros
@@ -1511,16 +1515,22 @@ Expression runtime::parseSelfDotNotationCall(ast* pAst) {
     string method_name="";
     Expression expression;
     Method* fn;
+    ast* pAst2;
 
     if(pAst->hassubast(ast_dot_fn_e)) {
-        pAst = pAst->getsubast(ast_dot_fn_e);
-        fn = resolveSelfMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        pAst2 = pAst->getsubast(ast_dot_fn_e);
+        fn = resolveSelfMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
-            if(expression.type == expression_lclass)
+            if(expression.type == expression_lclass) {
                 expression.utype.klass = fn->klass;
+                expression.utype.type = ResolvedReference::CLASS;
+            }
+
+            expression.utype.array = fn->array;
         } else
             expression.type = expression_unresolved;
+
     } else {
         scope->self = true;
         expression = parseUtype(pAst->getsubast(ast_utype));
@@ -1620,7 +1630,7 @@ Method* runtime::resolveBaseMethodUtype(ast* pAst, ast* pAst2) {
                     else if((fn = base->getOverload(string_toop(ptr.refname), params)) != NULL){ return fn; }
                     else if((fn = base->getConstructor(params)) != NULL) { return fn; }
                     else {
-                        start = base; // recursivley assign klass to new base
+                        start = base->getBaseClass(); // recursivley assign klass to new base
                     }
                 }
             }
@@ -1642,16 +1652,22 @@ Expression runtime::parseBaseDotNotationCall(ast* pAst) {
     Expression expression;
     string method_name="";
     Method* fn;
+    ast* pAst2;
 
     if(pAst->hassubast(ast_dot_fn_e)) {
-        pAst = pAst->getsubast(ast_dot_fn_e);
-        fn = resolveBaseMethodUtype(pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        pAst2 = pAst->getsubast(ast_dot_fn_e);
+        fn = resolveBaseMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list));
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
-            if(expression.type == expression_lclass)
+            if(expression.type == expression_lclass) {
                 expression.utype.klass = fn->klass;
+                expression.utype.type = ResolvedReference::CLASS;
+            }
+
+            expression.utype.array = fn->array;
         } else
             expression.type = expression_unresolved;
+
     } else {
         scope->base = true;
         expression = parseUtype(pAst->getsubast(ast_utype));
@@ -2015,8 +2031,14 @@ Expression runtime::parseDotNotationCallContext(Expression& contextExpression, a
         } else
             expression.type = expression_unresolved;
     } else {
-        // TODO: must evalueste to a field
-        expression = parseUtypeContext(klass, pAst);
+        /*
+         * Nasty way to check which ast to pass
+         * can we do this a better way?
+         */
+        if(pAst->gettype() == ast_utype)
+            expression = parseUtypeContext(klass, pAst);
+        else
+            expression = parseUtypeContext(klass, pAst->getsubast(ast_utype));
     }
 
     if(pAst->hasentity(DOT)) {
@@ -2024,6 +2046,83 @@ Expression runtime::parseDotNotationCallContext(Expression& contextExpression, a
     }
 
     expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
+    Expression expression, indexExpr, rightExpr;
+    Field* field;
+
+    indexExpr = parseExpression(pAst);
+
+    expression.type = interm.type;
+    expression.utype = interm.utype;
+    expression.utype.array = false;
+    expression.lnk = pAst;
+
+    switch(interm.type) {
+        case expression_field:
+            if(!interm.utype.field->array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+            }
+            if(interm.utype.field->type == field_class) {
+                expression.utype.klass = interm.utype.field->klass;
+                expression.type = expression_lclass;
+            } else if(interm.utype.field->type == field_native) {
+                expression.type = expression_var;
+            }else {
+                expression.type = expression_unknown;
+            }
+            // TODO: access array at size
+            break;
+        case expression_string:
+            // TODO: add code to get string at index
+            expression.type = expression_var;
+            break;
+        case expression_var:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_lclass:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "null cannot be used as an array");
+            break;
+        case expression_dynamicclass:
+            if(!interm.utype.array) {
+                // error not an array
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+            }
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "void cannot be used as an array");
+            break;
+        case expression_unresolved:
+            /* do nothing */
+            break;
+        default:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "invalid array expression before `[`");
+            break;
+    }
+
+    if(indexExpr.type == expression_var) {
+        // we have an integer!
+    } else if(indexExpr.type == expression_field) {
+        if(!indexExpr.utype.field->nativeInt()) {
+            errors->newerror(GENERIC, pAst->line, pAst->col, "array index is not an integer");
+        }
+    } else if(indexExpr.type == expression_unresolved) {
+    } else {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "array index is not an integer");
+    }
+
     return expression;
 }
 
@@ -2117,8 +2216,21 @@ Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, un
     for(unsigned int i = startpos; i < pAst->getsubastcount(); i++) {
             utype = pAst->getsubast(i);
 
-            rightExpr = parseDotNotationCallContext(rightExpr, utype);
+            if(rightExpr.utype.array && utype->gettype() != ast_expression) {
+                errors->newerror(GENERIC, utype->line, utype->col, "expected array index `[]`");
+            }
 
+            if(utype->gettype() == ast_dotnotation_call_expr) {
+                rightExpr = parseDotNotationChain(utype, rightExpr, 0);
+            }
+            else if(utype->gettype() == ast_expression){ /* array expression */
+                rightExpr = parseArrayExpression(rightExpr, utype);
+            }
+            else {
+                rightExpr = parseDotNotationCallContext(rightExpr, utype);
+            }
+
+            rightExpr.lnk = utype;
             if(rightExpr.type == expression_unresolved || rightExpr.type == expression_unknown)
                 break;
 

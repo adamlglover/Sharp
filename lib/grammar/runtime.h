@@ -625,6 +625,8 @@ private:
     Method *resolveContextMethodUtype(ClassObject *classContext, ast *pAst, ast *pAst2);
 
     Expression &parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos);
+
+    Expression parseArrayExpression(Expression &interm, ast *pAst);
 };
 
 #define progname "bootstrap"

@@ -131,6 +131,7 @@ public:
 
     int line, col;
     long numEntities, numAsts;
+
 private:
     ast_types type;
     ast *parent;

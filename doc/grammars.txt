@@ -104,8 +104,11 @@ A value consists of an <expression>
     | '=' // must return left assignee type
     | '==' // must return bool
 
+<array-expression>:
+expression '[' expression ']' [<dot-notation-call-expr>]
+
 <dot-notation-call-expr>:
-[.] <utype-naked> [<value-list> [expression]]
+[.] <utype-naked> [<value-list> [<dot-notation-call-expr> | <array-expression>]]
 
 <primary-expr>:
 <literal>                       // ast_literal_e
@@ -119,7 +122,7 @@ A value consists of an <expression>
     | 'base' '->' <dot-notation-call-expr>
     | null
     | new uType [([<value-list>] | [VectorArray>])]
-    | expression '[' expression ']' [expression]
+    | <array-expression>
     | '(' uType ')' expression
     | expression ('++' | '--')
     | ('+' | '-' | '++' | '--') expression

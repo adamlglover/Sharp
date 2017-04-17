@@ -695,6 +695,24 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
                 advance();
                 pAst->add_entity(current());
             }
+            else if(peek(1).gettokentype() == LEFTBRACE) {
+                advance();
+                pAst->add_entity(current());
+
+                parse_expression(pAst);
+                expect(RIGHTBRACE, pAst, "`]`");
+
+                errors->enablecheck_mode();
+                this->retainstate(pAst);
+                if(!parse_dot_notation_call_expr(pAst))
+                {
+                    errors->pass();
+                    this->rollbacklast();
+                } else {
+                    this->dumpstate();
+                    errors->fail();
+                }
+            }
             else {
                 errors->enablecheck_mode();
                 this->retainstate(pAst);

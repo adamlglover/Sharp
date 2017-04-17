@@ -8,14 +8,18 @@ class X {
     fn operator+(var x) {
 
     }
+
+    fn foo(var x) : Main[] {
+
+    }
 }
 
 
 class Main base application#X{
 
-    var x = base->yy.yy().y;
-    var y=self->foo(Main.x, foo(9)[1].x);
-    var yy = base->application#X.foo("foo");
+    var x = 9;
+    var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo();
+    var yy = base->application#Main.foo("foo");
     X[] b;
 
     fn foo(var x, var n) : var {
