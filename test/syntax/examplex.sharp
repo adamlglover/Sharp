@@ -17,8 +17,9 @@ class X {
 
 class Main base application#X{
 
+    var xx = foo(7)[90]++;
     var x = (dynamic_object)foo(89)[0];
-    var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo();
+    var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
     var yy = base->application#Main.foo("foo");
     X[] b;
 
@@ -26,7 +27,11 @@ class Main base application#X{
 
     }
 
-    fn foo(var x) : Main[] {
+    fn operator++ (var x) : Main {
+        return self;
+    }
+
+    fn foo(var x) : Main {
 
     }
 

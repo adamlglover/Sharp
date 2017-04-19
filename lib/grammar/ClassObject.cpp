@@ -209,3 +209,12 @@ bool ClassObject::hasBaseClass(ClassObject *pObject) {
             _klass = k;
     }
 }
+
+bool ClassObject::hasOverload(_operator op) {
+    for(OperatorOverload& oper : *overloads) {
+        if(op == oper.getOperator())
+            return true;
+    }
+
+    return false;
+}

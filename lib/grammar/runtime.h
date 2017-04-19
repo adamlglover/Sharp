@@ -108,7 +108,6 @@ enum expression_type {
     expression_void=12,
     expression_unresolved=13,
     expression_null=14,
-    expression_array=15,
     expression_unknown=0x900f
 };
 
@@ -632,10 +631,12 @@ private:
     Expression parseCastExpression(ast *pAst);
 
     Expression parseNativeCast(Expression &utype, Expression &arg);
+
+    Expression parseClassCast(Expression &utype, Expression &arg);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.34"
+#define progvers "0.1.38"
 
 struct options {
     /*

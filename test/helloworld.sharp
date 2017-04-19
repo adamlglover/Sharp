@@ -4,8 +4,8 @@ import io;
 
 class Main {
 
-    public static fn main(String[] args) : int {
-        io.console.write("Hello World");
+    public static fn main(string[] args) : __int16 {
+        Console.write("Hello World");
         return 0;
     }
 }

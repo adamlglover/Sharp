@@ -1391,8 +1391,35 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
             expression.utype.array = fn->array;
 
+            if(pAst->hasentity(_INC) || pAst->hasentity(_DEC)) {
+                token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
+
+                if(fn->array) {
+                    errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
+                } else {
+                    switch(fn->type) {
+                        case lvoid:
+                            errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "cannot use `" + entity.gettoken() + "` operator on function that returns void ");
+                            break;
+                        case lnative_object:
+                            // TODO: increment return value
+                            break;
+                        case lclass_object:
+                            if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
+                                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "`; missing overload params for operator `"
+                                                                                                + fn->klass->getFullName() + ".operator" + entity.gettoken() + "`");
+                            } else {
+                                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
+                            }
+                            break;
+                        case lundefined:
+                            // do nothing
+                            break;
+                    }
+                }
+            }
+
             // TODO: check for ++ and --
-            // TODO: parse dot_notation_chain expression
         } else
             expression.type = expression_unresolved;
     } else {
@@ -1748,7 +1775,6 @@ void runtime::checkVectorArray(Expression& utype, List<Expression>& vecArry) {
 
     for(unsigned int i = 0; i < vecArry.size(); i++) {
         if(vecArry.get(i).type != expression_unresolved) {
-            cout << "utype " << utype.type << " vec at " << i << " is " << vecArry.get(i).type << endl;
             switch(vecArry.get(i).type) {
                 case expression_native:
                     errors->newerror(UNEXPECTED_SYMBOL, vecArry.get(i).lnk->line, vecArry.get(i).lnk->col, " `" + nativefield_tostr(utype.utype.nf) + "`");
@@ -1864,7 +1890,66 @@ Expression runtime::parseNewExpression(ast* pAst) {
 Expression runtime::parsePostInc(ast* pAst) {
     Expression expression;
     cout << "post inc!!" << endl;
+    token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
 
+    expression = parseIntermExpression(pAst);
+    if(expression.utype.array){
+        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+    } else {
+        switch(expression.type) {
+            case expression_var:
+                // TODO: increment value
+                break;
+            case expression_field:
+                break;
+            case expression_lclass:
+                break;
+            case expression_dynamicclass:
+                // TODO: complain as unknown class to increment, give hint to cast to a class then call operator function from that class
+                break;
+            case expression_null:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "value `null` cannot be used as var");
+                break;
+            case expression_native:
+                errors->newerror(UNEXPECTED_SYMBOL, entity.getline(), entity.getcolumn(), " `" + nativefield_tostr(expression.utype.nf) + "`");
+                break;
+            case expression_string:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "increment on immutable string");
+                break;
+            case expression_unresolved:
+                // do nothing
+                break;
+            default:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+                break;
+        }
+    }
+    if(pAst->hasentity(_INC) || pAst->hasentity(_DEC)) {
+
+        if(fn->array) {
+            errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
+        } else {
+            switch(fn->type) {
+                case lvoid:
+                    errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "cannot use `" + entity.gettoken() + "` operator on function that returns void ");
+                    break;
+                case lnative_object:
+                    // TODO: increment return value
+                    break;
+                case lclass_object:
+                    if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "`; missing overload params for operator `"
+                                                                                        + fn->klass->getFullName() + ".operator" + entity.gettoken() + "`");
+                    } else {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
+                    }
+                    break;
+                case lundefined:
+                    // do nothing
+                    break;
+            }
+        }
+    }
 
     return expression;
 }
@@ -2280,46 +2365,64 @@ Expression runtime::parseNativeCast(Expression& utype, Expression& arg) {
     switch(utype.utype.nf) {
         case fi8:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fi16:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fi32:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fi64:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fui8:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fui16:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fui32:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fui64:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
         case fvar:
             if(arg.type == expression_var) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
@@ -2328,6 +2431,56 @@ Expression runtime::parseNativeCast(Expression& utype, Expression& arg) {
             return expression;
         case fdynamic:
             if(arg.type == expression_lclass) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
+                return expression;
+            }
+            break;
+    }
+
+    if(arg.type != expression_unresolved)
+        errors->newerror(INCOMPATIBLE_TYPES, utype.lnk->line, utype.lnk->col, "; cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
+    return Expression(utype.lnk);
+}
+
+Expression runtime::parseClassCast(Expression& utype, Expression& arg) {
+    Expression expression(utype.lnk);
+    if(arg.type != expression_unresolved) {
+        if(arg.utype.array != utype.utype.array) {
+            errors->newerror(INCOMPATIBLE_TYPES, utype.lnk->line, utype.lnk->col, "; cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
+            expression.type = expression_unresolved;
+            return expression;
+        }
+    }
+
+    switch(arg.type) {
+        case expression_lclass:
+            if(utype.utype.klass->match(arg.utype.klass)) {
+                expression.type = utype.type;
+                expression.utype = utype.utype;
+                return expression;
+            }
+            break;
+        case expression_dynamicclass:
+            // TODO: put runtime code to evaluate at runtime
+            expression.type = utype.type;
+            expression.utype = utype.utype;
+            return expression;
+        case expression_field:
+            if(arg.utype.field->type == field_class) {
+                if(utype.utype.klass->match(arg.utype.klass)) {
+                    expression.type = utype.type;
+                    expression.utype = utype.utype;
+                    return expression;
+                }
+            } else if(arg.utype.field->type == field_native) {
+                errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "field `" + arg.utype.field->name + "` is not a class; "
+                                                                          "cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
+                return expression;
+            } else {
+                // field is unresolved
+                expression.type = expression_unresolved;
+                expression.utype = utype.utype;
                 return expression;
             }
             break;
@@ -2349,6 +2502,12 @@ Expression runtime::parseCastExpression(ast* pAst) {
         switch(utype.type) {
             case expression_native:
                 expression = parseNativeCast(utype, arg);
+                break;
+            case expression_class:
+                expression = parseClassCast(utype, arg);
+                break;
+            case expression_field:
+                errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "cast expression of type `field` not allowed, must be of type `class`");
                 break;
         }
     }

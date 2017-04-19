@@ -95,6 +95,7 @@ public:
     size_t overloadCount();
     OperatorOverload* getOverload(size_t p);
     OperatorOverload* getOverload(_operator op, List<Param>& params);
+    bool hasOverload(_operator op);
     bool addOperatorOverload(OperatorOverload overload);
 
     size_t fieldCount();
