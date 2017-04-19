@@ -638,7 +638,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.38"
+#define progvers "0.1.39"
 
 struct options {
     /*

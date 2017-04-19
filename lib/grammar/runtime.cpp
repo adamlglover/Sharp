@@ -1243,10 +1243,10 @@ string runtime::paramsToString(List<Param> &param) {
                 } else message += param.get(i).field.klass->getFullName();
                 break;
             case field_unresolved:
-                message += "<unknown-type>";
+                message += "?";
                 break;
             default:
-                message += "<unknown-type>";
+                message += "?";
                 break;
         }
 

@@ -17,7 +17,9 @@ class X {
 
 class Main base application#X{
 
-    var xx = foo(7)++.operator++(9).foo(0,0);
+// TODO: fix this '.' in front of func call are not checked
+// TODO: add check to add 'operator' in front of function ann e if applicable
+    var xx = .operator++(9).foo(0,0);
     var x = (dynamic_object)foo(89)[0];
     var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
     var yy = base->application#Main.foo("foo");
