@@ -681,7 +681,6 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
     }
 
     if(parse_utype_naked(pAst)) {
-        token_entity e = peek(1);
         if(peek(1).gettokentype() == LEFTPAREN) {
             parse_valuelist(pAst);
 
@@ -1579,7 +1578,16 @@ void parser::parse_modulename(ast* pAst)
 {
     pAst = get_ast(pAst, ast_modulename);
 
-    expectidentifier(pAst);
+    if(peek(1).gettoken() == "operator") {
+        if(isoverride_operator(peek(2).gettoken())) {
+            advance();
+            advance();
+            pAst->add_entity(current());
+            return;
+        }
+    } else {
+        expectidentifier(pAst);
+    }
 
     advance();
     while(current().gettokentype() == DOT) {
@@ -1704,8 +1712,12 @@ bool parser::parse_reference_pointer(ast *pAst) {
     pAst = get_ast(pAst, ast_refrence_pointer);
 
     advance();
-    if(!(current().getid() == IDENTIFIER && !iskeyword(current().gettoken())))
-        return false;
+    if(!(current().getid() == IDENTIFIER && !iskeyword(current().gettoken()))) {
+        if(current().gettoken() != "operator")
+            return false;
+        else
+            pushback();
+    }
     else
         pushback();
     parse_modulename(pAst);

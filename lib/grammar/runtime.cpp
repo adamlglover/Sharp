@@ -1364,10 +1364,10 @@ Expression runtime::parseBinaryExpression(Expression& expression, Expression& le
 
     switch(expression.type) {
         case expression_lclass:
-            if(left.type == expression_array) {
-                if(!expression.utype.array) {
-                }
-            }
+//            if(left.type == expression_array) {
+//                if(!expression.utype.array) {
+//                }
+//            }
             break;
     }
     return expression;
@@ -1393,7 +1393,10 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
             if(pAst->hasentity(_INC) || pAst->hasentity(_DEC)) {
                 token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
+                OperatorOverload* overload;
+                List<Param> emptyParams;
 
+                expression.type = expression_var;
                 if(fn->array) {
                     errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
                 } else {
@@ -1405,7 +1408,14 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
                             // TODO: increment return value
                             break;
                         case lclass_object:
-                            if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
+                            if((overload = fn->klass->getOverload(string_toop(entity.gettoken()), emptyParams)) != NULL) {
+                                // add code to call overload
+                                expression.type = methodReturntypeToExpressionType(overload);
+                                if(expression.type == expression_lclass) {
+                                    expression.utype.klass = overload->klass;
+                                    expression.utype.type = ResolvedReference::CLASS;
+                                }
+                            } else if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
                                 errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "`; missing overload params for operator `"
                                                                                                 + fn->klass->getFullName() + ".operator" + entity.gettoken() + "`");
                             } else {
@@ -1887,12 +1897,33 @@ Expression runtime::parseNewExpression(ast* pAst) {
     return expression;
 }
 
+void runtime::postIncClass(Expression& expression, token_entity op, ClassObject* klass) {
+    OperatorOverload* overload;
+    List<Param> emptyParams;
+
+    if((overload = klass->getOverload(string_toop(op.gettoken()), emptyParams)) != NULL) {
+        // add code to call overload
+        expression.type = methodReturntypeToExpressionType(overload);
+        if(expression.type == expression_lclass) {
+            expression.utype.klass = overload->klass;
+            expression.utype.type = ResolvedReference::CLASS;
+        }
+    } else if(klass->hasOverload(string_toop(op.gettoken()))) {
+        errors->newerror(GENERIC, op.getline(), op.getcolumn(), "use of class `" + klass->getName() + "`; missing overload params for operator `"
+                                                                        + klass->getFullName() + ".operator" + op.gettoken() + "`");
+        expression.type = expression_var;
+    } else {
+        errors->newerror(GENERIC, op.getline(), op.getcolumn(), "use of class `" + klass->getName() + "` must return an int to use `" + op.gettoken() + "` operator");
+        expression.type = expression_var;
+    }
+}
+
 Expression runtime::parsePostInc(ast* pAst) {
     Expression expression;
-    cout << "post inc!!" << endl;
     token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
 
-    expression = parseIntermExpression(pAst);
+    expression = parseIntermExpression(pAst->getsubast(0));
+
     if(expression.utype.array){
         errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
     } else {
@@ -1901,11 +1932,27 @@ Expression runtime::parsePostInc(ast* pAst) {
                 // TODO: increment value
                 break;
             case expression_field:
+                if(expression.utype.field->type == field_class) {
+                    postIncClass(expression, entity, expression.utype.field->klass);
+                    return expression;
+                } else if(expression.utype.field->type == field_native) {
+                    if(expression.utype.field->nf == fdynamic) {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "use of `" + entity.gettoken() + "` operator on field of type `dynamic_object` without a cast. Try ((SomeClass)dynamic_class)++");
+                    } else if(expression.utype.field->nativeInt()) {
+                        // increment the field
+                    } else {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+                    }
+                } else {
+                    // do nothing field is unresolved
+                }
                 break;
             case expression_lclass:
+                postIncClass(expression, entity, expression.utype.klass);
+                return expression;
                 break;
             case expression_dynamicclass:
-                // TODO: complain as unknown class to increment, give hint to cast to a class then call operator function from that class
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "use of `" + entity.gettoken() + "` operator on type `dynamic_object` without a cast. Try ((SomeClass)dynamic_class)++");
                 break;
             case expression_null:
                 errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "value `null` cannot be used as var");
@@ -1924,33 +1971,8 @@ Expression runtime::parsePostInc(ast* pAst) {
                 break;
         }
     }
-    if(pAst->hasentity(_INC) || pAst->hasentity(_DEC)) {
 
-        if(fn->array) {
-            errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
-        } else {
-            switch(fn->type) {
-                case lvoid:
-                    errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "cannot use `" + entity.gettoken() + "` operator on function that returns void ");
-                    break;
-                case lnative_object:
-                    // TODO: increment return value
-                    break;
-                case lclass_object:
-                    if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
-                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "`; missing overload params for operator `"
-                                                                                        + fn->klass->getFullName() + ".operator" + entity.gettoken() + "`");
-                    } else {
-                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
-                    }
-                    break;
-                case lundefined:
-                    // do nothing
-                    break;
-            }
-        }
-    }
-
+    expression.type = expression_var;
     return expression;
 }
 
@@ -2037,15 +2059,12 @@ Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst,
             else if((fn = klass->getFunction(methodName, params)) != NULL){}
             else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
             else if(classContext->getField(methodName) != NULL) {
-                errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + methodName + "` is a field");
+                errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + classContext->getFullName() + methodName + "` is a field");
             }
             else {
-                if(klass->getField(methodName)) {
-
-                }
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + classContext->getFullName() + "." + (klass == NULL ? ptr.refname : methodName) + paramsToString(params) + "`");
             }
         }
         else if(expression.type == expression_field && expression.utype.field->type != field_class) {
@@ -2055,7 +2074,7 @@ Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst,
         else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
         else {
-            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + (expression.utype.klass == NULL ? ptr.refname : methodName) + "`");
+            errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + classContext->getFullName() + "." + (expression.utype.klass == NULL ? ptr.refname : methodName) + "`");
         }
     } else {
         // method or global macros
@@ -2067,10 +2086,10 @@ Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst,
                 errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + ptr.refname + "` is a field");
             }
             else {
-                if(string_toop(methodName) != oper_NO) methodName = "operator" + ptr.refname;
+                if(string_toop(ptr.refname) != oper_NO) methodName = "operator" + ptr.refname;
                 else methodName = ptr.refname;
 
-                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName +  paramsToString(params) + "`");
+                errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + classContext->getFullName() + "." + methodName +  paramsToString(params) + "`");
             }
         } else {
             // must be macros but it can be

@@ -633,6 +633,8 @@ private:
     Expression parseNativeCast(Expression &utype, Expression &arg);
 
     Expression parseClassCast(Expression &utype, Expression &arg);
+
+    void postIncClass(Expression &expression, token_entity op, ClassObject* klass);
 };
 
 #define progname "bootstrap"

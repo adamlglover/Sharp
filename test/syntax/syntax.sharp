@@ -26,6 +26,11 @@ class Start
         };
     }
 
+    var axx = foo(7)[90].operator++(9).foo(0,0);
+    var ax = (dynamic_object)foo(89)[0];
+    var ay=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
+    var ayy = base->application#Main.foo("foo");
+
     /*
     * assign-expr operators must return void,
     * all other operators must return a value
