@@ -2,6 +2,10 @@ mod examples_x.b.x;
 
 import examples_x.b.x;
 
+macros foo() : var
+{
+
+}
 
 class Start
 {

@@ -835,7 +835,7 @@ bool parser::parse_expression(ast *pAst) {
             return true;
     }
     else {
-        this->rollback();
+        this->rollbacklast();
     }
 
     if(peek(1).gettoken() == "self")

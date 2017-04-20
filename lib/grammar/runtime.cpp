@@ -2632,6 +2632,15 @@ Expression runtime::parsePreInc(ast* pAst) {
     return expression;
 }
 
+class X {
+public:
+
+    X& operator+(int x) {
+        x +=1;
+        return *this;
+    }
+};
+
 Expression runtime::parseParenExpression(ast* pAst) {
     Expression expression;
 
@@ -2708,7 +2717,7 @@ Expression runtime::parseNotExpression(ast* pAst) {
     return expression;
 }
 
-void runtime::addClass(ClassObject* klass, Expression& left, Expression &right, ast* pAst) {
+void runtime::addClass(ClassObject* klass, Expression& expression, Expression& left, Expression &right, ast* pAst) {
     List<Param> params;
     List<Expression> eList;
     eList.push_back(right);
@@ -2718,6 +2727,9 @@ void runtime::addClass(ClassObject* klass, Expression& left, Expression &right, 
 
     if((overload = klass->getOverload(oper_PLUS, params)) != NULL) {
         // call operand
+        expression.type = methodReturntypeToExpressionType(overload);
+        if(expression.type == expression_lclass)
+            expression.utype.klass = overload->klass;
     } else {
         errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `"
                                                           + left.typeToString() + "` and `" + right.typeToString() + "`");
@@ -2727,7 +2739,7 @@ void runtime::addClass(ClassObject* klass, Expression& left, Expression &right, 
     __freeList(eList);
 }
 
-void runtime::addNative(NativeField nf, Expression& left, Expression& right, ast* pAst) {
+void runtime::addNative(NativeField nf, Expression& expression, Expression& left, Expression& right, ast* pAst) {
 
 }
 
@@ -2754,9 +2766,9 @@ Expression runtime::parseAddExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(left.utype.field->nf, left, right, pAst);
+                addNative(left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
-                addClass(left.utype.field->klass, left, right, pAst);
+                addClass(left.utype.field->klass, expression, left, right, pAst);
             } else {
                 // do nothing field unresolved
             }
