@@ -6,7 +6,7 @@
 #define SHARP_STDIMPORTS_H
 
 #include <iostream>
-#include <string.h>
+#include <stdint-gcc.h>
 #include <cstdlib>
 #include <sstream>
 #include <list>

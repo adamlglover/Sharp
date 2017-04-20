@@ -2,15 +2,15 @@ mod examples_x.b.x;
 
 import examples_x.b.x;
 
-macros foo() : var
+macros foo()
 {
 
-}
+};
 
 class Start
 {
 
-    var x = X.yy.yy.operator+("");
+    var x = X.yy.yy.operator*("");
     var i = SQL.q(cursor, x /9 ? 504 : 403, io.READ)/113;
 
     var yyy=self->foo(x, foo(x));
