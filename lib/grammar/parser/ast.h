@@ -72,6 +72,8 @@ enum ast_types
     ast_cast_e,
     ast_pre_inc_e,
     ast_paren_e,
+    ast_vect_e,
+    ast_add_e,
 
     ast_none
 };

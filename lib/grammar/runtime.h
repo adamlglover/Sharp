@@ -142,6 +142,7 @@ struct Expression {
     ast* lnk;
     bool dot, _new;
 
+    string typeToString();
     void free() {
         code.free();
     }
@@ -614,8 +615,6 @@ private:
 
     Expression parseIntermExpression(ast *pAst);
 
-    Expression parseBinaryExpression(Expression &expression, Expression &left);
-
     Expression parseDotNotationCallContext(Expression &contextExpression, ast *pAst);
 
     Expression parseUtypeContext(ClassObject *classContext, ast *pAst);
@@ -643,10 +642,20 @@ private:
     Expression parseParenExpression(ast *pAst);
 
     Expression parseNotExpression(ast *pAst);
+
+    void notClass(Expression &expression, ClassObject *klass, ast* pAst);
+
+    Expression parseBinaryExpression(ast *pAst);
+
+    Expression parseAddExpression(ast *pAst);
+
+    void addClass(ClassObject *klass, Expression& left, Expression &right, ast* pAst);
+
+    void addNative(NativeField nf, Expression &left, Expression &right, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.39"
+#define progvers "0.1.40"
 
 struct options {
     /*

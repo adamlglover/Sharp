@@ -28,6 +28,10 @@ class Start
 
 // TODO: fix this '.' in front of func call are not checked
 // TODO: add check to add 'operator' in front of function ann e if applicable
+    var cxx = !(++foo(9)[9]).foo(9,9,9,9);//.foo(0,0);
+    var cx = (dynamic_object)foo(89)[0];
+    var cy=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
+    var cyy = base->application#Main.foo("foo");
     var bxx = .operator++(9).foo(0,0);
     var axx = foo(7)[90].operator++(9).foo(0,0);
     var ax = (dynamic_object)foo(89)[0];

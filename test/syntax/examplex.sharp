@@ -19,11 +19,13 @@ class Main base application#X{
 
 // TODO: fix this '.' in front of func call are not checked
 // TODO: add check to add 'operator' in front of function ann e if applicable
+    var cyy = m + 8;
     var xx = !(++foo(9)[9]).foo(9,9,9,9);//.foo(0,0);
     var x = (dynamic_object)foo(89)[0];
     var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
     var yy = base->application#Main.foo("foo");
     X[] b;
+    Main m;
 
     fn foo(var x, var n) : var {
 
@@ -33,6 +35,10 @@ class Main base application#X{
 // use new enum core_expression to signify function call, field access etc..
 // then have a core_expr_string to store helpful data about the expression
     fn operator++ () : Main {
+        return self;
+    }
+
+    fn operator+(var x) : Main {
         return self;
     }
 

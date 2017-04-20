@@ -366,6 +366,7 @@ bool runtime::parse_global_utype(ref_ptr& ptr, Expression& expression, ast* pAst
 
 void runtime::parseCharLiteral(token_entity token, Expression& expression) {
     expression.type = expression_var;
+
     int64_t  i64;
     if(token.gettoken().size() > 1) {
         switch(token.gettoken().at(1)) {
@@ -401,6 +402,7 @@ void runtime::parseCharLiteral(token_entity token, Expression& expression) {
 
 void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
     expression.type = expression_var;
+
     int64_t i64;
     double var;
     string int_string = invalidate_underscores(token.gettoken());
@@ -427,6 +429,7 @@ void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
 
 void runtime::parseHexLiteral(token_entity token, Expression& expression) {
     expression.type = expression_var;
+
     int64_t i64;
     double var;
     string hex_string = invalidate_underscores(token.gettoken());
@@ -442,6 +445,7 @@ void runtime::parseHexLiteral(token_entity token, Expression& expression) {
 
 void runtime::parseStringLiteral(token_entity token, Expression& expression) {
     expression.type = expression_string;
+
     string parsed_string = "";
     bool slash = false;
     for(char c : token.gettoken()) {
@@ -1361,19 +1365,6 @@ expression_type runtime::methodReturntypeToExpressionType(Method* fn) {
         return expression_unknown;
 }
 
-Expression runtime::parseBinaryExpression(Expression& expression, Expression& left) {
-
-    switch(expression.type) {
-        case expression_lclass:
-//            if(left.type == expression_array) {
-//                if(!expression.utype.array) {
-//                }
-//            }
-            break;
-    }
-    return expression;
-}
-
 Expression runtime::parseDotNotationCall(ast* pAst) {
     string method_name="";
     Expression expression, interm;
@@ -2176,7 +2167,7 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
         case expression_field:
             if(!interm.utype.field->array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             if(interm.utype.field->type == field_class) {
                 expression.utype.klass = interm.utype.field->klass;
@@ -2195,32 +2186,32 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
         case expression_var:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_lclass:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_null:
-            errors->newerror(GENERIC, pAst->line, pAst->col, "null cannot be used as an array");
+            errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "null cannot be used as an array");
             break;
         case expression_dynamicclass:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->line, pAst->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_void:
-            errors->newerror(GENERIC, pAst->line, pAst->col, "void cannot be used as an array");
+            errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "void cannot be used as an array");
             break;
         case expression_unresolved:
             /* do nothing */
             break;
         default:
-            errors->newerror(GENERIC, pAst->line, pAst->col, "invalid array expression before `[`");
+            errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "invalid array expression before `[`");
             break;
     }
 
@@ -2228,11 +2219,11 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
         // we have an integer!
     } else if(indexExpr.type == expression_field) {
         if(!indexExpr.utype.field->nativeInt()) {
-            errors->newerror(GENERIC, pAst->line, pAst->col, "array index is not an integer");
+            errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "array index is not an integer");
         }
     } else if(indexExpr.type == expression_unresolved) {
     } else {
-        errors->newerror(GENERIC, pAst->line, pAst->col, "array index is not an integer");
+        errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "array index is not an integer");
     }
 
     return expression;
@@ -2254,7 +2245,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
         case expression_field:
             if(!interm.utype.field->array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             if(interm.utype.field->type == field_class) {
                 expression.utype.klass = interm.utype.field->klass;
@@ -2273,13 +2264,13 @@ Expression runtime::parseArrayExpression(ast* pAst) {
         case expression_var:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_lclass:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_null:
@@ -2288,7 +2279,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
         case expression_dynamicclass:
             if(!interm.utype.array) {
                 // error not an array
-                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression must evaluate to array");
+                errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
             break;
         case expression_void:
@@ -2354,6 +2345,7 @@ Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, un
 }
 
 Expression runtime::parseIntermExpression(ast* pAst) {
+    Expression expression;
 
     switch(pAst->gettype()) {
         case ast_primary_expr:
@@ -2370,6 +2362,20 @@ Expression runtime::parseIntermExpression(ast* pAst) {
             return parsePostInc(pAst);
         case ast_arry_e:
             return parseArrayExpression(pAst);
+        case ast_cast_e:
+            return parseCastExpression(pAst);
+        case ast_pre_inc_e:
+            return parsePreInc(pAst);
+        case ast_paren_e:
+            return parseParenExpression(pAst);
+        case ast_not_e:
+            return parseNotExpression(pAst);
+        case ast_vect_e:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unexpected vector array expression. Did you mean 'new type { <data>, .. }'?");
+            expression.lnk = pAst;
+            return expression;
+        case ast_add_e:
+            return parseBinaryExpression(pAst);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -2638,13 +2644,151 @@ Expression runtime::parseParenExpression(ast* pAst) {
     return expression;
 }
 
+void runtime::notClass(Expression& expression, ClassObject* klass, ast* pAst) {
+    List<Param> emptyParams;
+    if(klass->getOverload(oper_NOT, emptyParams)) {
+        // call overload operator
+    } else if(klass->hasOverload(oper_NOT)) {
+        errors->newerror(GENERIC, pAst->line, pAst->col, "use of unary operator '!' on class `" + klass->getName() + "`; missing overload params for operator `"
+                                                                        + klass->getFullName() + ".operator!`");
+    } else {
+        // error cannot apply not to expression of type class
+        errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to expression of type `" + klass->getFullName() + "`");
+    }
+}
+
 Expression runtime::parseNotExpression(ast* pAst) {
     Expression expression;
 
     expression = parseExpression(pAst->getsubast(ast_expression));
 
     // TODO: check expression if it is a var then go ahead, else throw error
+    switch(expression.type) {
+        case expression_var:
+            // negate value
+            break;
+        case expression_lclass:
+            // check for !operator
+            notClass(expression, expression.utype.klass, pAst);
+            break;
+        case expression_unresolved:
+            // do nothing
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + expression.utype.toString() + "`");
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + expression.utype.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to dynamic_object, did you forget to add a cast?  i.e !((SomeClass)dynamic_class)");
+            break;
+        case expression_field:
+            if(expression.utype.field->type == field_native) {
+                // negate value
+            } else if(expression.utype.field->type == field_class) {
+                notClass(expression, expression.utype.field->klass, pAst);
+            } else {
+                // do nothjing field is unresolvable
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to null");
+            break;
+        case expression_string:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to immutable string");
+            break;
+        default:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to given expression");
+            break;
+
+    }
+
+    expression.type = expression_var;
     return expression;
+}
+
+void runtime::addClass(ClassObject* klass, Expression& left, Expression &right, ast* pAst) {
+    List<Param> params;
+    List<Expression> eList;
+    eList.push_back(right);
+    OperatorOverload* overload;
+
+    expressionListToParams(params, eList);
+
+    if((overload = klass->getOverload(oper_PLUS, params)) != NULL) {
+        // call operand
+    } else {
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `"
+                                                          + left.typeToString() + "` and `" + right.typeToString() + "`");
+    }
+
+    __freeList(params);
+    __freeList(eList);
+}
+
+void runtime::addNative(NativeField nf, Expression& left, Expression& right, ast* pAst) {
+
+}
+
+Expression runtime::parseAddExpression(ast* pAst) {
+    Expression expression, left, right;
+    token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                        "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(left.utype.field->nf, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(left.utype.field->klass, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            break;
+        case expression_lclass:
+            break;
+        case expression_class:
+            break;
+        case expression_void:
+            break;
+        case expression_dynamicclass:
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseBinaryExpression(ast* pAst) {
+    switch(pAst->gettype()) {
+        case ast_add_e:
+            return parseAddExpression(pAst);
+        default:
+            return Expression(pAst);
+    }
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
@@ -2675,6 +2819,12 @@ Expression runtime::parseExpression(ast *pAst) {
             return parseParenExpression(encap);
         case ast_not_e:
             return parseNotExpression(encap);
+        case ast_vect_e:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unexpected vector array expression. Did you mean 'new type { <data>, .. }'?");
+            expression.lnk = encap;
+            return expression;
+        case ast_add_e:
+            return parseBinaryExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -4568,6 +4718,8 @@ _operator string_toop(string op) {
         return oper_NOT_EQ;
     if(op=="%=")
         return oper_MOD_EQ;
+    if(op=="!")
+        return oper_NOT;
     return oper_NO;
 }
 
@@ -4598,6 +4750,34 @@ void Expression::utype_refrence_toexpression(ResolvedReference ref) {
                 break;
         }
     }
+}
+
+string Expression::typeToString() {
+    switch(type) {
+        case expression_string:
+            return "var[]";
+        case expression_unresolved:
+            return "?";
+        case expression_var:
+            return string("var") + (utype.array ? "[]" : "");
+        case expression_lclass:
+            return utype.typeToString();
+        case expression_native:
+            return utype.typeToString();
+        case expression_unknown:
+            return "?";
+        case expression_class:
+            return utype.typeToString();
+        case expression_void:
+            return "void";
+        case expression_dynamicclass:
+            return "dynamic object";
+        case expression_field:
+            return utype.typeToString();
+        case expression_null:
+            return "null";
+    }
+    return utype.typeToString();
 }
 
 string ResolvedReference::toString() {

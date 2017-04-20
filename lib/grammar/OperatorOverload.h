@@ -25,6 +25,7 @@ enum _operator {
     oper_OR_EQ,
     oper_NOT_EQ,
     oper_MOD_EQ,
+    oper_NOT,
 
     oper_NO
 };

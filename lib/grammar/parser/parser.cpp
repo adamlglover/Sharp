@@ -824,6 +824,7 @@ bool parser::parse_expression(ast *pAst) {
     if(peek(1).gettokentype() == LEFTCURLY)
     {
         parse_vectorarray(pAst);
+        pAst->encapsulate(ast_vect_e);
         return true;
     }
 
@@ -928,6 +929,17 @@ bool parser::parse_expression(ast *pAst) {
             return true;
     }
 
+    /* expression ('+'|'-') expression */
+    if(peek(1).gettokentype() == PLUS || peek(1).gettokentype() == MINUS)
+    {
+        advance();
+        pAst->add_entity(current());
+
+        parse_expression(pAst);
+        pAst->encapsulate(ast_add_e);
+        return true;
+    }
+
     /* expression ('*'|'/'|'%') expression */
     if(peek(1).gettokentype() == MULT || peek(1).gettokentype() == _DIV ||
        peek(1).gettokentype() == _MOD)
@@ -939,15 +951,6 @@ bool parser::parse_expression(ast *pAst) {
         return true;
     }
 
-    /* expression ('+'|'-') expression */
-    if(peek(1).gettokentype() == PLUS || peek(1).gettokentype() == MINUS)
-    {
-        advance();
-        pAst->add_entity(current());
-
-        parse_expression(pAst);
-        return true;
-    }
 
     /* expression ('<<'|'>>') expression */
     if(peek(1).gettokentype() == SHL || peek(1).gettokentype() == SHR)
