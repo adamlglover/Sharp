@@ -635,6 +635,14 @@ private:
     Expression parseClassCast(Expression &utype, Expression &arg);
 
     void postIncClass(Expression &expression, token_entity op, ClassObject* klass);
+
+    Expression parsePreInc(ast *pAst);
+
+    void preIncClass(Expression &expression, token_entity entity, ClassObject *klass);
+
+    Expression parseParenExpression(ast *pAst);
+
+    Expression parseNotExpression(ast *pAst);
 };
 
 #define progname "bootstrap"

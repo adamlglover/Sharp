@@ -24,7 +24,7 @@ void runtime::interpret() {
         resolveAllMethods();
 
         for(parser* p : parsers) {
-            errors = new Errors(p->lines, p->sourcefile, false, c_options.aggressive_errors);
+            errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
             _current = p;
 
             ast* trunk;
@@ -886,6 +886,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
     Scope* scope = current_scope();
     int64_t i64;
 
+    expression.lnk = pAst;
     if(scope->self) {
         resolveSelfUtype(scope, refrence, expression, pAst);
     } else if(scope->base) {
@@ -1299,7 +1300,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
                 errors->newerror(COULD_NOT_RESOLVE, pAst2->line, pAst2->col, " `" + methodName + paramsToString(params) + "`");
             }
         } else if(expression.type == expression_field && expression.utype.field->type != field_class) {
-            errors->newerror(GENERIC, pAst2->line, pAst2->col, " field `" +  methodName + "` is not a class");
+            errors->newerror(GENERIC, expression.lnk->line, expression.lnk->col, " field `" +  expression.utype.field->name + "` is not a class");
 
         } else if(expression.utype.type == ResolvedReference::NOTRESOLVED) {
         }
@@ -1901,7 +1902,13 @@ void runtime::postIncClass(Expression& expression, token_entity op, ClassObject*
     OperatorOverload* overload;
     List<Param> emptyParams;
 
-    if((overload = klass->getOverload(string_toop(op.gettoken()), emptyParams)) != NULL) {
+    if(op.gettokentype() == _INC) {
+        overload = klass->getPostIncOverload();
+    } else {
+        overload = klass->getPostDecOverload();
+    }
+
+    if(overload != NULL) {
         // add code to call overload
         expression.type = methodReturntypeToExpressionType(overload);
         if(expression.type == expression_lclass) {
@@ -2534,6 +2541,112 @@ Expression runtime::parseCastExpression(ast* pAst) {
     return expression;
 }
 
+void runtime::preIncClass(Expression& expression, token_entity op, ClassObject* klass) {
+    OperatorOverload* overload;
+    List<Param> emptyParams;
+
+    if(op.gettokentype() == _INC) {
+        overload = klass->getPreIncOverload();
+    } else {
+        overload = klass->getPreDecOverload();
+    }
+
+    if(overload != NULL) {
+        // add code to call overload
+        expression.type = methodReturntypeToExpressionType(overload);
+        if(expression.type == expression_lclass) {
+            expression.utype.klass = overload->klass;
+            expression.utype.type = ResolvedReference::CLASS;
+        }
+    } else if(klass->hasOverload(string_toop(op.gettoken()))) {
+        errors->newerror(GENERIC, op.getline(), op.getcolumn(), "use of class `" + klass->getName() + "`; missing overload params for operator `"
+                                                                + klass->getFullName() + ".operator" + op.gettoken() + "`");
+        expression.type = expression_var;
+    } else {
+        errors->newerror(GENERIC, op.getline(), op.getcolumn(), "use of class `" + klass->getName() + "` must return an int to use `" + op.gettoken() + "` operator");
+        expression.type = expression_var;
+    }
+}
+
+Expression runtime::parsePreInc(ast* pAst) {
+    Expression expression;
+    token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
+
+    expression = parseExpression(pAst->getsubast(0));
+
+    if(expression.utype.array){
+        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+    } else {
+        switch(expression.type) {
+            case expression_var:
+                // TODO: increment value
+                break;
+            case expression_field:
+                if(expression.utype.field->type == field_class) {
+                    preIncClass(expression, entity, expression.utype.field->klass);
+                    return expression;
+                } else if(expression.utype.field->type == field_native) {
+                    if(expression.utype.field->nf == fdynamic) {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "use of `" + entity.gettoken() + "` operator on field of type `dynamic_object` without a cast. Try ((SomeClass)dynamic_class)++");
+                    } else if(expression.utype.field->nativeInt()) {
+                        // increment the field
+                    } else {
+                        errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+                    }
+                } else {
+                    // do nothing field is unresolved
+                }
+                break;
+            case expression_lclass:
+                preIncClass(expression, entity, expression.utype.klass);
+                return expression;
+                break;
+            case expression_dynamicclass:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "use of `" + entity.gettoken() + "` operator on type `dynamic_object` without a cast. Try ((SomeClass)dynamic_class)++");
+                break;
+            case expression_null:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "value `null` cannot be used as var");
+                break;
+            case expression_native:
+                errors->newerror(UNEXPECTED_SYMBOL, entity.getline(), entity.getcolumn(), " `" + nativefield_tostr(expression.utype.nf) + "`");
+                break;
+            case expression_string:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "increment on immutable string");
+                break;
+            case expression_unresolved:
+                // do nothing
+                break;
+            default:
+                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "expression must evaluate to an int to use `" + entity.gettoken() + "` operator");
+                break;
+        }
+    }
+
+    expression.type = expression_var;
+    return expression;
+}
+
+Expression runtime::parseParenExpression(ast* pAst) {
+    Expression expression;
+
+    expression = parseExpression(pAst->getsubast(ast_expression));
+
+    if(pAst->hassubast(ast_dotnotation_call_expr)) {
+        return parseDotNotationChain(pAst, expression, 0);
+    }
+
+    return expression;
+}
+
+Expression runtime::parseNotExpression(ast* pAst) {
+    Expression expression;
+
+    expression = parseExpression(pAst->getsubast(ast_expression));
+
+    // TODO: check expression if it is a var then go ahead, else throw error
+    return expression;
+}
+
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
 Expression runtime::parseExpression(ast *pAst) {
     Expression expression;
@@ -2556,6 +2669,12 @@ Expression runtime::parseExpression(ast *pAst) {
             return parseArrayExpression(encap);
         case ast_cast_e:
             return parseCastExpression(encap);
+        case ast_pre_inc_e:
+            return parsePreInc(encap);
+        case ast_paren_e:
+            return parseParenExpression(encap);
+        case ast_not_e:
+            return parseNotExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();

@@ -742,6 +742,7 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
         parse_expression(pAst);
+        pAst->encapsulate(ast_pre_inc_e);
         return true;
     }
 
@@ -811,11 +812,13 @@ bool parser::parse_expression(ast *pAst) {
                 errors->fail();
             } else {
                 errors->pass();
-                pAst = this->rollback();
+                pAst = this->rollbacklast();
             }
 
+            pAst->encapsulate(ast_paren_e);
             return true;
-        }
+        } else
+            pAst->encapsulate(ast_paren_e);
     }
 
     if(peek(1).gettokentype() == LEFTCURLY)

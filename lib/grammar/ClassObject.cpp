@@ -218,3 +218,51 @@ bool ClassObject::hasOverload(_operator op) {
 
     return false;
 }
+
+OperatorOverload *ClassObject::getPostIncOverload() {
+    for(OperatorOverload& oper : *overloads) {
+        if(oper_INC == oper.getOperator()) {
+            if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+                return &oper;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+OperatorOverload *ClassObject::getPostDecOverload() {
+    for(OperatorOverload& oper : *overloads) {
+        if(oper_DEC == oper.getOperator()) {
+            if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+                return &oper;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+OperatorOverload *ClassObject::getPreIncOverload() {
+    for(OperatorOverload& oper : *overloads) {
+        if(oper_INC == oper.getOperator()) {
+            if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+                return &oper;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+OperatorOverload *ClassObject::getPreDecOverload() {
+    for(OperatorOverload& oper : *overloads) {
+        if(oper_DEC == oper.getOperator()) {
+            if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+                return &oper;
+            }
+        }
+    }
+
+    return NULL;
+}

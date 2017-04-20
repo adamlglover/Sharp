@@ -94,6 +94,10 @@ public:
 
     size_t overloadCount();
     OperatorOverload* getOverload(size_t p);
+    OperatorOverload* getPostIncOverload();
+    OperatorOverload* getPostDecOverload();
+    OperatorOverload* getPreIncOverload();
+    OperatorOverload* getPreDecOverload();
     OperatorOverload* getOverload(_operator op, List<Param>& params);
     bool hasOverload(_operator op);
     bool addOperatorOverload(OperatorOverload overload);
