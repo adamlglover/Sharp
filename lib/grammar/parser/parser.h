@@ -46,6 +46,13 @@ public:
 
     static bool isnative_type(string type);
     static bool isassign_exprsymbol(string token);
+
+    /**
+     * This is a special flag that denotes that the compiler has detected too many errors
+     * and you need to fix your program!
+     */
+    bool panic;
+
 private:
     void parse();
     bool isend();
@@ -53,12 +60,6 @@ private:
     void advance();
     token_entity peek(int forward);
     static bool iskeyword(string key);
-
-    /**
-     * This is a special flag that denotes that the compiler has detected too many errors
-     * and you need to fix your program!
-     */
-    bool panic;
 
     int64_t cursor;
     list<ast> *tree;

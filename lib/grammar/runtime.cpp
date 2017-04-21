@@ -4362,7 +4362,7 @@ void _srt_start(list<string> files)
     tokenizer* t;
     file::stream source;
     size_t errors=0, uo_errors=0;
-    int succeeded=0, failed=0;
+    int succeeded=0, failed=0, panic=0;
 
     for(string file : files) {
         source.begin();
@@ -4393,6 +4393,10 @@ void _srt_start(list<string> files)
             {
                 p->geterrors()->print_errors();
 
+                if(p->panic) {
+                    panic = 1;
+                }
+
                 errors+= p->geterrors()->error_count();
                 uo_errors+= p->geterrors()->uoerror_count();
                 failed++;
@@ -4407,7 +4411,11 @@ void _srt_start(list<string> files)
         source.end();
     }
 
-    if(errors == 0 && uo_errors == 0) {
+    if(panic) {
+        cout << "Detected more than 9999+ errors, fix your freakin code!";
+    }
+
+    if(!panic && errors == 0 && uo_errors == 0) {
         failed = 0, succeeded=0;
         runtime rt(c_options.out, parsers);
 

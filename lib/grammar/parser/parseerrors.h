@@ -154,7 +154,9 @@ private:
 
     void print_error(parseerror &err);
 
-    bool has_error(const parseerror &e) const;
+    bool has_error(list <parseerror> *e, const parseerror &parseerror1) const;
+
+    bool shouldreportwarning(token_entity *token, const parseerror &last_err, const parseerror &e) const;
 };
 
 #endif //SHARP_PARSEERRORS_H

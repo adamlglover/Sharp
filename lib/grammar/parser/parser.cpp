@@ -20,6 +20,9 @@ void parser::parse()
 
     while(!isend())
     {
+        if(panic)
+            break;
+
         eval(NULL);
     }
 
@@ -625,7 +628,6 @@ bool parser::parse_primaryexpr(ast *pAst) {
 
 void parser::parse_valuelist(ast *pAst) {
     pAst = get_ast(pAst, ast_value_list);
-    CHECK_ERRORS
 
     expect(LEFTPAREN, pAst, "`(`");
 
@@ -678,7 +680,6 @@ bool parser::isoverride_operator(string token) {
 
 bool parser::parse_dot_notation_call_expr(ast *pAst) {
     pAst = get_ast(pAst, ast_dotnotation_call_expr);
-    CHECK_ERRORS2(false)
 
     if(peek(1).gettokentype() == DOT)
     {

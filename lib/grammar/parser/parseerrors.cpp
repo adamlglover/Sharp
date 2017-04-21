@@ -172,12 +172,30 @@ int Errors::newerror(p_errors err, token_entity token, string xcmts) {
 bool Errors::shouldreport(token_entity *token, const parseerror &last_err,
                           const parseerror &e) const {
     if(last_err.error != e.error && !(last_err.line == e.line && last_err.col == e.col)
-       && (last_err.error.find(e.error) == std::string::npos) && !has_error(e))
+       && (last_err.error.find(e.error) == std::string::npos) && !has_error(errors, e))
     {
         if(token != NULL && !(token->getid() == SINGLE || token->getid() == CHAR_LITERAL ||
                 token->getid() == STRING_LITERAL || token->getid() == INTEGER_LITERAL))
             return (last_err.error.find(token->gettoken()) == std::string::npos) &&
                     ((last_err.line-e.line)!=-1);
+
+        return true;
+    }
+
+
+    return false;
+}
+
+
+bool Errors::shouldreportwarning(token_entity *token, const parseerror &last_err,
+                          const parseerror &e) const {
+    if(last_err.error != e.error && !(last_err.line == e.line && last_err.col == e.col)
+       && (last_err.error.find(e.error) == std::string::npos))
+    {
+        if(token != NULL && !(token->getid() == SINGLE || token->getid() == CHAR_LITERAL ||
+                              token->getid() == STRING_LITERAL || token->getid() == INTEGER_LITERAL))
+            return (last_err.error.find(token->gettoken()) == std::string::npos) &&
+                   ((last_err.line-e.line)!=-1);
 
         return true;
     }
@@ -215,12 +233,19 @@ void Errors::newerror(p_errors err, int l, int c, string xcmts) {
 void Errors::newwarning(p_errors err, int l, int c, string xcmts) {
     keypair<p_errors, string> kp = geterrorbyid(err);
     parseerror e(true, kp, l,c, xcmts);
-    parseerror last_err = cm ? lastcheckederr : lasterr;
+    parseerror last_err;
+    if(warnings->size() > 0) {
+        last_err = *std::next(warnings->begin(), warnings->size()-1);
+    } else {
+        last_err = cm ? lastcheckederr : lasterr;
+    }
 
-    if(asis)
-        print_error(e);
+    if(warnings->size() == 0 || shouldreportwarning(NULL, last_err, e)) {
+        if(asis)
+            print_error(e);
 
-    warnings->push_back(e);
+        warnings->push_back(e);
+    }
 }
 
 string Errors::getline(int line) {
@@ -305,9 +330,9 @@ void Errors::free() {
     delete (_testerrors); this->_testerrors = NULL;
 }
 
-bool Errors::has_error(const parseerror &e) const {
-    for(parseerror& pe : *errors) {
-        if(pe.error == e.error)
+bool Errors::has_error(list <parseerror> *e, const parseerror &perror) const {
+    for(parseerror& pe : *e) {
+        if(pe.error == perror.error)
             return true;
     }
     return false;
