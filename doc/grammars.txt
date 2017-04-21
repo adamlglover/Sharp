@@ -101,8 +101,8 @@ A value consists of an <expression>
     | '-'
     | '++'
     | '--'
-    | '=' // must return left assignee type
-    | '==' // must return bool
+    | '='
+    | '=='
 
 <array-expression>:
 expression '[' expression ']' [<dot-notation-call-expr>]

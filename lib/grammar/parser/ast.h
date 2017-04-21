@@ -74,6 +74,12 @@ enum ast_types
     ast_paren_e,
     ast_vect_e,
     ast_add_e,
+    ast_mult_e,
+    ast_shift_e,
+    ast_less_e,
+    ast_equal_e,
+    ast_and_e,
+    ast_ques_e,
 
     ast_none
 };

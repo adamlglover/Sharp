@@ -21,7 +21,8 @@ public:
             ast_cursor(-1),
             rStateCursor(-1),
             parsed(false),
-            tree(NULL)
+            tree(NULL),
+            panic(false)
     {
         if(tokenizer != NULL && tokenizer->geterrors() != NULL &&
                 !tokenizer->geterrors()->_errs())
@@ -52,6 +53,12 @@ private:
     void advance();
     token_entity peek(int forward);
     static bool iskeyword(string key);
+
+    /**
+     * This is a special flag that denotes that the compiler has detected too many errors
+     * and you need to fix your program!
+     */
+    bool panic;
 
     int64_t cursor;
     list<ast> *tree;
@@ -213,5 +220,21 @@ private:
 
     bool parse_utype_naked(ast *pAst);
 };
+
+#define _SHARP_CERROR_LIMIT 9999
+
+#define CHECK_ERRORS \
+    if(panic) return; \
+    else if(errors->uoerror_count() > _SHARP_CERROR_LIMIT) { \
+        panic = true; \
+        return; \
+    }
+
+#define CHECK_ERRORS2(x) \
+    if(panic) return x; \
+    else if(errors->uoerror_count() > _SHARP_CERROR_LIMIT) { \
+        panic = true; \
+        return x; \
+    }
 
 #endif //SHARP_PARRSER_H

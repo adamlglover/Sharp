@@ -8,10 +8,10 @@
 
 uint64_t tokenizer::getentitycount()
 {
-    return entites->size();
+    return entites.size();
 }
 
-list<token_entity>* tokenizer::getentities()
+List<token_entity>& tokenizer::getentities()
 {
     return entites;
 }
@@ -32,7 +32,7 @@ void tokenizer::parse()
     if(!errors->_errs())
     {
         EOF_token = new token_entity("", SINGLE, 0, line, _EOF);
-        entites->push_back(*EOF_token);
+        entites.push_back(*EOF_token);
     }
 }
 
@@ -123,7 +123,7 @@ void tokenizer::scan_characterliteral() {
         else if (escaped)
         {
             hascharacter = true;
-            if(!isletter((char) tolower(current())))
+            if(!isletter((char) tolower(current())) && current() != '\\')
             {
                 errors->newerror(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", text preceding `\\` must be alpha only");
                 return;
@@ -145,12 +145,12 @@ void tokenizer::scan_characterliteral() {
         if(character.str() == "") {
             errors->newerror(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", character literals cannot be empty");
         } else
-            entites->push_back(token_entity(character.str(), CHAR_LITERAL, col, line));
+            entites.add(token_entity(character.str(), CHAR_LITERAL, col, line));
     }
     else
     {
         string msg = character.str();
-        entites->push_back(token_entity(get_escaped_string(msg), CHAR_LITERAL, col, line));
+        entites.add(token_entity(get_escaped_string(msg), CHAR_LITERAL, col, line));
     }
 
     advance();
@@ -190,60 +190,60 @@ void tokenizer::scan_symbol() {
             s.append(1,chs[0]);
             s.append(1,chs[1]);
 
-            entites->push_back(token_entity(s, SINGLE, col, line, type));
+            entites.add(token_entity(s, SINGLE, col, line, type));
             cursor += 2;
             return;
         }
     }
 
     if ('<' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, LESSTHAN));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, LESSTHAN));
     else if ('>' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, GREATERTHAN));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, GREATERTHAN));
     else if (';' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, SEMICOLON));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, SEMICOLON));
     else if (':' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, COLON));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, COLON));
     else if ('+' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, PLUS));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, PLUS));
     else if ('-' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, MINUS));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, MINUS));
     else if ('*' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, MULT));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, MULT));
     else if (',' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, COMMA));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, COMMA));
     else if ('=' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, ASSIGN));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, ASSIGN));
     else if ('#' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, HASH));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, HASH));
     else if ('!' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, NOT));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, NOT));
     else if ('/' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, _DIV));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, _DIV));
     else if ('%' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, _MOD));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, _MOD));
     else if ('(' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, LEFTPAREN));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, LEFTPAREN));
     else if (')' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, RIGHTPAREN));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, RIGHTPAREN));
     else if ('{' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, LEFTCURLY));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, LEFTCURLY));
     else if ('}' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, RIGHTCURLY));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, RIGHTCURLY));
     else if ('.' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, DOT));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, DOT));
     else if ('[' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, LEFTBRACE));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, LEFTBRACE));
     else if (']' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, RIGHTBRACE));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, RIGHTBRACE));
     else if ('&' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, AND));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, AND));
     else if ('|' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, OR));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, OR));
     else if ('^' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, XOR));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, XOR));
     else if ('?' == current())
-        entites->push_back(token_entity(string(1, current()), SINGLE, col, line, QUESMK));
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, QUESMK));
     else
     {
         errors->newerror(UNEXPECTED_SYMBOL, line, col, " `" + string(1, current()) + "`");
@@ -269,7 +269,7 @@ void tokenizer::scan_identifier() {
     if(!hasletter)
         errors->newerror(GENERIC, line, col, " expected at least 1 letter in identifier `" + var.str() + "`");
     else
-        entites->push_back(token_entity(var.str(), IDENTIFIER, col, line));
+        entites.add(token_entity(var.str(), IDENTIFIER, col, line));
 }
 
 void tokenizer::scan_stringliteral() {
@@ -331,11 +331,11 @@ void tokenizer::scan_stringliteral() {
     }
 
     if (!escaped_found)
-        entites->push_back(token_entity(message.str(), STRING_LITERAL, col, line));
+        entites.add(token_entity(message.str(), STRING_LITERAL, col, line));
     else
     {
         string msg = message.str();
-        entites->push_back(token_entity(get_escaped_string(msg), STRING_LITERAL, col, line));
+        entites.add(token_entity(get_escaped_string(msg), STRING_LITERAL, col, line));
     }
 
     advance();
@@ -405,7 +405,7 @@ void tokenizer::scan_hex() {
         advance();
     }
 
-    entites->push_back(token_entity(num.str(), HEX_LITERAL, col, line));
+    entites.add(token_entity(num.str(), HEX_LITERAL, col, line));
 }
 
 void tokenizer::scan_number() {
@@ -501,7 +501,7 @@ void tokenizer::scan_number() {
         }
     }
 
-    entites->push_back(token_entity(num.str(), INTEGER_LITERAL, col, line));
+    entites.add(token_entity(num.str(), INTEGER_LITERAL, col, line));
     return;
 }
 
@@ -714,10 +714,9 @@ void tokenizer::free() {
     this->cursor = 0;
     this->errors->free();
     this->lines->clear();
-    this->entites->clear();
+    this->entites.free();
     delete (this->errors); this->errors = NULL;
     delete (this->lines); this->lines = NULL;
-    delete (this->entites); this->entites = NULL;
 
 }
 

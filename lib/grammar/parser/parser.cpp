@@ -7,7 +7,7 @@
 
 void parser::parse()
 {
-    if(toks->getentities() == 0)
+    if(toks->getentities().size() == 0)
         return;
 
     parsed = true;
@@ -16,7 +16,7 @@ void parser::parse()
     sourcefile = toks->file;
 
     errors = new Errors(lines, sourcefile, false, c_options.aggressive_errors);
-    _current= &(*std::next(toks->getentities()->begin(), cursor));
+    _current= &toks->getentities().get(cursor);
 
     while(!isend())
     {
@@ -41,6 +41,7 @@ void parser::eval(ast* _ast) {
     {
         parse_accesstypes();
     }
+    CHECK_ERRORS
 
     if(isend())
     {
@@ -136,19 +137,18 @@ token_entity parser::current()
 void parser::advance()
 {
     if((cursor+1)>=toks->getentitycount())
-        *_current =*toks->EOF_token;
+        _current =toks->EOF_token;
     else
-        _current = &(*std::next(toks->getentities()->begin()
-                , ++cursor));
+        _current = &toks->getentities().get(++cursor);
 }
 
 token_entity parser::peek(int forward)
 {
 
-    if(cursor+forward >= toks->getentities()->size())
-        return *std::next(toks->getentities()->begin(), toks->getentitycount()-1);
+    if(cursor+forward >= toks->getentities().size())
+        return toks->getentities().get(toks->getentitycount()-1);
     else
-        return *std::next(toks->getentities()->begin(), cursor+forward);
+        return toks->getentities().get(cursor+forward);
 }
 
 bool parser::isvariable_decl(token_entity token) {
@@ -326,6 +326,8 @@ void parser::parse_classblock(ast *pAst) {
 
     while(!isend() && brackets > 0)
     {
+        CHECK_ERRORS
+
         advance();
         if(isaccess_decl(current()))
         {
@@ -454,8 +456,10 @@ ast * parser::get_ast(ast *pAst, ast_types typ) {
 }
 
 void parser::pushback() {
-    _current = &(*std::next(toks->getentities()->begin(), cursor-1));
-    cursor--;
+    if(cursor > 0) {
+        _current = &toks->getentities().get(cursor-1);
+        cursor--;
+    }
 }
 
 int partialdecl = 0;
@@ -621,6 +625,7 @@ bool parser::parse_primaryexpr(ast *pAst) {
 
 void parser::parse_valuelist(ast *pAst) {
     pAst = get_ast(pAst, ast_value_list);
+    CHECK_ERRORS
 
     expect(LEFTPAREN, pAst, "`(`");
 
@@ -673,6 +678,7 @@ bool parser::isoverride_operator(string token) {
 
 bool parser::parse_dot_notation_call_expr(ast *pAst) {
     pAst = get_ast(pAst, ast_dotnotation_call_expr);
+    CHECK_ERRORS2(false)
 
     if(peek(1).gettokentype() == DOT)
     {
@@ -735,6 +741,7 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
 
 bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
+    CHECK_ERRORS2(false)
 
     /* ++ or -- before the expression */
     if(peek(1).gettokentype() == _INC || peek(1).gettokentype() == _DEC)
@@ -948,6 +955,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_mult_e);
         return true;
     }
 
@@ -959,6 +967,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_shift_e);
         return true;
     }
 
@@ -970,6 +979,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_less_e);
         return true;
     }
 
@@ -981,6 +991,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_equal_e);
         return true;
     }
 
@@ -993,6 +1004,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_and_e);
         return true;
     }
 
@@ -1007,6 +1019,7 @@ bool parser::parse_expression(ast *pAst) {
         expect(COLON, pAst, "`:`");
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_ques_e);
         return true;
     }
 
@@ -1124,6 +1137,8 @@ void parser::parse_block(ast* pAst) {
 
     while(!isend())
     {
+        CHECK_ERRORS
+
         advance();
         if (current().gettokentype() == RIGHTCURLY)
         {
@@ -1420,6 +1435,7 @@ void parser::parse_labeldecl(ast *pAst) {
 int commas=0;
 void parser::parse_statement(ast* pAst) {
     pAst = get_ast(pAst, ast_statement);
+    CHECK_ERRORS
 
     if(isreturn_stmnt(current()))
     {
@@ -1630,6 +1646,7 @@ void parser::parse_all(ast *pAst) {
     {
         parse_accesstypes();
     }
+    CHECK_ERRORS
 
     if(current().gettokentype() == _EOF)
     {

@@ -649,15 +649,27 @@ private:
 
     Expression parseAddExpression(ast *pAst);
 
-    void addClass(ClassObject *klass, Expression& expression, Expression& left, Expression &right, ast* pAst);
+    void addClass(token_entity operand, ClassObject *klass, Expression& expression, Expression& left, Expression &right, ast* pAst);
 
-    void addNative(NativeField nf, Expression& expression, Expression &left, Expression &right, ast *pAst);
+    void addNative(token_entity operand, NativeField nf, Expression& expression, Expression &left, Expression &right, ast *pAst);
 
     Expression parseUnary(token_entity token, Expression &right, ast *pAst);
+
+    Expression parseMultExpression(ast *pAst);
+
+    Expression parseShiftExpression(ast *pAst);
+
+    Expression parseLessExpression(ast *pAst);
+
+    Expression parseEqualExpression(ast *pAst);
+
+    Expression parseAndExpression(ast *pAst);
+
+    Expression parseQuesExpression(ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.41"
+#define progvers "0.1.42"
 
 struct options {
     /*

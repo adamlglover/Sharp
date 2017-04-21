@@ -39,7 +39,7 @@ public:
      * Programmer must be responsible
      * for freeing that data himself
      */
-    void remove(unsigned long _X) {
+    void remove(unsigned long long _X) {
         if(_X>=len || len==0){
             stringstream ss;
             ss << "index out of bounds list::remove() _X: " << _X
@@ -80,7 +80,7 @@ public:
         }
     }
 
-    T at(unsigned long _X) {
+    T at(unsigned long long _X) {
         if(_X>=len){
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
@@ -90,8 +90,8 @@ public:
         return _Data[_X];
     }
 
-    T& get(unsigned long _X) {
-        if(_X>=len){
+    T& get(long long _X) {
+        if(_X>=len || _X < 0){
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
                << " length: " << len << endl;

@@ -9,6 +9,7 @@
 #include "../../../../stdimports.h"
 #include "tokenentity.h"
 #include "../parseerrors.h"
+#include "../../../util/List2.h"
 
 class tokenizer
 {
@@ -21,14 +22,14 @@ public:
             line(1),
             file(file)
     {
-        entites = new list<token_entity>();
+        entites.init();
         lines = new list<string>();
 
         parse();
     }
 
     uint64_t getentitycount();
-    list<token_entity> * getentities();
+    List<token_entity>& getentities();
     Errors* geterrors();
     list<string>* getlines();
 
@@ -62,7 +63,7 @@ private:
     void scan_characterliteral();
     string get_escaped_string(string msg) const;
 
-    list<token_entity> *entites;
+    List<token_entity> entites;
     Errors* errors;
     list<string> *lines;
     string toks;

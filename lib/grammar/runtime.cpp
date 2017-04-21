@@ -2375,6 +2375,7 @@ Expression runtime::parseIntermExpression(ast* pAst) {
             expression.lnk = pAst;
             return expression;
         case ast_add_e:
+        case ast_mult_e:
             return parseBinaryExpression(pAst);
         default:
             stringstream err;
@@ -2717,7 +2718,7 @@ Expression runtime::parseNotExpression(ast* pAst) {
     return expression;
 }
 
-void runtime::addClass(ClassObject* klass, Expression& expression, Expression& left, Expression &right, ast* pAst) {
+void runtime::addClass(token_entity operand, ClassObject* klass, Expression& expression, Expression& left, Expression &right, ast* pAst) {
     List<Param> params;
     List<Expression> eList;
     eList.push_back(right);
@@ -2725,7 +2726,7 @@ void runtime::addClass(ClassObject* klass, Expression& expression, Expression& l
 
     expressionListToParams(params, eList);
 
-    if((overload = klass->getOverload(oper_PLUS, params)) != NULL) {
+    if((overload = klass->getOverload(string_toop(operand.gettoken()), params)) != NULL) {
         // call operand
         expression.type = methodReturntypeToExpressionType(overload);
         if(expression.type == expression_lclass) {
@@ -2733,7 +2734,7 @@ void runtime::addClass(ClassObject* klass, Expression& expression, Expression& l
             expression.utype.type = ResolvedReference::CLASS;
         }
     } else {
-        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `"
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `"
                                                           + left.typeToString() + "` and `" + right.typeToString() + "`");
     }
 
@@ -2741,7 +2742,7 @@ void runtime::addClass(ClassObject* klass, Expression& expression, Expression& l
     __freeList(eList);
 }
 
-void runtime::addNative(NativeField nf, Expression& expression, Expression& left, Expression& right, ast* pAst) {
+void runtime::addNative(token_entity operand, NativeField nf, Expression& expression, Expression& left, Expression& right, ast* pAst) {
     expression.type = expression_var;
 
     if(right.type == expression_var) {
@@ -2750,10 +2751,10 @@ void runtime::addNative(NativeField nf, Expression& expression, Expression& left
         if(right.utype.field->nativeInt()) {
             // add 2 vars
         } else {
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
         }
     } else {
-        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
     }
 }
 
@@ -2813,12 +2814,14 @@ Expression runtime::parseUnary(token_entity operand, Expression& right, ast* pAs
             break;
     }
 
+    expression.type = expression_var;
     expression.lnk = pAst;
     return expression;
 }
 
 Expression runtime::parseAddExpression(ast* pAst) {
     Expression expression, left, right;
+    cout << "add +" << endl;
     token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
 
     if(operand.gettokentype() == PLUS && pAst->getsubast(1) == NULL) {
@@ -2834,13 +2837,25 @@ Expression runtime::parseAddExpression(ast* pAst) {
     left = parseIntermExpression(pAst->getsubast(0));
     right = parseExpression(pAst->getsubast(1));
 
+    expression.type = expression_var;
     switch(left.type) {
         case expression_var:
             if(right.type == expression_var) {
                 // add 2 vars
+            }else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    // add var
+                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                } else if(right.utype.field->type == field_class) {
+                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+            } else if(right.type == expression_lclass) {
+                addClass(operand, left.utype.klass, expression, left, right, pAst);
             } else {
                 errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                        "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
             }
             break;
         case expression_null:
@@ -2850,9 +2865,9 @@ Expression runtime::parseAddExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(left.utype.field->nf, expression, left, right, pAst);
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
-                addClass(left.utype.field->klass, expression, left, right, pAst);
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
                 // do nothing field unresolved
             }
@@ -2861,7 +2876,7 @@ Expression runtime::parseAddExpression(ast* pAst) {
             errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
             break;
         case expression_lclass:
-            addClass(left.utype.klass, expression, left, right, pAst);
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
             break;
         case expression_class:
             errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
@@ -2873,10 +2888,410 @@ Expression runtime::parseAddExpression(ast* pAst) {
         case expression_dynamicclass:
             errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
                                                               "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
-                                                                                                                                                                               "i.e ((SomeClass)dynamic_class) + <data>");
+                                                                                                                                                                               "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
             break;
         case expression_string:
             // TODO: construct new string(<string>) and use that to concatonate strings
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseMultExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "mult *" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary *<expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    // add var
+                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                } else if(right.utype.field->type == field_class) {
+                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+            } else if(right.type == expression_lclass) {
+                addClass(operand, left.utype.klass, expression, left, right, pAst);
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseShiftExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "shift <<" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary << <expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    // add var
+                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                } else if(right.utype.field->type == field_class) {
+                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+            } else if(right.type == expression_lclass) {
+                addClass(operand, left.utype.klass, expression, left, right, pAst);
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            expression.type = expression_string;
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseLessExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "less <" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary << <expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    // add var
+                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                } else if(right.utype.field->type == field_class) {
+                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+            } else if(right.type == expression_lclass) {
+                addClass(operand, left.utype.klass, expression, left, right, pAst);
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            expression.type = expression_string;
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseEqualExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "less <" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary << <expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    switch(left.type) {
+        case expression_var:
+            if(operand.gettokentype() == ASSIGN) {
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            } else {
+                if(right.type == expression_var) {
+                    // add 2 vars
+                }
+                else if(right.type == expression_field) {
+                    if(right.utype.field->type == field_native) {
+                        // add var
+                        addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                    } else if(right.utype.field->type == field_class) {
+                        addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                    } else {
+                        // do nothing field unresolved
+                    }
+                } else if(right.type == expression_lclass) {
+                    addClass(operand, left.utype.klass, expression, left, right, pAst);
+                } else {
+                    errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                      "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+                }
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable. Did you forget to apply a cast? "
+                    "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            expression.type = expression_string;
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
+Expression runtime::parseAndExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "and &" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary << <expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    // add var
+                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                } else if(right.utype.field->type == field_class) {
+                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+            } else if(right.type == expression_lclass) {
+                addClass(operand, left.utype.klass, expression, left, right, pAst);
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            expression.type = expression_string;
             break;
         default:
             break;
@@ -2890,9 +3305,24 @@ Expression runtime::parseBinaryExpression(ast* pAst) {
     switch(pAst->gettype()) {
         case ast_add_e:
             return parseAddExpression(pAst);
+        case ast_mult_e:
+            return parseMultExpression(pAst);
+        case ast_shift_e:
+            return parseShiftExpression(pAst);
+        case ast_less_e:
+            return parseLessExpression(pAst);
+        case ast_equal_e:
+            return parseEqualExpression(pAst);
+        case ast_and_e:
+            return parseAndExpression(pAst);
         default:
             return Expression(pAst);
     }
+}
+
+Expression runtime::parseQuesExpression(ast* pAst) {
+    Expression expression;
+    return expression;
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
@@ -2928,7 +3358,14 @@ Expression runtime::parseExpression(ast *pAst) {
             expression.lnk = encap;
             return expression;
         case ast_add_e:
+        case ast_mult_e:
+        case ast_shift_e:
+        case ast_less_e:
+        case ast_equal_e:
+        case ast_and_e:
             return parseBinaryExpression(encap);
+        case ast_ques_e:
+            return parseQuesExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
