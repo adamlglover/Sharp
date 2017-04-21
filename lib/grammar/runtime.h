@@ -666,6 +666,10 @@ private:
     Expression parseAndExpression(ast *pAst);
 
     Expression parseQuesExpression(ast *pAst);
+
+    bool equals(Expression &left, Expression &right);
+
+    Expression parseAssignExpression(ast *pAst);
 };
 
 #define progname "bootstrap"

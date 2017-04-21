@@ -80,6 +80,7 @@ enum ast_types
     ast_equal_e,
     ast_and_e,
     ast_ques_e,
+    ast_assign_e,
 
     ast_none
 };

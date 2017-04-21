@@ -1031,6 +1031,7 @@ bool parser::parse_expression(ast *pAst) {
         pAst->add_entity(current());
 
         parse_expression(pAst);
+        pAst->encapsulate(ast_assign_e);
         return true;
     }
 

@@ -19,7 +19,8 @@ class Main base application#X{
 
 // TODO: fix this '.' in front of func call are not checked
 // TODO: add check to add 'operator' in front of function ann e if applicable
-    var accb;
+    var ccx = accb *= 90;
+    var accb  += 9 ? 9 : 0;
     var cyy = m + (7 * (+b >> 9)) << x & i;
     var xx = !(++foo(9)[9]).foo(9,9,9,9);//.foo(0,0);
     var x = (dynamic_object)foo(89)[0];

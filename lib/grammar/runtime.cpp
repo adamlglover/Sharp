@@ -1,6 +1,7 @@
 //
 // Created by BraxtonN on 1/30/2017.
 //
+#include <string.h>
 #include <string>
 #include <sstream>
 #include <cstdio>
@@ -2376,7 +2377,13 @@ Expression runtime::parseIntermExpression(ast* pAst) {
             return expression;
         case ast_add_e:
         case ast_mult_e:
+        case ast_shift_e:
+        case ast_less_e:
+        case ast_equal_e:
+        case ast_and_e:
             return parseBinaryExpression(pAst);
+        case ast_ques_e:
+            return parseQuesExpression(pAst);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -3155,6 +3162,12 @@ Expression runtime::parseEqualExpression(ast* pAst) {
     right = parseExpression(pAst->getsubast(1));
 
     expression.type = expression_var;
+    if(operand.gettokentype() == ASSIGN) {
+        if(equals(left, right)) {
+            return expression;
+        }
+    }
+
     switch(left.type) {
         case expression_var:
             if(operand.gettokentype() == ASSIGN) {
@@ -3301,6 +3314,91 @@ Expression runtime::parseAndExpression(ast* pAst) {
     return expression;
 }
 
+Expression runtime::parseAssignExpression(ast* pAst) {
+    Expression expression, left, right;
+    cout << "assign +=" << endl;
+    token_entity operand = pAst->getentity(0);
+
+    if(pAst->getsubast(1) == NULL) {
+        // cannot compute unary << <expression>
+        errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
+        return Expression(pAst);
+    }
+
+    left = parseIntermExpression(pAst->getsubast(0));
+    right = parseExpression(pAst->getsubast(1));
+
+    expression.type = expression_var;
+    if(equals(left, right)) {
+        return expression;
+    }
+
+    switch(left.type) {
+        case expression_var:
+            if(operand.gettokentype() == ASSIGN) {
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            } else {
+                if(right.type == expression_var) {
+                    // add 2 vars
+                }
+                else if(right.type == expression_field) {
+                    if(right.utype.field->type == field_native) {
+                        // add var
+                        addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                    } else if(right.utype.field->type == field_class) {
+                        addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                    } else {
+                        // do nothing field unresolved
+                    }
+                } else if(right.type == expression_lclass) {
+                    addClass(operand, left.utype.klass, expression, left, right, pAst);
+                } else {
+                    errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                      "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+                }
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+            } else if(left.utype.field->type == field_class) {
+                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_lclass:
+            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable. Did you forget to apply a cast? "
+                                                                     "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            expression.type = expression_string;
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
+}
+
 Expression runtime::parseBinaryExpression(ast* pAst) {
     switch(pAst->gettype()) {
         case ast_add_e:
@@ -3315,14 +3413,149 @@ Expression runtime::parseBinaryExpression(ast* pAst) {
             return parseEqualExpression(pAst);
         case ast_and_e:
             return parseAndExpression(pAst);
+        case ast_assign_e:
+            return parseAssignExpression(pAst);
         default:
             return Expression(pAst);
     }
 }
 
+bool runtime::equals(Expression& left, Expression& right) {
+
+    if(left.type == expression_native) {
+        errors->newerror(UNEXPECTED_SYMBOL, left.lnk->line, left.lnk->col, " `" + left.typeToString() + "`");
+        return false;
+    }
+    if(right.type == expression_native) {
+        errors->newerror(UNEXPECTED_SYMBOL, right.lnk->line, right.lnk->col, " `" + right.typeToString() + "`");
+        return false;
+    }
+
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+                return true;
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    if(right.utype.field->nativeInt()) {
+                        return true;
+                    }
+                }
+            }
+            break;
+        case expression_null:
+            if(right.type == expression_lclass || right.type == expression_dynamicclass) {
+                return true;
+            } else if(right.type == expression_class) {
+                errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                return false;
+            }
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                if(right.type == expression_var) {
+                    if(left.utype.field->nativeInt()) {
+                        return true;
+                    }
+                } else if(right.type == expression_dynamicclass) {
+                    if(left.utype.field->dynamicObject()) {
+                        return true;
+                    }
+                }
+            } else if(left.utype.field->type == field_class) {
+                if(right.type == expression_lclass) {
+                    if(left.utype.field->klass->match(right.utype.klass)) {
+                        return true;
+                    }
+                } else if(right.type == expression_class) {
+                    if(left.utype.field->klass->match(right.utype.klass)) {
+                        errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                        return false;
+                    }
+                }
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_lclass:
+            if(right.type == expression_lclass) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    return true;
+                }
+            } else if(right.type == expression_field) {
+                if(left.utype.klass->match(right.utype.field->klass)) {
+                    return true;
+                }
+            } else if(right.type == expression_class) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                    return false;
+                }
+            }
+            break;
+        case expression_class:
+            if(right.type == expression_class) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    return true;
+                }
+            }
+            break;
+        case expression_void:
+            if(right.type == expression_void) {
+                return true;
+            }
+            break;
+        case expression_dynamicclass:
+            if(right.type == expression_dynamicclass) {
+                return true;
+            } else if(right.type == expression_field) {
+                if(right.utype.field->nf == fdynamic) {
+                    return true;
+                }
+            }
+            break;
+        case expression_string:
+            if(right.type == expression_field) {
+                if(right.utype.field->nativeInt() && right.utype.field->array) {
+                    return true;
+                }
+            }
+            else if(right.type == expression_var) {
+                if(right.utype.array) {
+                    return true;
+                }
+            }
+            else if(right.type == expression_string) {
+                return true;
+            }
+            break;
+        default:
+            break;
+    }
+
+    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Expressions of type `" + left.typeToString() + "` and `" + right.typeToString() + "` are not compatible");
+    return false;
+}
+
 Expression runtime::parseQuesExpression(ast* pAst) {
-    Expression expression;
-    return expression;
+    Expression condition, condIfTrue, condIfFalse;
+
+    // TODO: use later for assembly
+    condition = parseIntermExpression(pAst->getsubast(0));
+    condIfTrue = parseExpression(pAst->getsubast(1));
+    condIfFalse = parseExpression(pAst->getsubast(2));
+
+    if(equals(condIfTrue, condIfFalse)) {
+        if(condIfTrue.type == expression_class) {
+            errors->newerror(GENERIC, condIfTrue.lnk->line,  condIfTrue.lnk->col, "Class `" + condIfTrue.typeToString() + "` must be lvalue");
+            return condIfTrue;
+        }
+    }
+
+    return condIfTrue;
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
@@ -3363,6 +3596,7 @@ Expression runtime::parseExpression(ast *pAst) {
         case ast_less_e:
         case ast_equal_e:
         case ast_and_e:
+        case ast_assign_e:
             return parseBinaryExpression(encap);
         case ast_ques_e:
             return parseQuesExpression(encap);
