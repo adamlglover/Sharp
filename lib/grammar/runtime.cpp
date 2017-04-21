@@ -2728,8 +2728,10 @@ void runtime::addClass(ClassObject* klass, Expression& expression, Expression& l
     if((overload = klass->getOverload(oper_PLUS, params)) != NULL) {
         // call operand
         expression.type = methodReturntypeToExpressionType(overload);
-        if(expression.type == expression_lclass)
+        if(expression.type == expression_lclass) {
             expression.utype.klass = overload->klass;
+            expression.utype.type = ResolvedReference::CLASS;
+        }
     } else {
         errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `"
                                                           + left.typeToString() + "` and `" + right.typeToString() + "`");
@@ -2740,12 +2742,94 @@ void runtime::addClass(ClassObject* klass, Expression& expression, Expression& l
 }
 
 void runtime::addNative(NativeField nf, Expression& expression, Expression& left, Expression& right, ast* pAst) {
+    expression.type = expression_var;
 
+    if(right.type == expression_var) {
+        // add 2 vars
+    } else if(right.type == expression_field) {
+        if(right.utype.field->nativeInt()) {
+            // add 2 vars
+        } else {
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+        }
+    } else {
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `+` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+    }
+}
+
+Expression runtime::parseUnary(token_entity operand, Expression& right, ast* pAst) {
+    Expression expression;
+
+    switch(right.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add/ subtract 2 vars
+            } else {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Unary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + right.typeToString() + "`");
+            }
+            break;
+        case expression_null:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Unary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + right.typeToString() + "`");
+            break;
+        case expression_field:
+            if(right.utype.field->type == field_native) {
+                // add var
+                if(right.utype.field->nativeInt()) {
+                    // add/ subtract 2 vars
+                } else {
+                    errors->newerror(GENERIC, pAst->line,  pAst->col, "Unary operator `" + operand.gettoken() +
+                                                                      "` cannot be applied to expression of type `" + right.typeToString() + "`");
+                }
+            } else if(right.utype.field->type == field_class) {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Expression of type `" + right.typeToString() + "` is non numeric");
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + right.typeToString() + "`");
+            break;
+        case expression_lclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Expression of type `" + right.typeToString() + "` is non numeric");
+            break;
+        case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + right.typeToString() + "`");
+            break;
+        case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Unary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + right.typeToString() + "`");
+            break;
+        case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Unary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + right.typeToString() + "`");
+            break;
+        case expression_string:
+            // TODO: construct new string(<string>) and use that to concatonate strings
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Expression of type `" + right.typeToString() + "` is non numeric");
+            break;
+        default:
+            break;
+    }
+
+    expression.lnk = pAst;
+    return expression;
 }
 
 Expression runtime::parseAddExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
+
+    if(operand.gettokentype() == PLUS && pAst->getsubast(1) == NULL) {
+        // left is right then add 1 to data
+        right = parseExpression(pAst->getsubast(0));
+        return parseUnary(operand, right, pAst);
+    } else if(operand.gettokentype() == MINUS && pAst->getsubast(1) == NULL) {
+        // left is right multiply expression by -1
+        right = parseExpression(pAst->getsubast(0));
+        return parseUnary(operand, right, pAst);
+    }
 
     left = parseIntermExpression(pAst->getsubast(0));
     right = parseExpression(pAst->getsubast(1));
@@ -2774,14 +2858,22 @@ Expression runtime::parseAddExpression(ast* pAst) {
             }
             break;
         case expression_native:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
             break;
         case expression_lclass:
+            addClass(left.utype.klass, expression, left, right, pAst);
             break;
         case expression_class:
+            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
             break;
         case expression_void:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
             break;
         case expression_dynamicclass:
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+                                                                                                                                                                               "i.e ((SomeClass)dynamic_class) + <data>");
             break;
         case expression_string:
             // TODO: construct new string(<string>) and use that to concatonate strings
@@ -4814,9 +4906,9 @@ string ResolvedReference::typeToString() {
         case FIELD:
             if(field != NULL) {
                 if(field->type == field_native) {
-                    return runtime::nativefield_tostr(field->nf) + (array ? "[]" : "");
+                    return runtime::nativefield_tostr(field->nf) + (array || field->array ? "[]" : "");
                 } else if(field->type == field_class) {
-                    return field->klass->getFullName() + (array ? "[]" : "");
+                    return field->klass->getFullName() + (array || field->array ? "[]" : "");
                 } else
                     return toString() + (array ? "[]" : "");
             } else

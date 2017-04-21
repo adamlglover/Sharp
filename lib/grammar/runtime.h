@@ -652,10 +652,12 @@ private:
     void addClass(ClassObject *klass, Expression& expression, Expression& left, Expression &right, ast* pAst);
 
     void addNative(NativeField nf, Expression& expression, Expression &left, Expression &right, ast *pAst);
+
+    Expression parseUnary(token_entity token, Expression &right, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.40"
+#define progvers "0.1.41"
 
 struct options {
     /*

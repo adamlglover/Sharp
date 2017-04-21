@@ -19,7 +19,7 @@ class Main base application#X{
 
 // TODO: fix this '.' in front of func call are not checked
 // TODO: add check to add 'operator' in front of function ann e if applicable
-    var cyy = m + 8 + m;
+    var cyy = +b;
     var xx = !(++foo(9)[9]).foo(9,9,9,9);//.foo(0,0);
     var x = (dynamic_object)foo(89)[0];
     var y=[7].foo(89).__sizeof(yt).foo(9)[9].foo(8)[90].foo()++;
@@ -42,9 +42,6 @@ class Main base application#X{
         return self;
     }
 
-    fn operator+(Main x) : Main {
-        return self;
-    }
 
     fn operator++ (var x, Main b) : Main {
         return self;
