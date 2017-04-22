@@ -36,6 +36,9 @@ public:
     string file;
     token_entity* EOF_token;
     void free();
+
+    static bool iswhitespace(char c);
+
 private:
     void parse();
     void parse_lines();
@@ -43,7 +46,7 @@ private:
     bool isletter(char c);
     bool isnumber(char c);
     bool issymbol(char c);
-    bool iswhitespace(char c);
+
     char advance();
     void newline();
     char current();

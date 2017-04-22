@@ -9,6 +9,7 @@
 #include "../util/file.h"
 #include "../runtime/interp/Opcode.h"
 #include "../runtime/interp/register.h"
+#include "Asm.h"
 
 using namespace std;
 
@@ -228,6 +229,37 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
     }
 }
 
+m64Assembler runtime::parseAssemblyBlock(ast* pAst) {
+    m64Assembler assembler;
+    string assembly = "";
+
+    if(pAst->getentitycount() == 1) {
+        if(file::exists(pAst->getentity(0).gettoken().c_str())) {
+            file::stream __ostream;
+            file::read_alltext(pAst->getentity(0).gettoken().c_str(), __ostream);
+
+            assembly = __ostream.to_str();
+            __ostream.end();
+        } else {
+            assembly = pAst->getentity(0).gettoken();
+        }
+    } else {
+        for(unsigned int i = 0; i < pAst->getentitycount(); i++) {
+            assembly += pAst->getentity(0).gettoken() + "\n";
+        }
+    }
+
+    Asm __vasm;
+    __vasm.parse(assembler, this, assembly);
+
+    return assembler;
+}
+
+void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
+    int i = 0;
+    m64Assembler code = parseAssemblyBlock(pAst->getsubast(ast_assembly_block));
+}
+
 Block runtime::parseBlock(ast* pAst) {
     Block block;
 
@@ -244,6 +276,9 @@ Block runtime::parseBlock(ast* pAst) {
                 break;
             case ast_expression:
                 parseExpression(trunk);
+                break;
+            case ast_assembly_statement:
+                parseAssemblyStatement(block, trunk);
                 break;
             default: {
                 stringstream err;

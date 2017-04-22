@@ -11,6 +11,10 @@ class X {
 class Main base application#X{
 
     public static fn main(string[] args) : var {
+        __asm(
+            "movl 3"
+        );
+
         if(true) {
             Console.write("Hello, World!");
         } else if(true) {

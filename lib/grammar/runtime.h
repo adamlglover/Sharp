@@ -708,6 +708,10 @@ private:
     void parseReturnStatement(Block &block, ast *pAst);
 
     void parseIfStatement(Block &block, ast *pAst);
+
+    void parseAssemblyStatement(Block &block, ast *trunk);
+
+    m64Assembler parseAssemblyBlock(ast *pAst);
 };
 
 #define progname "bootstrap"
