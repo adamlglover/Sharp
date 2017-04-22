@@ -122,6 +122,14 @@ public:
         push_back(_V);
     }
 
+    bool check(T _V) {
+        for(unsigned int i = 0; i < len; i++) {
+            if(_V == _Data[i])
+                return true;
+        }
+        return false;
+    }
+
     void removefirst(T _V) {
         unsigned int iter = -1;
         for(unsigned int i = 0; i < len; i++) {

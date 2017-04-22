@@ -151,6 +151,9 @@ void runtime::parse_class_decl(ast *pAst) {
             case ast_var_decl:
                 parse_var_decl(pAst);
                 break;
+            case ast_method_decl:
+                parseMethodDecl(pAst);
+                break;
             default: {
                 stringstream err;
                 err << ": unknown ast type: " << pAst->gettype();
@@ -190,6 +193,94 @@ void runtime::parse_class_decl(ast *pAst) {
     remove_scope();
 }
 
+void runtime::parseReturnStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    Expression returnVal, value = parse_value(pAst->getsubast(ast_value));
+
+    returnVal.type = methodReturntypeToExpressionType(scope->function);
+    if(returnVal.type == expression_lclass) {
+        returnVal.utype.klass = scope->function->klass;
+        returnVal.utype.type = ResolvedReference::CLASS;
+    }
+    returnVal.utype.array = scope->function->array;
+    equals(returnVal, value, ": Returning `" + value.typeToString() + "` from a function returning `" + returnVal.typeToString() + "`");
+}
+
+void runtime::parseIfStatement(Block& block, ast* pAst) {
+    int i = 0;
+    Expression cond = parseExpression(pAst->getsubast(0));
+    Block blockIf = parseBlock(pAst->getsubast(1));
+
+    if(pAst->getsubastcount() > 2) {
+        ast* trunk;
+        for(unsigned int i = 2; i < pAst->getsubastcount(); i++) {
+            trunk = pAst->getsubast(i);
+            switch(trunk->gettype()) {
+                case ast_elseif_statement:
+                    cond = parseExpression(trunk->getsubast(ast_expression));
+                    blockIf = parseBlock(trunk->getsubast(ast_block));
+                    break;
+                case ast_else_statement:
+                    blockIf = parseBlock(trunk->getsubast(ast_block));
+                    break;
+            }
+        }
+    }
+}
+
+Block runtime::parseBlock(ast* pAst) {
+    Block block;
+
+    ast* trunk;
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        trunk = pAst->getsubast(i)->getsubast(0);
+
+        switch(trunk->gettype()) {
+            case ast_return_stmnt:
+                parseReturnStatement(block, trunk);
+                break;
+            case ast_if_statement:
+                parseIfStatement(block, trunk);
+                break;
+            case ast_expression:
+                parseExpression(trunk);
+                break;
+            default: {
+                stringstream err;
+                err << ": unknown ast type: " << trunk->gettype();
+                errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
+                break;
+            }
+        }
+    }
+
+    return block;
+}
+
+void runtime::parseMethodDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    parse_access_decl(pAst, modifiers, startpos);
+
+    List<Param> params;
+    string name =  pAst->getentity(startpos).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    Method* method = scope->klass->getFunction(name, params);
+    if(method != NULL) {
+        if(method->isStatic()) {
+            add_scope(Scope(scope_static_block, scope->klass, method));
+        } else
+            add_scope(Scope(scope_instance_block, scope->klass, method));
+
+        Block fblock = parseBlock(pAst->getsubast(ast_block));
+        remove_scope();
+    }
+    int c = 0;
+}
+
 void runtime::parse_var_decl(ast *pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
@@ -202,6 +293,16 @@ void runtime::parse_var_decl(ast *pAst) {
 
     if(pAst->hassubast(ast_value)) {
         Expression expression = parse_value(pAst->getsubast(ast_value));
+
+        Expression assignee(pAst);
+        assignee.type = expression_field;
+        assignee.utype.field = field;
+        assignee.utype.type = ResolvedReference::FIELD;
+        assignee.utype.refrenceName = field->name;
+
+        if(equals(assignee, expression)) {
+            return;
+        }
         // TODO: do something based on the assign expression
     }
 
@@ -2828,7 +2929,6 @@ Expression runtime::parseUnary(token_entity operand, Expression& right, ast* pAs
 
 Expression runtime::parseAddExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "add +" << endl;
     token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
 
     if(operand.gettokentype() == PLUS && pAst->getsubast(1) == NULL) {
@@ -2910,7 +3010,6 @@ Expression runtime::parseAddExpression(ast* pAst) {
 
 Expression runtime::parseMultExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "mult *" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -2989,7 +3088,6 @@ Expression runtime::parseMultExpression(ast* pAst) {
 
 Expression runtime::parseShiftExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "shift <<" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -3069,7 +3167,6 @@ Expression runtime::parseShiftExpression(ast* pAst) {
 
 Expression runtime::parseLessExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "less <" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -3149,7 +3246,6 @@ Expression runtime::parseLessExpression(ast* pAst) {
 
 Expression runtime::parseEqualExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "less <" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -3236,7 +3332,6 @@ Expression runtime::parseEqualExpression(ast* pAst) {
 
 Expression runtime::parseAndExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "and &" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -3316,7 +3411,6 @@ Expression runtime::parseAndExpression(ast* pAst) {
 
 Expression runtime::parseAssignExpression(ast* pAst) {
     Expression expression, left, right;
-    cout << "assign +=" << endl;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubast(1) == NULL) {
@@ -3420,14 +3514,14 @@ Expression runtime::parseBinaryExpression(ast* pAst) {
     }
 }
 
-bool runtime::equals(Expression& left, Expression& right) {
+bool runtime::equals(Expression& left, Expression& right, string msg) {
 
     if(left.type == expression_native) {
-        errors->newerror(UNEXPECTED_SYMBOL, left.lnk->line, left.lnk->col, " `" + left.typeToString() + "`");
+        errors->newerror(UNEXPECTED_SYMBOL, left.lnk->line, left.lnk->col, " `" + left.typeToString() + "`" + msg);
         return false;
     }
     if(right.type == expression_native) {
-        errors->newerror(UNEXPECTED_SYMBOL, right.lnk->line, right.lnk->col, " `" + right.typeToString() + "`");
+        errors->newerror(UNEXPECTED_SYMBOL, right.lnk->line, right.lnk->col, " `" + right.typeToString() + "`" + msg);
         return false;
     }
 
@@ -3449,7 +3543,7 @@ bool runtime::equals(Expression& left, Expression& right) {
             if(right.type == expression_lclass || right.type == expression_dynamicclass) {
                 return true;
             } else if(right.type == expression_class) {
-                errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue" + msg);
                 return false;
             }
             break;
@@ -3472,7 +3566,7 @@ bool runtime::equals(Expression& left, Expression& right) {
                     }
                 } else if(right.type == expression_class) {
                     if(left.utype.field->klass->match(right.utype.klass)) {
-                        errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                        errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue" + msg);
                         return false;
                     }
                 }
@@ -3491,7 +3585,7 @@ bool runtime::equals(Expression& left, Expression& right) {
                 }
             } else if(right.type == expression_class) {
                 if(left.utype.klass->match(right.utype.klass)) {
-                    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue");
+                    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue" + msg);
                     return false;
                 }
             }
@@ -3536,7 +3630,7 @@ bool runtime::equals(Expression& left, Expression& right) {
             break;
     }
 
-    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Expressions of type `" + left.typeToString() + "` and `" + right.typeToString() + "` are not compatible");
+    errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Expressions of type `" + left.typeToString() + "` and `" + right.typeToString() + "` are not compatible" + msg);
     return false;
 }
 

@@ -1348,33 +1348,37 @@ void parser::parse_ifstmnt(ast *pAst) {
 
     parse_block(pAst);
 
+    ast* tmp;
+    bool isElse = false;
     condexpr:
     if(peek(1).gettoken() == "else")
     {
         if(peek(2).gettoken() == "if")
         {
-            pAst = get_ast(pAst, ast_elseif_statement);
+            tmp = get_ast(pAst, ast_elseif_statement);
 
             advance();
-            pAst->add_entity(current());
+            tmp->add_entity(current());
             advance();
-            pAst->add_entity(current());
+            tmp->add_entity(current());
 
-            expect(LEFTPAREN, pAst, "`(`");
-            parse_expression(pAst);
-            expect(RIGHTPAREN, pAst, "`)`");
+            expect(LEFTPAREN, tmp, "`(`");
+            parse_expression(tmp);
+            expect(RIGHTPAREN, tmp, "`)`");
         }
         else
         {
-            pAst = get_ast(pAst, ast_else_statement);
+            tmp = get_ast(pAst, ast_else_statement);
 
             advance();
-            pAst->add_entity(current());
+            tmp->add_entity(current());
+            isElse = true;
         }
 
 
-        parse_block(pAst);
-        goto condexpr;
+        parse_block(tmp);
+        if(!isElse)
+            goto condexpr;
     }
 }
 

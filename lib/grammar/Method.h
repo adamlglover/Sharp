@@ -62,6 +62,7 @@ public:
     size_t paramCount() { return params.size(); }
     List<Param>* getParams() { return &params; }
     Param& getParam(int p) { return params.get(p); }
+    bool isStatic() { return modifiers.check(mStatic); }
     void clear() {
         modifiers.free();
 

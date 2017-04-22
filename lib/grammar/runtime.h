@@ -148,6 +148,20 @@ struct Expression {
     }
 };
 
+struct Block {
+    Block()
+    :
+            code()
+    {
+    }
+
+    m64Assembler code;
+
+    void free() {
+        code.free();
+    }
+};
+
 struct context {
     context()
     :
@@ -206,7 +220,8 @@ struct Scope {
             type(scope_global),
             klass(NULL),
             self(false),
-            base(false)
+            base(false),
+            function(NULL)
     {
         locals.init();
     }
@@ -216,12 +231,26 @@ struct Scope {
             type(type),
             klass(klass),
             self(false),
-            base(false)
+            base(false),
+            function(NULL)
+    {
+        locals.init();
+    }
+
+    Scope(scope_type type, ClassObject* klass, Method* func)
+            :
+            type(type),
+            klass(klass),
+            self(false),
+            base(false),
+            function(func)
     {
         locals.init();
     }
 
     Field* getLocalField(string field_name) {
+        if(locals.size() == 0) return NULL;
+
         for(unsigned int i = locals.size()-1; i > 0; i--) {
             if(locals.at(i).name == field_name) {
                 return &locals.get(i);
@@ -241,6 +270,7 @@ struct Scope {
 
     scope_type type;
     ClassObject* klass;
+    Method* function;
     List<Field> locals;
     bool self, base;
 };
@@ -667,13 +697,21 @@ private:
 
     Expression parseQuesExpression(ast *pAst);
 
-    bool equals(Expression &left, Expression &right);
+    bool equals(Expression &left, Expression &right, string msg = "");
 
     Expression parseAssignExpression(ast *pAst);
+
+    void parseMethodDecl(ast *pAst);
+
+    Block parseBlock(ast *pAst);
+
+    void parseReturnStatement(Block &block, ast *pAst);
+
+    void parseIfStatement(Block &block, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.42"
+#define progvers "0.1.43"
 
 struct options {
     /*

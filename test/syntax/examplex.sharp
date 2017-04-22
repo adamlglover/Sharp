@@ -5,17 +5,21 @@ import io;
 class X {
     static X yy;
 
-    fn operator+(var x) {
-
-    }
-
-    fn foo(var x) : Main[] {
-
-    }
 }
 
 
 class Main base application#X{
+
+    public static fn main(string[] args) : var {
+        if(true) {
+            Console.write("Hello, World!");
+        } else if(true) {
+            Console.write("Hello, World!");
+        } else {
+            Console.write("Hello, World!");
+        }
+        return b;
+    }
 
 // TODO: fix this '.' in front of func call are not checked
 // TODO: add check to add 'operator' in front of function ann e if applicable
