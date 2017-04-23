@@ -7,8 +7,17 @@
 
 
 #include "m64Assembler.h"
+#include "parser/tokenizer/tokenentity.h"
 
 class runtime;
+class Errors;
+class tokenizer;
+class ast;
+
+struct int2_t {
+    int64_t high_bytes;
+    int64_t low_bytes;
+};
 
 class Asm {
 
@@ -21,22 +30,28 @@ public:
     {
     }
 
-    void parse(m64Assembler& assembler, runtime* instance, string& code);
+    void parse(m64Assembler& assembler, runtime* instance, string& code, ast* pAst);
 
+    int64_t errors, uo_errors;
 private:
-    int64_t npos;
+    int64_t npos, i64;
+    int2_t i2;
     m64Assembler* assembler;
     runtime* instance;
     string code;
+    tokenizer* tk;
 
     bool isend();
 
-    CXX11_INLINE
-    char current() { return code.at(npos); }
+    token_entity current();
 
-    void invalidate_whitespace();
+    bool instruction_is(string name);
 
-    void invalidate_comments();
+    void expect_int();
+
+    void expect_int_or_register();
+
+    void expect(string token);
 };
 
 

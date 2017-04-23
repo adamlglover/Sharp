@@ -250,7 +250,7 @@ m64Assembler runtime::parseAssemblyBlock(ast* pAst) {
     }
 
     Asm __vasm;
-    __vasm.parse(assembler, this, assembly);
+    __vasm.parse(assembler, this, assembly, pAst);
 
     return assembler;
 }

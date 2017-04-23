@@ -391,9 +391,16 @@ public:
     static unsigned int  classUID;
 
     keypair<List<string>, List<string>> parse_map;
+    parser* _current;
+
+    static string invalidate_underscores(string basic_string);
+
+    static bool all_integers(string int_string);
+
+    static int64_t get_low_bytes(double var);
+
 private:
     Environment* env;
-    parser* _current;
     list<parser*> parsers;
     string out;
     list<string>* modules;
@@ -509,12 +516,6 @@ private:
     void parse_charliteral(string basic_string, m64Assembler &assembler);
 
     void parse_intliteral(string int_string, m64Assembler &assembler, ast* pAst);
-
-    bool all_integers(string int_string);
-
-    string invalidate_underscores(string basic_string);
-
-    int64_t get_low_bytes(double var);
 
     void parse_hexliteral(string hex_string, m64Assembler &assembler, ast *pAst);
 
@@ -715,7 +716,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.44"
+#define progvers "0.1.45"
 
 struct options {
     /*
