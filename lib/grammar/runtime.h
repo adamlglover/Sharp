@@ -251,19 +251,19 @@ struct Scope {
         locals.init();
     }
 
-    Field* getLocalField(string field_name) {
+    keypair<int, Field>* getLocalField(string field_name) {
         if(locals.size() == 0) return NULL;
 
-        for(unsigned int i = locals.size()-1; i > 0; i--) {
+        for(long long i = locals.size()-1; i >= 0; i--) {
             if(locals.at(i).value.name == field_name) {
-                return &locals.get(i).value;
+                return &locals.get(i);
             }
         }
         return NULL;
     }
 
     int getLocalFieldIndex(string field_name) {
-        for(unsigned int i = locals.size()-1; i > 0; i--) {
+        for(long long i = locals.size()-1; i > 0; i--) {
             if(locals.at(i).value.name == field_name) {
                 return i;
             }
@@ -717,10 +717,20 @@ private:
     void parseAssemblyStatement(Block &block, ast *trunk);
 
     void parseAssemblyBlock(Block& block, ast *pAst);
+
+    void parseForStatement(Block &block, ast *pAst);
+
+    bool validateLocalField(string name, ast* pAst);
+
+    Field utypeArgToField(keypair<string, ResolvedReference> arg);
+
+    void parseForEachStatement(Block &block, ast *trunk);
+
+    void parseUtypeArg(ast *pAst, const Scope *scope, Block &block);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.45"
+#define progvers "0.1.46"
 
 struct options {
     /*

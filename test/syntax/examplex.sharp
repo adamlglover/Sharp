@@ -11,6 +11,7 @@ class X {
 class Main base application#X{
 
     public static fn main(string[] args) : var {
+
         __asm(
             ".L1:"
             "movi 3,%adx"
@@ -29,6 +30,12 @@ class Main base application#X{
             Console.write("Hello, World!");
         } else {
             Console.write("Hello, World!");
+
+            for(var args = 0; args < x;) {
+                for(var v : args) {
+
+                }
+            }
         }
         return b;
     }

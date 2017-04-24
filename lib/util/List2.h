@@ -80,7 +80,7 @@ public:
         }
     }
 
-    T at(unsigned long long _X) {
+    T at(unsigned long _X) {
         if(_X>=len){
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
@@ -90,7 +90,7 @@ public:
         return _Data[_X];
     }
 
-    T& get(long long _X) {
+    T& get(unsigned long _X) {
         if(_X>=len || _X < 0){
             stringstream ss;
             ss << "index out of bounds list::get() _X: " << _X
@@ -107,7 +107,6 @@ public:
         len=0;
     }
 
-    CXX11_INLINE
     unsigned long size() { return len; }
 
     void pop_back() {

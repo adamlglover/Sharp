@@ -228,7 +228,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
     if(tk->geterrors()->_errs())
     {
-        cout << note.getNote("in inline assembly");
+        cout << note.getNote("Assembler messages:");
         tk->geterrors()->print_errors();
 
         errors+= tk->geterrors()->error_count();
@@ -456,7 +456,6 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 if(!label_exists(name)) {
                     label.set(name, current_address());
                     label_map.add(label);
-                    cout << "create label " << name << " at address " << current_address() << endl;
                 } else {
                     tk->geterrors()->newerror(GENERIC, current(), "redefinition of label `" + name + "`");
                 }

@@ -39,6 +39,7 @@ enum p_errors
     SYMBOL_ALREADY_DEFINED = 24,
     INVALID_PARAM = 25,
     INCOMPATIBLE_TYPES = 26,
+    DUPlICATE_DECLIRATION = 27,
 
     NO_ERR = 999
 };
@@ -120,8 +121,10 @@ public:
     uint64_t warn_count() { return warnings->size(); }
     uint64_t uoerror_count() { return uo_errors->size(); }
     int newerror(p_errors err, token_entity token, string xcmts = "");
+    int newerror(p_errors err, ast* pAst, string xcmts = "");
     void newerror(p_errors err, int l, int c, string xcmts = "");
     void newwarning(p_errors err, int l, int c, string xcmts);
+    void newwarning(p_errors err, ast* pAst, string xcmts);
     bool _errs();
     bool _warnings() { return warnings; }
     void enablecheck_mode();

@@ -4,6 +4,7 @@
 #include <sstream>
 #include "parseerrors.h"
 #include "../../util/keypair.h"
+#include "ast.h"
 
 void int_errs()
 {
@@ -88,6 +89,9 @@ void int_errs()
     predefined_errs.push_back(err);
 
     err.set(INCOMPATIBLE_TYPES, "incompatible types");
+    predefined_errs.push_back(err);
+
+    err.set(DUPlICATE_DECLIRATION, "duplicate declaration of");
     predefined_errs.push_back(err);
 }
 
@@ -336,4 +340,50 @@ bool Errors::has_error(list <parseerror> *e, const parseerror &perror) const {
             return true;
     }
     return false;
+}
+
+int Errors::newerror(p_errors err, ast *pAst, string xcmts) {
+    keypair<p_errors, string> kp = geterrorbyid(err);
+    parseerror e(kp, pAst->line, pAst->col, xcmts);
+    parseerror last_err = cm ? lastcheckederr : lasterr;
+
+    if(shouldreport(NULL, last_err, e))
+    {
+        if(asis) {
+            print_error(e);
+        } else if(cm) {
+            gettesterrorlist()->push_back(e);
+            lastcheckederr = e;
+            return 1;
+        }
+
+        _err = true;
+        errors->push_back(e);
+        uo_errors->push_back(e);
+        lasterr = e;
+        return 1;
+    }
+    else {
+        uo_errors->push_back(e);
+    }
+
+    return 0;
+}
+
+void Errors::newwarning(p_errors err, ast *pAst, string xcmts) {
+    keypair<p_errors, string> kp = geterrorbyid(err);
+    parseerror e(true, kp, pAst->line, pAst->col, xcmts);
+    parseerror last_err;
+    if(warnings->size() > 0) {
+        last_err = *std::next(warnings->begin(), warnings->size()-1);
+    } else {
+        last_err = cm ? lastcheckederr : lasterr;
+    }
+
+    if(warnings->size() == 0 || shouldreportwarning(NULL, last_err, e)) {
+        if(asis)
+            print_error(e);
+
+        warnings->push_back(e);
+    }
 }

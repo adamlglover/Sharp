@@ -10,6 +10,7 @@
 #include "../runtime/interp/Opcode.h"
 #include "../runtime/interp/register.h"
 #include "Asm.h"
+#include "../util/List2.h"
 
 using namespace std;
 
@@ -256,9 +257,116 @@ void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
     parseAssemblyBlock(block, pAst->getsubast(ast_assembly_block));
 }
 
+bool runtime::validateLocalField(std::string name, ast* pAst) {
+    Scope* scope = current_scope();
+    keypair<int, Field>* field;
 
+    if((field = scope->getLocalField(name)) != NULL) {
+        if(scope->blocks == field->key) {
+            // err redefinition of parameter
+            errors->newerror(DUPlICATE_DECLIRATION, pAst, " local variable `" + field->value.name + "`");
+            return false;
+        } else {
+            errors->newwarning(GENERIC, pAst, " local variable `" + field->value.name + "` hides previous declaration in higher scope");
+            return true;
+        }
+    } else {
+        return true;
+    }
+}
+
+Field runtime::utypeArgToField(keypair<string, ResolvedReference> arg) {
+    Field field;
+    field.name = arg.key;
+    field.array = arg.value.array;
+    field.fullName = field.name;
+    field.klass = arg.value.klass;
+    field.modifiers.add(mPublic);
+    field.nf = arg.value.nf;
+    if(arg.value.type == ResolvedReference::CLASS) {
+        field.type = field_class;
+    } else if(arg.value.type == ResolvedReference::NATIVE) {
+        field.type = field_native;
+    } else {
+        field.type = field_unresolved;
+    }
+
+    return field;
+}
+
+void runtime::parseForStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    scope->blocks++;
+
+    parseUtypeArg(pAst, scope, block);
+
+    Expression cond, iter;
+    if(pAst->hassubast(ast_for_expresion_cond)) {
+        cond = parseExpression(pAst->getsubast(ast_for_expresion_cond));
+    }
+
+    if(pAst->hassubast(ast_for_expresion_iter)) {
+        iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
+    }
+
+    parseBlock(pAst->getsubast(ast_block), block);
+    scope->blocks--;
+}
+
+void runtime::parseUtypeArg(ast *pAst, const Scope *scope, Block &block) {
+    if(pAst->hassubast(ast_utype_arg)) {
+        keypair<string, ResolvedReference> utypeArg = parseUtypeArg(pAst->getsubast(ast_utype_arg));
+        Expression expression;
+
+        if(pAst->hassubast(ast_value)) {
+            expression = parse_value(pAst->getsubast(ast_value));
+        }
+
+        if(validateLocalField(utypeArg.key, pAst->getsubast(ast_utype_arg))) {
+            if(utypeArg.value.type == ResolvedReference::FIELD) {
+                errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_utype_arg), " `" + utypeArg.value.field->name + "`");
+            }
+
+            keypair<int, Field> local;
+            local.set(scope->blocks, utypeArgToField(utypeArg));
+
+            local.value.vaddr = scope->locals.size()-1;
+            scope->locals.push_back(local);
+
+            if(pAst->hassubast(ast_value)) {
+                // todo: ASSIGN VALUE TO VARIABLE
+                Expression assignee(pAst);
+                assignee.type = expression_field;
+                assignee.utype.field = &scope->locals.get(scope->locals.size()-1).value;
+                assignee.utype.type = ResolvedReference::FIELD;
+                assignee.utype.refrenceName = scope->locals.get(scope->locals.size()-1).value.name;
+
+                equals(assignee, expression);
+            }
+        }
+    }
+}
+
+void runtime::parseForEachStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    scope->blocks++;
+
+    parseUtypeArg(pAst, scope, block);
+
+    Expression arryExpression = parseExpression(pAst->getsubast(ast_expression));
+
+    if(!arryExpression.utype.array) {
+        errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must evaluate to type array");
+    }
+
+    parseBlock(pAst->getsubast(ast_block), block);
+
+    scope->blocks--;
+}
 
 void runtime::parseBlock(ast* pAst, Block& block) {
+    Scope* scope = current_scope();
+    scope->blocks++;
 
     ast* trunk;
     for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
@@ -286,6 +394,9 @@ void runtime::parseBlock(ast* pAst, Block& block) {
             case ast_for_statement:
                 parseForStatement(block, trunk);
                 break;
+            case ast_foreach_statement:
+                parseForEachStatement(block, trunk);
+                break;
             default: {
                 stringstream err;
                 err << ": unknown ast type: " << trunk->gettype();
@@ -294,6 +405,8 @@ void runtime::parseBlock(ast* pAst, Block& block) {
             }
         }
     }
+
+    scope->blocks--;
 }
 
 void runtime::parseMethodDecl(ast* pAst) {
@@ -308,11 +421,20 @@ void runtime::parseMethodDecl(ast* pAst) {
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
     Method* method = scope->klass->getFunction(name, params);
+
     if(method != NULL) {
         if(method->isStatic()) {
             add_scope(Scope(scope_static_block, scope->klass, method));
         } else
             add_scope(Scope(scope_instance_block, scope->klass, method));
+
+        keypair<int, Field> local;
+        Scope* curr = current_scope();
+        for(unsigned int i = 0; i < params.size(); i++) {
+
+            local.set(curr->blocks, params.get(i).field);
+            curr->locals.add(local);
+        }
 
         Block fblock;
         parseBlock(pAst->getsubast(ast_block), fblock);
@@ -1059,7 +1181,8 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
             } else {
 
                 // scope_class? | scope_instance_block? | scope_static_block?
-                if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                if(scope->type != scope_class && scope->getLocalField(refrence.refname) != NULL) {
+                    field = &scope->getLocalField(refrence.refname)->value;
                     expression.utype.type = ResolvedReference::FIELD;
                     expression.utype.field = field;
                     expression.code.push_i64(SET_Di(i64, op_MOVL, scope->getLocalFieldIndex(refrence.refname)));
@@ -1192,7 +1315,8 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     }
                 }
 
-                if(scope->type != scope_class && (field = scope->getLocalField(refrence.refname)) != NULL) {
+                if(scope->type != scope_class && scope->getLocalField(refrence.refname) != NULL) {
+                    field = &scope->getLocalField(refrence.refname)->value;
                     resolveFieldHeiarchy(field, refrence, expression, pAst);
                     return;
                 }
