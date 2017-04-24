@@ -726,7 +726,7 @@ private:
 
     void parseForEachStatement(Block &block, ast *trunk);
 
-    void parseUtypeArg(ast *pAst, const Scope *scope, Block &block);
+    void parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
 };
 
 #define progname "bootstrap"

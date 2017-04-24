@@ -313,7 +313,7 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     scope->blocks--;
 }
 
-void runtime::parseUtypeArg(ast *pAst, const Scope *scope, Block &block) {
+void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
     if(pAst->hassubast(ast_utype_arg)) {
         keypair<string, ResolvedReference> utypeArg = parseUtypeArg(pAst->getsubast(ast_utype_arg));
         Expression expression;
@@ -330,17 +330,21 @@ void runtime::parseUtypeArg(ast *pAst, const Scope *scope, Block &block) {
             keypair<int, Field> local;
             local.set(scope->blocks, utypeArgToField(utypeArg));
 
-            local.value.vaddr = scope->locals.size()-1;
+            local.value.vaddr = scope->locals.size() - 1;
             scope->locals.push_back(local);
+
+            Expression assignee(pAst);
+            assignee.type = expression_field;
+            assignee.utype.field = &scope->locals.get(scope->locals.size() - 1).value;
+            assignee.utype.type = ResolvedReference::FIELD;
+            assignee.utype.refrenceName = scope->locals.get(scope->locals.size() - 1).value.name;
+
+            if(comparator != NULL) {
+                equals(assignee, *comparator);
+            }
 
             if(pAst->hassubast(ast_value)) {
                 // todo: ASSIGN VALUE TO VARIABLE
-                Expression assignee(pAst);
-                assignee.type = expression_field;
-                assignee.utype.field = &scope->locals.get(scope->locals.size()-1).value;
-                assignee.utype.type = ResolvedReference::FIELD;
-                assignee.utype.refrenceName = scope->locals.get(scope->locals.size()-1).value.name;
-
                 equals(assignee, expression);
             }
         }
@@ -351,9 +355,8 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
 
-    parseUtypeArg(pAst, scope, block);
-
     Expression arryExpression = parseExpression(pAst->getsubast(ast_expression));
+    parseUtypeArg(pAst, scope, block, &arryExpression);
 
     if(!arryExpression.utype.array) {
         errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must evaluate to type array");

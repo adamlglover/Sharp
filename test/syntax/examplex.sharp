@@ -7,6 +7,7 @@ class X {
 
 }
 
+class string { /* ... */ }
 
 class Main base application#X{
 
@@ -31,8 +32,8 @@ class Main base application#X{
         } else {
             Console.write("Hello, World!");
 
-            for(var args = 0; args < x;) {
-                for(var v : args) {
+            for(var l = 0; args < x;) {
+                foreach(var v : args) {
 
                 }
             }
