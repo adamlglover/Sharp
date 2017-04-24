@@ -17,10 +17,44 @@ bool Asm::isend() {
 bool Asm::instruction_is(string name) {
     if(current().getid() == IDENTIFIER && current().gettoken() == name) {
         npos++;
+        expect_instr = false;
         return true;
     }
 
     return false;
+}
+
+string Asm::expect_identifier() {
+    if(current().getid() == IDENTIFIER) {
+        string name = current().gettoken();
+        npos++;
+        return name;
+    } else {
+        tk->geterrors()->newerror(GENERIC, current(), "expected identifier");
+        return "";
+    }
+}
+
+bool Asm::label_exists(string label) {
+    for(unsigned int i = 0; i < label_map.size(); i++) {
+        if(label_map.get(i).key == label)
+            return true;
+    }
+
+     return false;
+}
+
+int64_t Asm::current_address() {
+    return assembler->__asm64.size();
+}
+
+int64_t Asm::get_label(string label) {
+    for(unsigned int i = 0; i < label_map.size(); i++) {
+        if(label_map.get(i).key == label)
+            return label_map.get(i).value;
+    }
+
+    return 0;
 }
 
 void Asm::expect_int_or_register() {
@@ -53,6 +87,27 @@ void Asm::expect_int_or_register() {
         }
 
         npos++;
+        if(current() == "+") {
+            npos++;
+
+            int rx = i2.high_bytes;
+            expect_int();
+
+            int64_t offset = i2.high_bytes;
+            i2.high_bytes = offset + rx;
+        }
+
+        i2.low_bytes = -1;
+    } else if(current() == "$") {
+        npos++;
+
+        string name = expect_identifier();
+        if(label_exists(name)) {
+            i2.high_bytes = get_label(name);
+        } else {
+            tk->geterrors()->newerror(GENERIC, current(), "expected identifier after mnemonic '$'");
+        }
+
         i2.low_bytes = -1;
     } else
         expect_int();
@@ -88,7 +143,8 @@ void Asm::expect_int() {
 
             i2.high_bytes = (int64_t )x;
 
-            if(current().gettoken().find('.') != string::npos)
+            if(current().gettoken().find('.') != string::npos || current().gettoken().find('e') != string::npos
+               || current().gettoken().find('E') != string::npos)
                 i2.low_bytes = abs(runtime::get_low_bytes(x));
             else
                 i2.low_bytes = -1;
@@ -165,8 +221,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
     this->instance = instance;
     this->code = code;
     tk = new tokenizer(code, "stdin");
+    label_map.init();
     RuntimeNote note = RuntimeNote(instance->_current->sourcefile, instance->_current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
+    keypair<std::string, int64_t> label;
 
     if(tk->geterrors()->_errs())
     {
@@ -187,7 +245,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_int();
                 assembler.push_i64(SET_Di(i64, op_INT, i2.high_bytes));
             } else if(instruction_is("movi")) {
-                expect_int();
+                expect_int_or_register();
                 itmp = i2;
                 expect(",");
                 expect_int_or_register();
@@ -261,16 +319,172 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_int_or_register();
 
                 assembler.push_i64(SET_Ci(i64, op_DIV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
-            } else {
-                    npos++;
-                    tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
+            } else if(instruction_is("mod")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("pop")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("inc")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_INC, itmp.high_bytes));
+            } else if(instruction_is("dec")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_DEC, i2.high_bytes));
+            } else if(instruction_is("movr")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_MOVR, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("movx")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_MOVX, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("lt")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_LT, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("brh")) {
+                assembler.push_i64(SET_Ei(i64, op_BRH));
+            } else if(instruction_is("bre")) {
+                assembler.push_i64(SET_Ei(i64, op_BRE));
+            } else if(instruction_is("ife")) {
+                assembler.push_i64(SET_Ei(i64, op_IFE));
+            } else if(instruction_is("ifne")) {
+                assembler.push_i64(SET_Ei(i64, op_IFNE));
+            } else if(instruction_is("gt")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_GT, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("ge")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_GTE, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("le")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_LTE, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("movl")) {
+                expect_int();
+
+                assembler.push_i64(SET_Di(i64, op_MOVL, i2.high_bytes));
+            } else if(instruction_is("obj_next")) {
+                assembler.push_i64(SET_Ei(i64, op_OBJECT_NXT));
+            } else if(instruction_is("obj_prev")) {
+                assembler.push_i64(SET_Ei(i64, op_OBJECT_PREV));
+            } else if(instruction_is("rmov")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_RMOV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("mov")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                assembler.push_i64(SET_Ci(i64, op_MOV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("movd")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                assembler.push_i64(SET_Ci(i64, op_MOVD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("movbi")) {
+                expect_int();
+
+                if(i2.low_bytes != -1) {
+                    assembler.push_i64(SET_Ci(i64, op_MOVBI, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+                } else {
+                    itmp = i2;
+                    expect(",");
+                    expect_int();
+
+                    assembler.push_i64(SET_Ci(i64, op_MOVBI, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
                 }
+
+            } else if(instruction_is("_sizeof")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_SIZEOF, i2.high_bytes));
+            } else if(instruction_is("put")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_PUT, i2.high_bytes));
+            } else if(instruction_is("_putc")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_PUTC, i2.high_bytes));
+            } else if(instruction_is("chklen")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_CHECKLEN, i2.high_bytes));
+            } else if(current() == ".") {
+                npos++;
+
+                string name = expect_identifier();
+                if(!label_exists(name)) {
+                    label.set(name, current_address());
+                    label_map.add(label);
+                    cout << "create label " << name << " at address " << current_address() << endl;
+                } else {
+                    tk->geterrors()->newerror(GENERIC, current(), "redefinition of label `" + name + "`");
+                }
+
+                expect_instr = true;
+                expect(":");
+            } else if(instruction_is("goto")) {
+                expect("$");
+                string name = expect_identifier();
+                if(label_exists(name)) {
+                    assembler.push_i64(SET_Di(i64, op_GOTO, get_label(name)));
+                } else {
+                    tk->geterrors()->newerror(GENERIC, current(), "expected identifier after mnemonic '$'");
+                }
+            } else {
+                npos++;
+                tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
             }
+        }
+
+        if(expect_instr) {
+            tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
+        }
 
         if(tk->geterrors()->_errs())
         {
 
-            cout << note.getNote("in inline assembly");
+            cout << note.getNote("Assembler messages:");
             tk->geterrors()->print_errors();
 
             errors+= tk->geterrors()->error_count();

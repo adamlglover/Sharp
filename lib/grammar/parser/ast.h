@@ -49,6 +49,8 @@ enum ast_types
     ast_while_statement,
     ast_assembly_statement,
     ast_for_statement,
+    ast_for_expresion_cond,
+    ast_for_expresion_iter,
     ast_foreach_statement,
     ast_type_identifier,
     ast_refrence_pointer,
@@ -97,10 +99,8 @@ public:
             numEntities(0),
             numAsts(0)
     {
-        sub_asts = new List<ast>();
-        entities = new List<token_entity>();
-        sub_asts->init();
-        entities->init();
+        sub_asts.init();
+        entities.init();
     }
 
     ast()
@@ -112,10 +112,8 @@ public:
             numEntities(0),
             numAsts(0)
     {
-        sub_asts = new List<ast>();
-        entities = new List<token_entity>();
-        sub_asts->init();
-        entities->init();
+        sub_asts.init();
+        entities.init();
     }
 
     void encapsulate(ast_types at);
@@ -144,11 +142,13 @@ public:
     int line, col;
     long numEntities, numAsts;
 
+    void settype(ast_types types);
+
 private:
     ast_types type;
     ast *parent;
-    List<ast> *sub_asts;
-    List<token_entity> *entities;
+    List<ast> sub_asts;
+    List<token_entity> entities;
 
 };
 

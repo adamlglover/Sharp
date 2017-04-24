@@ -221,7 +221,8 @@ struct Scope {
             klass(NULL),
             self(false),
             base(false),
-            function(NULL)
+            function(NULL),
+            blocks(0)
     {
         locals.init();
     }
@@ -232,7 +233,8 @@ struct Scope {
             klass(klass),
             self(false),
             base(false),
-            function(NULL)
+            function(NULL),
+            blocks(0)
     {
         locals.init();
     }
@@ -243,7 +245,8 @@ struct Scope {
             klass(klass),
             self(false),
             base(false),
-            function(func)
+            function(func),
+            blocks(0)
     {
         locals.init();
     }
@@ -252,8 +255,8 @@ struct Scope {
         if(locals.size() == 0) return NULL;
 
         for(unsigned int i = locals.size()-1; i > 0; i--) {
-            if(locals.at(i).name == field_name) {
-                return &locals.get(i);
+            if(locals.at(i).value.name == field_name) {
+                return &locals.get(i).value;
             }
         }
         return NULL;
@@ -261,7 +264,7 @@ struct Scope {
 
     int getLocalFieldIndex(string field_name) {
         for(unsigned int i = locals.size()-1; i > 0; i--) {
-            if(locals.at(i).name == field_name) {
+            if(locals.at(i).value.name == field_name) {
                 return i;
             }
         }
@@ -271,7 +274,8 @@ struct Scope {
     scope_type type;
     ClassObject* klass;
     Method* function;
-    List<Field> locals;
+    List<keypair<int, Field>> locals;
+    int blocks;
     bool self, base;
 };
 
@@ -704,7 +708,7 @@ private:
 
     void parseMethodDecl(ast *pAst);
 
-    Block parseBlock(ast *pAst);
+    void parseBlock(ast *pAst, Block& block);
 
     void parseReturnStatement(Block &block, ast *pAst);
 
@@ -712,7 +716,7 @@ private:
 
     void parseAssemblyStatement(Block &block, ast *trunk);
 
-    m64Assembler parseAssemblyBlock(ast *pAst);
+    void parseAssemblyBlock(Block& block, ast *pAst);
 };
 
 #define progname "bootstrap"

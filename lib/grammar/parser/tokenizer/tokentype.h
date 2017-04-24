@@ -60,6 +60,7 @@ enum token_type
     PTR, // ->
     _INC, // ++
     _DEC, // --
+    DOLLAR, // $
     _EOF = 9999, // end of file
 
     NONE // not a type

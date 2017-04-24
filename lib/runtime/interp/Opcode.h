@@ -230,8 +230,9 @@ enum OPCODE {
     op_MOVU64=0x2c,
 
     op_MOVN=0x2d, /* move ptr = &ptr->_Node[r]; */
-    op_MOVG=0x2e, /* move ptr = &env->objects[r]; */
-    op_MOVSELF=0x2f, /* move ptr = instance; */
+	op_GOTO=0x2e,
+    op_MOVG=0x2f, /* move ptr = &env->objects[r]; */
+    op_MOVSELF=0x30, /* move ptr = instance; */
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

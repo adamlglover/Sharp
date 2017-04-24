@@ -1278,16 +1278,23 @@ void parser::parse_forstmnt(ast *pAst) {
 
     expect(LEFTPAREN, pAst, "`(`");
 
-    parse_utypearg(pAst);
-    parse_valueassignment(pAst);
+    if(peek(1).gettokentype() != SEMICOLON) {
+        parse_utypearg(pAst);
+        parse_valueassignment(pAst);
+    }
+
     expect(SEMICOLON, pAst, "`;`"); // The inititalizer
 
-    if(peek(1).gettokentype() != SEMICOLON)
+    if(peek(1).gettokentype() != SEMICOLON) {
         parse_expression(pAst);
+        pAst->getsubast(ast_expression)->settype(ast_for_expresion_cond);
+    }
     expect(SEMICOLON, pAst, "`;`");
 
-    if(peek(1).gettokentype() != SEMICOLON)
+    if(peek(1).gettokentype() != RIGHTPAREN) {
         parse_expression(pAst);
+        pAst->getsubast(ast_expression)->settype(ast_for_expresion_iter);
+    }
     expect(RIGHTPAREN, pAst, "`)`");
 
     parse_block(pAst);

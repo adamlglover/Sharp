@@ -26,7 +26,8 @@ public:
     :
             npos(0),
             instance(NULL),
-            code("")
+            code(""),
+            expect_instr(false)
     {
     }
 
@@ -40,6 +41,8 @@ private:
     runtime* instance;
     string code;
     tokenizer* tk;
+    bool expect_instr;
+    List<keypair<std::string, int64_t>> label_map;
 
     bool isend();
 
@@ -52,6 +55,14 @@ private:
     void expect_int_or_register();
 
     void expect(string token);
+
+    string expect_identifier();
+
+    bool label_exists(string label);
+
+    int64_t current_address();
+
+    int64_t get_label(string name);
 };
 
 

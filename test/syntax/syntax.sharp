@@ -127,8 +127,8 @@ class Start
         var u = 0x4376;
 
         __asm (
-            "movi 0,%adx    # move address to value of function ptr to address register "
-            "movx %adx,#adx # store address of main function back in %adx               "
+            "movi 0,%adx    // move address to value of function ptr to address register "
+            "movx %adx,%adx // store address of main function back in %adx               "
         );
     }
 

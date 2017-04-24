@@ -210,7 +210,7 @@ void runtime::parseReturnStatement(Block& block, ast* pAst) {
 void runtime::parseIfStatement(Block& block, ast* pAst) {
     int i = 0;
     Expression cond = parseExpression(pAst->getsubast(0));
-    Block blockIf = parseBlock(pAst->getsubast(1));
+    parseBlock(pAst->getsubast(1), block);
 
     if(pAst->getsubastcount() > 2) {
         ast* trunk;
@@ -219,18 +219,17 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
             switch(trunk->gettype()) {
                 case ast_elseif_statement:
                     cond = parseExpression(trunk->getsubast(ast_expression));
-                    blockIf = parseBlock(trunk->getsubast(ast_block));
+                    parseBlock(trunk->getsubast(ast_block), block);
                     break;
                 case ast_else_statement:
-                    blockIf = parseBlock(trunk->getsubast(ast_block));
+                    parseBlock(trunk->getsubast(ast_block), block);
                     break;
             }
         }
     }
 }
 
-m64Assembler runtime::parseAssemblyBlock(ast* pAst) {
-    m64Assembler assembler;
+void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
     string assembly = "";
 
     if(pAst->getentitycount() == 1) {
@@ -245,27 +244,31 @@ m64Assembler runtime::parseAssemblyBlock(ast* pAst) {
         }
     } else {
         for(unsigned int i = 0; i < pAst->getentitycount(); i++) {
-            assembly += pAst->getentity(0).gettoken() + "\n";
+            assembly += pAst->getentity(i).gettoken() + "\n";
         }
     }
 
     Asm __vasm;
-    __vasm.parse(assembler, this, assembly, pAst);
-
-    return assembler;
+    __vasm.parse(block.code, this, assembly, pAst);
 }
 
 void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
-    int i = 0;
-    m64Assembler code = parseAssemblyBlock(pAst->getsubast(ast_assembly_block));
+    parseAssemblyBlock(block, pAst->getsubast(ast_assembly_block));
 }
 
-Block runtime::parseBlock(ast* pAst) {
-    Block block;
+
+
+void runtime::parseBlock(ast* pAst, Block& block) {
 
     ast* trunk;
     for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
-        trunk = pAst->getsubast(i)->getsubast(0);
+        trunk = pAst->getsubast(i);
+
+        if(trunk->gettype() == ast_block) {
+            parseBlock(trunk, block);
+            continue;
+        } else
+            trunk = trunk->getsubast(0);
 
         switch(trunk->gettype()) {
             case ast_return_stmnt:
@@ -280,6 +283,9 @@ Block runtime::parseBlock(ast* pAst) {
             case ast_assembly_statement:
                 parseAssemblyStatement(block, trunk);
                 break;
+            case ast_for_statement:
+                parseForStatement(block, trunk);
+                break;
             default: {
                 stringstream err;
                 err << ": unknown ast type: " << trunk->gettype();
@@ -288,8 +294,6 @@ Block runtime::parseBlock(ast* pAst) {
             }
         }
     }
-
-    return block;
 }
 
 void runtime::parseMethodDecl(ast* pAst) {
@@ -310,10 +314,10 @@ void runtime::parseMethodDecl(ast* pAst) {
         } else
             add_scope(Scope(scope_instance_block, scope->klass, method));
 
-        Block fblock = parseBlock(pAst->getsubast(ast_block));
+        Block fblock;
+        parseBlock(pAst->getsubast(ast_block), fblock);
         remove_scope();
     }
-    int c = 0;
 }
 
 void runtime::parse_var_decl(ast *pAst) {
@@ -2966,11 +2970,11 @@ Expression runtime::parseAddExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
 
-    if(operand.gettokentype() == PLUS && pAst->getsubast(1) == NULL) {
+    if(operand.gettokentype() == PLUS && pAst->getsubastcount() == 1) {
         // left is right then add 1 to data
         right = parseExpression(pAst->getsubast(0));
         return parseUnary(operand, right, pAst);
-    } else if(operand.gettokentype() == MINUS && pAst->getsubast(1) == NULL) {
+    } else if(operand.gettokentype() == MINUS && pAst->getsubastcount() == 1) {
         // left is right multiply expression by -1
         right = parseExpression(pAst->getsubast(0));
         return parseUnary(operand, right, pAst);
@@ -3047,7 +3051,7 @@ Expression runtime::parseMultExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary *<expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
@@ -3125,7 +3129,7 @@ Expression runtime::parseShiftExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
@@ -3204,7 +3208,7 @@ Expression runtime::parseLessExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
@@ -3283,7 +3287,7 @@ Expression runtime::parseEqualExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
@@ -3369,7 +3373,7 @@ Expression runtime::parseAndExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
@@ -3448,7 +3452,7 @@ Expression runtime::parseAssignExpression(ast* pAst) {
     Expression expression, left, right;
     token_entity operand = pAst->getentity(0);
 
-    if(pAst->getsubast(1) == NULL) {
+    if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);

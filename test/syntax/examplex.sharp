@@ -12,8 +12,15 @@ class Main base application#X{
 
     public static fn main(string[] args) : var {
         __asm(
+            ".L1:"
             "movi 3,%adx"
-            "add %ecx,%enbx"
+            ".L2:"
+            "add %ecx,%ebx"
+            "movbi 138.8e+11"
+            "movbi #4,#7"
+            "movi 138.8e+10, %ecx"
+            "_sizeof %egx"
+            "goto $L1"
         );
 
         if(true) {
@@ -43,6 +50,9 @@ class Main base application#X{
     string s = "dkdjkn" + i < 9;
     fn foo(var x, var n) : var {
 
+        for(;;) {
+            // endless
+        }
     }
 
 // TODO: make "expression must evaluate to array" message more clear

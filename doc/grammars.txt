@@ -231,4 +231,4 @@ asm ( <string-literal>+ ) ;
      | identifier ':' <statement>
      | <variable-declaration>
      | <expression>
-     | <asm-decl> // add this
+     | <asm-decl>

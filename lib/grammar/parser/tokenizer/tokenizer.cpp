@@ -244,6 +244,8 @@ void tokenizer::scan_symbol() {
         entites.add(token_entity(string(1, current()), SINGLE, col, line, XOR));
     else if ('?' == current())
         entites.add(token_entity(string(1, current()), SINGLE, col, line, QUESMK));
+    else if ('$' == current())
+        entites.add(token_entity(string(1, current()), SINGLE, col, line, DOLLAR));
     else
     {
         errors->newerror(UNEXPECTED_SYMBOL, line, col, " `" + string(1, current()) + "`");
@@ -626,7 +628,7 @@ bool tokenizer::issymbol(char c)
            ('?' == c) || ('&' == c) ||
            ('|' == c) || (';' == c) ||
            ('!' == c) || ('.' == c) |
-           ('#' == c);
+           ('#' == c) || ('$' == c);
 }
 
 bool tokenizer::isend()

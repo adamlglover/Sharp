@@ -17,13 +17,17 @@ ast* ast::getparent()
 
 long ast::getsubastcount()
 {
-    return numAsts;
+    return sub_asts.size();
 }
 
 ast* ast::getsubast(long at)
 {
-    if(numAsts == 0 || at >= numAsts) return NULL;
-    return &sub_asts->get(at);
+    if(numAsts == 0 || at >= numAsts) {
+        stringstream ss;
+        ss << "internal error, ast not found at index " << at;
+        throw runtime_error(ss.str());
+    }
+    return &sub_asts.get(at);
 }
 
 long ast::getentitycount()
@@ -34,31 +38,28 @@ long ast::getentitycount()
 token_entity ast::getentity(long at)
 {
     if(numEntities == 0) return token_entity();
-    return entities->get(at);
+    return entities.get(at);
 }
 
 void ast::add_entity(token_entity entity)
 {
     numEntities++;
-    entities->add(entity);
+    entities.add(entity);
 }
 
 void ast::add_ast(ast _ast)
 {
     numAsts++;
-    sub_asts->add(_ast);
+    sub_asts.add(_ast);
 }
 
 void ast::free() {
-    if(this->entities != NULL) {
-        this->entities->free();
-        delete (this->entities); this->entities = NULL;
-    }
+    this->entities.free();
 
     ast* pAst;
-    for(int64_t i = 0; i < this->sub_asts->size(); i++)
+    for(int64_t i = 0; i < this->sub_asts.size(); i++)
     {
-        pAst = &this->sub_asts->get(i);
+        pAst = &this->sub_asts.get(i);
         pAst->free();
     }
 
@@ -66,44 +67,41 @@ void ast::free() {
     numEntities = 0;
     this->type = ast_none;
     this->parent = NULL;
-    if(this->sub_asts != NULL) {
-        this->sub_asts->free();
-        delete (this->sub_asts); this->sub_asts = NULL;
-    }
+    this->sub_asts.free();
 }
 
 void ast::freesubs() {
     ast* pAst;
-    for(int64_t i = 0; i < this->sub_asts->size(); i++)
+    for(int64_t i = 0; i < this->sub_asts.size(); i++)
     {
-        pAst = &this->sub_asts->get(i);
+        pAst = &this->sub_asts.get(i);
         pAst->free();
     }
 
     numAsts = 0;
-    this->sub_asts->free();
+    this->sub_asts.free();
 }
 
 void ast::freelastsub() {
-    ast* pAst = &this->sub_asts->get(this->sub_asts->size()-1);
+    ast* pAst = &this->sub_asts.get(this->sub_asts.size()-1);
     pAst->free();
     numAsts--;
-    this->sub_asts->pop_back();
+    this->sub_asts.pop_back();
 }
 
 void ast::freeentities() {
     numEntities = 0;
-    this->entities->free();
+    this->entities.free();
 }
 
 void ast::freelastentity() {
     numEntities--;
-    this->entities->pop_back();
+    this->entities.pop_back();
 }
 
 bool ast::hassubast(ast_types at) {
-    for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        if(sub_asts->get(i).gettype() == at)
+    for(unsigned int i = 0; i < sub_asts.size(); i++) {
+        if(sub_asts.get(i).gettype() == at)
             return true;
     }
     return false;
@@ -112,8 +110,8 @@ bool ast::hassubast(ast_types at) {
 bool ast::hasentity(token_type t) {
 
     token_entity e;
-    for(unsigned int i = 0; i < entities->size(); i++) {
-        e = entities->at(i);
+    for(unsigned int i = 0; i < entities.size(); i++) {
+        e = entities.at(i);
         if(e.gettokentype() == t)
             return true;
     }
@@ -122,8 +120,8 @@ bool ast::hasentity(token_type t) {
 
 ast *ast::getsubast(ast_types at) {
     ast* pAst;
-    for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        pAst = &sub_asts->get(i);
+    for(unsigned int i = 0; i < sub_asts.size(); i++) {
+        pAst = &sub_asts.get(i);
         if(pAst->gettype() == at)
             return pAst;
     }
@@ -132,8 +130,8 @@ ast *ast::getsubast(ast_types at) {
 
 token_entity ast::getentity(token_type t) {
     token_entity e;
-    for(unsigned int i = 0; i < entities->size(); i++) {
-        e = entities->at(i);
+    for(unsigned int i = 0; i < entities.size(); i++) {
+        e = entities.at(i);
         if(e.gettokentype() == t)
             return e;
     }
@@ -142,10 +140,10 @@ token_entity ast::getentity(token_type t) {
 
 ast *ast::getsubast_after(ast_types at) {
     bool found = false;
-    for(unsigned int i = 0; i < sub_asts->size(); i++) {
+    for(unsigned int i = 0; i < sub_asts.size(); i++) {
         if(found)
-            return &sub_asts->get(i);
-        if(sub_asts->get(i).gettype() == at) {
+            return &sub_asts.get(i);
+        if(sub_asts.get(i).gettype() == at) {
             found = true;
         }
     }
@@ -159,25 +157,29 @@ void ast::encapsulate(ast_types at) {
     add_ast(ast(this, at, this->line, this->col));
     ast* encap = getsubast(getsubastcount()-1);
 
-    for(unsigned int i = 0; i < sub_asts->size(); i++) {
-        if(sub_asts->get(i).type != at)
-            encap->add_ast(sub_asts->get(i));
+    for(unsigned int i = 0; i < sub_asts.size(); i++) {
+        if(sub_asts.get(i).type != at)
+            encap->add_ast(sub_asts.get(i));
     }
 
-    for(unsigned int i = 0; i < entities->size(); i++) {
-            encap->add_entity(entities->get(i));
+    for(unsigned int i = 0; i < entities.size(); i++) {
+            encap->add_entity(entities.get(i));
     }
 
     readjust:
-        for(unsigned int i = 0; i < sub_asts->size(); i++) {
-            if(sub_asts->get(i).type != at) {
-                sub_asts->remove(i);
+        for(unsigned int i = 0; i < sub_asts.size(); i++) {
+            if(sub_asts.get(i).type != at) {
+                sub_asts.remove(i);
                 goto readjust;
             }
         }
 
     numAsts = 1;
     numEntities = 0;
-    entities->free();
+    entities.free();
+}
+
+void ast::settype(ast_types t) {
+    type = t;
 }
 
