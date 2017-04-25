@@ -1,11 +1,24 @@
 mod application;
 
+import std;
+
 class Start {
 
-    public static function __init(string[] args) : int {
+    private static string[] initArgs;
+
+    private macros transposeArray(var[] args) {
+    /**
+    *   Convert var[][] to string array
+    */
+        __asm("transpose_args.asm");
+    }
+
+    public static function __init(var[] args) : var {
         /* Initialize singleton libraries and GC */
 
-        String[] args = null;
+        // under the hood this comes in as a var[][] with string values
+        transposeArray(args);
+        string[] pArgs = null;
         int retVal = application#Main.main(args);
 
         /* Shutdown threads and do other stuff before exit */

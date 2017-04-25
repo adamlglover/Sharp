@@ -100,6 +100,15 @@ public:
         return _Data[_X];
     }
 
+    T& last() {
+        if(len == 0){
+            stringstream ss;
+            ss << "illegal state list::last() length: 0" << endl;
+            throw std::runtime_error(ss.str());
+        }
+        return _Data[len-1];
+    }
+
     void free() {
         if(_Data != NULL)
             delete[] (_Data);

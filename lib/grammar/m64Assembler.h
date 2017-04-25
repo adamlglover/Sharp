@@ -34,6 +34,12 @@ public:
         return false;
     }
 
+    void addinjector_unsafe(std::string key) {
+        injectors.key.push_back(key);
+        injectors.value.push_back();
+        injectors.value.last().init();
+    }
+
     bool add(string injector, int64_t i64) {
         if(has_injector(injector)) {
             get_injector(injector).__asm64.push_back(i64);
@@ -62,7 +68,10 @@ public:
         injectors.value.free();
     }
 
+
+    keypair<List<string>, List<m64Assembler>> injectors;
 private:
+
 
     m64Assembler& get_injector(string key) {
         for(unsigned int i = 0; i < injectors.key.size(); i++) {
@@ -79,8 +88,6 @@ private:
         }
         return false;
     }
-
-    keypair<List<string>, List<m64Assembler>> injectors;
 };
 
 

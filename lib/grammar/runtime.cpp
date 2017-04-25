@@ -267,7 +267,7 @@ bool runtime::validateLocalField(std::string name, ast* pAst) {
             errors->newerror(DUPlICATE_DECLIRATION, pAst, " local variable `" + field->value.name + "`");
             return false;
         } else {
-            errors->newwarning(GENERIC, pAst, " local variable `" + field->value.name + "` hides previous declaration in higher scope");
+            warning(GENERIC, pAst->line, pAst->col, " local variable `" + field->value.name + "` hides previous declaration in higher scope");
             return true;
         }
     } else {
@@ -294,6 +294,22 @@ Field runtime::utypeArgToField(keypair<string, ResolvedReference> arg) {
     return field;
 }
 
+void runtime::removeForLabels(Scope* scope) {
+    for(long long i = scope->label_map.size()-1; i > 0; i++) {
+        if(scope->label_map.get(i).key == for_label_begin_id) {
+            scope->label_map.remove(i);
+            break;
+        }
+    }
+
+    for(long long i = scope->label_map.size()-1; i > 0; i++) {
+        if(scope->label_map.get(i).key == for_label_end_id) {
+            scope->label_map.remove(i);
+            break;
+        }
+    }
+}
+
 void runtime::parseForStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
@@ -309,7 +325,15 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
         iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
     }
 
+    // TODO: add real address
+    scope->label_map.add(keypair<std::string, int64_t>(for_label_begin_id,0));
+
     parseBlock(pAst->getsubast(ast_block), block);
+    // TODO: add real address
+    scope->label_map.add(keypair<std::string, int64_t>(for_label_end_id,0));
+
+    // TODO: fix branch addresses for 'break;'
+    removeForLabels(scope);
     scope->blocks--;
 }
 
@@ -419,6 +443,136 @@ void runtime::parseThrowStatement(Block& block, ast* pAst) {
     }
 }
 
+int64_t runtime::getLastLoopBeginAddress() {
+    Scope* scope = current_scope();
+
+    for(long long i = scope->label_map.size()-1; i < 0; i++) {
+        if(scope->label_map.get(i).key == for_label_begin_id) {
+            return scope->label_map.get(i).value;
+        }
+    }
+
+    return -1;
+}
+
+void runtime::parseContinueStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    int64_t start_addr;
+
+    if((start_addr = getLastLoopBeginAddress()) != -1) {
+        // TODO: jump to label address
+    } else {
+        // error not in loop
+        errors->newerror(GENERIC, pAst, "continue statement outside of loop");
+    }
+}
+
+void runtime::parseBreakStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    int64_t start_addr;
+
+    if((start_addr = getLastLoopBeginAddress()) != -1) {
+        // TODO: jump to label address
+        block.code.addinjector_unsafe("break");
+        m64Assembler &assembler = block.code.injectors.value.last();
+
+        /* the offset address will get resolved later */
+        assembler.push_i64(block.code.__asm64.size()-1); // address to inject instruction
+        assembler.push_i64(SET_Di(start_addr, op_GOTO, 0));
+    } else {
+        // error not in loop
+        errors->newerror(GENERIC, pAst, "break statement outside of loop");
+    }
+}
+
+void runtime::handleAnonymousGoto(m64Assembler& assembler, string name) {
+    Scope* scope = current_scope();
+    int64_t labelid = scope->undeclared_labels.size();
+
+    if(!scope->hasUndeclaredLabel(name)) {
+        scope->addUndeclaredLabel(name, labelid);
+    }
+    assembler.addinjector_unsafe("goto");
+    m64Assembler &builder = assembler.injectors.value.last();
+    int64_t i64;
+
+    /* the offset address will get resolved later */
+    builder.push_i64(assembler.__asm64.size()-1); // address to inject instruction
+    builder.push_i64(SET_Di(i64, op_GOTO, labelid));
+}
+
+void runtime::parseGotoStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    string label = pAst->getentity(1).gettoken();
+    int64_t i64;
+
+    if(scope->getLabel(label) != -1) {
+        block.code.push_i64(SET_Di(i64, op_GOTO, scope->getLabel(label)));
+    } else {
+        handleAnonymousGoto(block.code, label);
+    }
+}
+
+void runtime::parseStatement(Block& block, ast* pAst) {
+    switch(pAst->gettype()) {
+        case ast_return_stmnt:
+            parseReturnStatement(block, pAst);
+            break;
+        case ast_if_statement:
+            parseIfStatement(block, pAst);
+            break;
+        case ast_expression:
+            parseExpression(pAst);
+            break;
+        case ast_assembly_statement:
+            parseAssemblyStatement(block, pAst);
+            break;
+        case ast_for_statement:
+            parseForStatement(block, pAst);
+            break;
+        case ast_foreach_statement:
+            parseForEachStatement(block, pAst);
+            break;
+        case ast_while_statement:
+            parseWhileStatement(block, pAst);
+            break;
+        case ast_do_while_statement:
+            parseDoWhileStatement(block, pAst);
+            break;
+        case ast_trycatch_statement:
+            parseTryCatchStatement(block, pAst);
+            break;
+        case ast_throw_statement:
+            parseThrowStatement(block, pAst);
+            break;
+        case ast_continue_statement:
+            parseContinueStatement(block, pAst);
+            break;
+        case ast_break_statement:
+            parseBreakStatement(block, pAst);
+            break;
+        case ast_goto_statement:
+            parseGotoStatement(block, pAst); // TODO: do 2 runthroughs somehow
+            break;
+        default: {
+            stringstream err;
+            err << ": unknown ast type: " << pAst->gettype();
+            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
+            break;
+        }
+    }
+}
+
+void runtime::evaluateLabels(Block& block) {
+    Scope* scope = current_scope();
+
+    if(scope->label_map.size() != 0) {
+        for(unsigned int i = 0; i < scope->label_map.size(); i++) {
+            errors->newerror(COULD_NOT_RESOLVE, )
+        }
+    }
+}
+
 void runtime::parseBlock(ast* pAst, Block& block) {
     Scope* scope = current_scope();
     scope->blocks++;
@@ -427,52 +581,17 @@ void runtime::parseBlock(ast* pAst, Block& block) {
     for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
         trunk = pAst->getsubast(i);
 
+        goto d;
         if(trunk->gettype() == ast_block) {
             parseBlock(trunk, block);
             continue;
         } else
             trunk = trunk->getsubast(0);
 
-        switch(trunk->gettype()) {
-            case ast_return_stmnt:
-                parseReturnStatement(block, trunk);
-                break;
-            case ast_if_statement:
-                parseIfStatement(block, trunk);
-                break;
-            case ast_expression:
-                parseExpression(trunk);
-                break;
-            case ast_assembly_statement:
-                parseAssemblyStatement(block, trunk);
-                break;
-            case ast_for_statement:
-                parseForStatement(block, trunk);
-                break;
-            case ast_foreach_statement:
-                parseForEachStatement(block, trunk);
-                break;
-            case ast_while_statement:
-                parseWhileStatement(block, trunk);
-                break;
-            case ast_do_while_statement:
-                parseDoWhileStatement(block, trunk);
-                break;
-            case ast_trycatch_statement:
-                parseTryCatchStatement(block, trunk);
-                break;
-            case ast_throw_statement:
-                parseThrowStatement(block, trunk);
-                break;
-            default: {
-                stringstream err;
-                err << ": unknown ast type: " << trunk->gettype();
-                errors->newerror(INTERNAL_ERROR, trunk->line, trunk->col, err.str());
-                break;
-            }
-        }
+        parseStatement(block, trunk);
     }
 
+    evaluateLabels(block);
     scope->blocks--;
 }
 
@@ -2840,10 +2959,14 @@ Expression runtime::parseClassCast(Expression& utype, Expression& arg) {
         case expression_field:
             if(arg.utype.field->type == field_class) {
                 if(utype.utype.klass->match(arg.utype.klass)) {
-                    expression.type = utype.type;
+                    expression.type = expression_lclass;
                     expression.utype = utype.utype;
                     return expression;
                 }
+            } else if(arg.utype.field->type == field_native && arg.utype.field->nf == fdynamic) {
+                expression.type = expression_lclass;
+                expression.utype = utype.utype;
+                return expression;
             } else if(arg.utype.field->type == field_native) {
                 errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "field `" + arg.utype.field->name + "` is not a class; "
                                                                           "cannot cast `" + arg.utype.typeToString() + "` to `" + utype.utype.typeToString() + "`");
@@ -2986,7 +3109,7 @@ Expression runtime::parseParenExpression(ast* pAst) {
     expression = parseExpression(pAst->getsubast(ast_expression));
 
     if(pAst->hassubast(ast_dotnotation_call_expr)) {
-        return parseDotNotationChain(pAst, expression, 0);
+        return parseDotNotationChain(pAst->getsubast(ast_dotnotation_call_expr), expression, 0);
     }
 
     return expression;

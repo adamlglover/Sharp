@@ -36,8 +36,8 @@ string Asm::expect_identifier() {
 }
 
 bool Asm::label_exists(string label) {
-    for(unsigned int i = 0; i < label_map.size(); i++) {
-        if(label_map.get(i).key == label)
+    for(unsigned int i = 0; i < label_map->size(); i++) {
+        if(label_map->get(i).key == label)
             return true;
     }
 
@@ -49,9 +49,9 @@ int64_t Asm::current_address() {
 }
 
 int64_t Asm::get_label(string label) {
-    for(unsigned int i = 0; i < label_map.size(); i++) {
-        if(label_map.get(i).key == label)
-            return label_map.get(i).value;
+    for(unsigned int i = 0; i < label_map->size(); i++) {
+        if(label_map->get(i).key == label)
+            return label_map->get(i).value;
     }
 
     return 0;
@@ -221,7 +221,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
     this->instance = instance;
     this->code = code;
     tk = new tokenizer(code, "stdin");
-    label_map.init();
+    label_map = &instance->current_scope()->label_map;
     RuntimeNote note = RuntimeNote(instance->_current->sourcefile, instance->_current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
     keypair<std::string, int64_t> label;
@@ -455,7 +455,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 string name = expect_identifier();
                 if(!label_exists(name)) {
                     label.set(name, current_address());
-                    label_map.add(label);
+                    label_map->add(label);
                 } else {
                     tk->geterrors()->newerror(GENERIC, current(), "redefinition of label `" + name + "`");
                 }

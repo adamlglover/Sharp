@@ -42,7 +42,7 @@ private:
     string code;
     tokenizer* tk;
     bool expect_instr;
-    List<keypair<std::string, int64_t>> label_map;
+    List<keypair<std::string, int64_t>>* label_map;
 
     bool isend();
 

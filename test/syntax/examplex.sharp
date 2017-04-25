@@ -11,6 +11,8 @@ class string { /* ... */ }
 
 class Main base application#X{
 
+    dynamic_object o;
+
     public static fn main(string[] args) : var {
 
         __asm(
@@ -25,6 +27,7 @@ class Main base application#X{
             "goto $L1"
         );
 
+        continue;
         if(true) {
             Console.write("Hello, World!");
         } else if(true) {
@@ -34,7 +37,7 @@ class Main base application#X{
 
             for(var l = 0; args < x;) {
                 foreach(var v : args) {
-
+                    continue;
                 }
             }
         }

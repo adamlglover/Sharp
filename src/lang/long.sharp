@@ -1,13 +1,13 @@
 mod sharp.lang;
 
 class Long {
-    private long value;
+    private var value;
 
-    public Long(long value) {
+    public Long(var value) {
         self->value = value;
     }
 
-    private function i2str(long value) : String{
+    private function toString(long value) : String{
         return "";
     }
 

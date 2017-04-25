@@ -225,9 +225,9 @@ asm ( <string-literal>+ ) ;
      | <dowhile-statement>
      | <trycatch-statement>
      | <throw-statement>
-     | continue [identifier] ;
+     | continue ;
      | break ;
-     | goto [identifier] ;
+     | goto identifier ;
      | identifier ':' <statement>
      | <variable-declaration>
      | <expression>

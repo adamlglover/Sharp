@@ -162,51 +162,6 @@ struct Block {
     }
 };
 
-struct context {
-    context()
-    :
-            super(NULL),
-            accessor(NULL),
-            expression_head(false)
-    {
-    }
-
-    context(ClassObject* super)
-    :
-            super(super),
-            accessor(NULL),
-            expression_head(false)
-    {
-    }
-
-    /*
-     * we use ints to act as fillers to assign
-     */
-    context(bool expression_head)
-            :
-            super(NULL),
-            accessor(NULL),
-            expression_head(expression_head)
-    {
-    }
-
-    context(bool expression_head, context* ctx)
-            :
-            super(ctx->super),
-            accessor(ctx->accessor),
-            expression_head(expression_head)
-    {
-    }
-
-    ClassObject* super;
-    ClassObject* accessor;
-    bool expression_head;
-
-    void clear() {
-        super = NULL;
-    }
-};
-
 enum scope_type {
     scope_global,
     scope_class,
@@ -225,6 +180,7 @@ struct Scope {
             blocks(0)
     {
         locals.init();
+        label_map.init();
     }
 
     Scope(scope_type type, ClassObject* klass)
@@ -237,6 +193,7 @@ struct Scope {
             blocks(0)
     {
         locals.init();
+        label_map.init();
     }
 
     Scope(scope_type type, ClassObject* klass, Method* func)
@@ -249,6 +206,7 @@ struct Scope {
             blocks(0)
     {
         locals.init();
+        label_map.init();
     }
 
     keypair<int, Field>* getLocalField(string field_name) {
@@ -271,12 +229,34 @@ struct Scope {
         return 0;
     }
 
+    int64_t getLabel(std::string name) {
+        for(unsigned int i = 0; i < label_map.size(); i++) {
+            if(label_map.get(i).key == name)
+                return label_map.get(i).value;
+        }
+        return -1;
+    }
+
     scope_type type;
     ClassObject* klass;
     Method* function;
     List<keypair<int, Field>> locals;
+    List<keypair<std::string, int64_t>> label_map;
+    List<keypair<std::string, int64_t>> undeclared_labels; // name: label ; id: 9
     int blocks;
     bool self, base;
+
+    void addUndeclaredLabel(string name, int64_t id) {
+        undeclared_labels.add(keypair<std::string, int64_t>(name, id));
+    }
+
+    bool hasUndeclaredLabel(string name) {
+        for(unsigned int i = 0; i < undeclared_labels.size(); i++) {
+            if(undeclared_labels.get(i).key == name)
+                return true;
+        }
+        return false;
+    }
 };
 
 class ref_ptr {
@@ -341,6 +321,10 @@ public:
 
 #define init_constructor_postfix "()<init>"
 
+#define for_label_begin_id "$$for_start"
+
+#define for_label_end_id "$$for_end"
+
 class runtime
 {
 public:
@@ -402,6 +386,8 @@ public:
     static bool all_integers(string int_string);
 
     static int64_t get_low_bytes(double var);
+
+    Scope *current_scope();
 
 private:
     Environment* env;
@@ -538,8 +524,6 @@ private:
     void mov_field(Expression &expression, ast* pAst);
 
     void parse_class_cast(ResolvedReference &reference, Expression &expression, ast *pAst);
-
-    Scope *current_scope();
 
     Scope* add_scope(Scope scope);
 
@@ -739,6 +723,22 @@ private:
     void parseFinallyBlock(Block &block, ast *pAst);
 
     void parseThrowStatement(Block &block, ast *pAst);
+
+    void parseStatement(Block &block, ast *pAst);
+
+    void parseContinueStatement(Block &block, ast *pAst);
+
+    int64_t getLastLoopBeginAddress();
+
+    void removeForLabels(Scope *scope);
+
+    void parseBreakStatement(Block &block, ast *pAst);
+
+    void parseGotoStatement(Block &block, ast *pAst);
+
+    void handleAnonymousGoto(m64Assembler &assembler, string name);
+
+    void evaluateLabels(Block &block);
 };
 
 #define progname "bootstrap"

@@ -1,13 +1,79 @@
 mod sharp.lang;
 
-class String {
-    private string value;
+class string {
+    /*this will hold our string */
+        var[] data;
 
-    public String(string value) {
-        self->value = value;
-    }
+        string( var[] immstr ) {
+            data = immstr;
+        }
 
-    public function value() : String {
-        return value;
-    }
+        fn replace( var pos, var replaceChar ) : string {
+            if(pos >= __sizeof(data)) {
+                throw new RuntimeErr("Index out of bounds exception");
+            }
+
+            data[pos] = replaceChar;
+            return self;
+        }
+
+        fn append(var[] immstr) : string {
+            var[] oldStr = data;
+            data = new var[__sizeof(oldStr) + __sizeof(immstr)];
+
+            var iter;
+            for(var i = 0; i < __sizeof(oldStr); i++) {
+                data[iter++] = oldStr[i];
+            }
+
+            for(var i = 0; i < __sizeof(immstr); i++) {
+                data[iter++] = immstr[i];
+            }
+
+            return self;
+        }
+
+        fn at( var pos ) : __int8 {
+            if(pos >= __sizeof(data)) {
+                throw RuntimeErr("Index out of bounds");
+            }
+
+            return data[pos];
+        }
+
+        fn operator+( var[] immstr ) : string {
+            append(immstr);
+        }
+
+        fn operator+( string str ) : string {
+            append(str.value());
+        }
+
+        fn operator==( string str ) : var {
+            var iter;
+            foreach(var char : data) {
+                if(char != str.at(iter++))
+                    return false;
+            }
+
+            return true;
+        }
+
+        fn operator==( var[] str ) : var {
+            var iter;
+            foreach( var char : data ) {
+                if(char != str[iter++])
+                    return false;
+            }
+
+            return true;
+        }
+
+        fn operator+( var char ) : string {
+            append(new var[] { (__int8)char });
+        }
+
+        fn value() : var[] {
+            return data;
+        }
 }

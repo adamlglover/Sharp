@@ -1492,13 +1492,6 @@ void parser::parse_statement(ast* pAst) {
 
         expect_token(pAst2, "continue", "`continue`");
 
-        errors->enablecheck_mode();
-        if(!expectidentifier(pAst)) {
-            errors->pass();
-            pushback();
-        }
-        else
-            errors->fail();
         expect(SEMICOLON, pAst, "`;`");
     }
     else if(current().gettoken() == "break")
@@ -1514,13 +1507,8 @@ void parser::parse_statement(ast* pAst) {
 
         expect_token(pAst2, "goto", "`goto`");
 
-        errors->enablecheck_mode();
-        if(!expectidentifier(pAst)) {
-            errors->pass();
-            pushback();
-        }
-        else
-            errors->fail();
+        expectidentifier(pAst);
+        // TODO: add support for calling goto labels[9];
         expect(SEMICOLON, pAst, "`;`");
     }
     else if(isvariable_decl(current()))
