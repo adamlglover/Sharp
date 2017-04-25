@@ -727,10 +727,22 @@ private:
     void parseForEachStatement(Block &block, ast *trunk);
 
     void parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
+
+    void parseWhileStatement(Block &block, ast *pAst);
+
+    void parseDoWhileStatement(Block &block, ast *pAst);
+
+    void parseTryCatchStatement(Block &block, ast *pAst);
+
+    void parseCachClause(Block &block, ast *pAst);
+
+    void parseFinallyBlock(Block &block, ast *pAst);
+
+    void parseThrowStatement(Block &block, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.46"
+#define progvers "0.1.47"
 
 struct options {
     /*

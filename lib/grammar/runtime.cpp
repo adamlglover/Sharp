@@ -367,6 +367,58 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     scope->blocks--;
 }
 
+void runtime::parseWhileStatement(Block& block, ast* pAst) {
+    Expression cond = parseExpression(pAst->getsubast(ast_expression));
+    // TODO: process condition with asm
+    parseBlock(pAst->getsubast(ast_block), block);
+}
+
+void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
+    parseBlock(pAst->getsubast(ast_block), block);
+
+    Expression cond = parseExpression(pAst);
+}
+
+void runtime::parseCachClause(Block& block, ast* pAst) {
+    keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
+    // TODO: add catcher to asm
+    parseBlock(pAst->getsubast(ast_block), block);
+}
+
+void runtime::parseFinallyBlock(Block& block, ast* pAst) {
+    parseBlock(pAst->getsubast(ast_block), block);
+}
+
+void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
+    parseBlock(pAst->getsubast(ast_block), block);
+
+    ast* sub;
+    for(unsigned int i = 1; i < pAst->getsubastcount(); i++) {
+        sub = pAst->getsubast(i);
+
+        switch(sub->gettype()) {
+            case ast_catch_clause:
+                parseCachClause(block, pAst);
+                break;
+            case ast_finally_block:
+                parseFinallyBlock(block, pAst);
+                break;
+        }
+    }
+}
+
+void runtime::parseThrowStatement(Block& block, ast* pAst) {
+    Expression clause = parseExpression(pAst->getsubast(ast_expression));
+
+    if(clause.type == expression_lclass) {
+        ClassObject* throwable = getClass("<create-std-lib-first>", "RuntimeErr");
+        // TODO: do some further checking in here
+        // check if class maybe is child of class RuntimeErr
+    } else {
+        errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must be of type lclass");
+    }
+}
+
 void runtime::parseBlock(ast* pAst, Block& block) {
     Scope* scope = current_scope();
     scope->blocks++;
@@ -399,6 +451,18 @@ void runtime::parseBlock(ast* pAst, Block& block) {
                 break;
             case ast_foreach_statement:
                 parseForEachStatement(block, trunk);
+                break;
+            case ast_while_statement:
+                parseWhileStatement(block, trunk);
+                break;
+            case ast_do_while_statement:
+                parseDoWhileStatement(block, trunk);
+                break;
+            case ast_trycatch_statement:
+                parseTryCatchStatement(block, trunk);
+                break;
+            case ast_throw_statement:
+                parseThrowStatement(block, trunk);
                 break;
             default: {
                 stringstream err;
@@ -4177,7 +4241,10 @@ Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* 
 keypair<string, ResolvedReference> runtime::parseUtypeArg(ast* pAst) {
     keypair<string, ResolvedReference> utype_arg;
     utype_arg.value = parseUtype(pAst->getsubast(ast_utype)).utype;
-    utype_arg.key = pAst->getentity(0).gettoken();
+    if(pAst->getentitycount() != 0)
+        utype_arg.key = pAst->getentity(0).gettoken();
+    else
+        utype_arg.key = "";
 
     return utype_arg;
 }

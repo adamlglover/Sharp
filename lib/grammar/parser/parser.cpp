@@ -1329,7 +1329,7 @@ void parser::parse_whilestmnt(ast *pAst) {
 }
 
 void parser::parse_dowhilestmnt(ast *pAst) {
-    pAst = get_ast(pAst, ast_while_statement);
+    pAst = get_ast(pAst, ast_do_while_statement);
 
     expect_token(pAst, "do", "`do`");
     parse_block(pAst);

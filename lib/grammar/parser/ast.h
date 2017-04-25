@@ -47,6 +47,7 @@ enum ast_types
     ast_break_statement,
     ast_goto_statement,
     ast_while_statement,
+    ast_do_while_statement,
     ast_assembly_statement,
     ast_for_statement,
     ast_for_expresion_cond,
