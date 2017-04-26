@@ -70,6 +70,20 @@ public:
 
 
     keypair<List<string>, List<m64Assembler>> injectors;
+
+    void inject(int64_t &i, m64Assembler &assembler) {
+        if(i < 0) return;
+
+        int64_t start = i, iter = 0;
+        for(;;) {
+            if(iter >= assembler.__asm64.size())
+                break;
+
+            __asm64.insert(start, assembler.__asm64.get(iter++));
+            start++;
+        }
+    }
+
 private:
 
 

@@ -1499,7 +1499,7 @@ void parser::parse_statement(ast* pAst) {
         ast* pAst2 = get_ast(pAst, ast_break_statement);
 
         expect_token(pAst2, "break", "`break`");
-        expect(SEMICOLON, pAst, "`;`");
+        expect(SEMICOLON, pAst2, "`;`");
     }
     else if(current().gettoken() == "goto")
     {
@@ -1507,9 +1507,9 @@ void parser::parse_statement(ast* pAst) {
 
         expect_token(pAst2, "goto", "`goto`");
 
-        expectidentifier(pAst);
+        expectidentifier(pAst2);
         // TODO: add support for calling goto labels[9];
-        expect(SEMICOLON, pAst, "`;`");
+        expect(SEMICOLON, pAst2, "`;`");
     }
     else if(isvariable_decl(current()))
     {

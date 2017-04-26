@@ -34,6 +34,31 @@ public:
         __expand();
     }
 
+    void insert(long long _X, T& data) {
+        if(_X>len || _X < 0){
+            stringstream ss;
+            ss << "index out of bounds list::insert() _X: " << _X
+               << " length: " << len << endl;
+            throw std::runtime_error(ss.str());
+        }
+
+        if(len == 0) {
+            push_back(data);
+        } else {
+            __expand();
+            int64_t iter = _X;
+            T tmp = _Data[iter++];
+            _Data[_X] = data;
+            for(unsigned long i = _X; i < len-1; i++) {
+                if(i == _X) {
+                    // insert data
+                    _Data[i] = tmp;
+                } else
+                    _Data[i] = _Data[i+1];
+            }
+        }
+
+    }
 
     /*
      * Programmer must be responsible

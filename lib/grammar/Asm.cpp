@@ -105,7 +105,9 @@ void Asm::expect_int_or_register() {
         if(label_exists(name)) {
             i2.high_bytes = get_label(name);
         } else {
-            tk->geterrors()->newerror(GENERIC, current(), "expected identifier after mnemonic '$'");
+            npos--;
+            tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
+            npos++;
         }
 
         i2.low_bytes = -1;
@@ -457,7 +459,9 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                     label.set(name, current_address());
                     label_map->add(label);
                 } else {
+                    npos--;
                     tk->geterrors()->newerror(GENERIC, current(), "redefinition of label `" + name + "`");
+                    npos++;
                 }
 
                 expect_instr = true;
@@ -468,7 +472,9 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 if(label_exists(name)) {
                     assembler.push_i64(SET_Di(i64, op_GOTO, get_label(name)));
                 } else {
-                    tk->geterrors()->newerror(GENERIC, current(), "expected identifier after mnemonic '$'");
+                    npos--;
+                    tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
+                    npos++;
                 }
             } else {
                 npos++;

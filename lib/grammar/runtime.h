@@ -177,7 +177,8 @@ struct Scope {
             self(false),
             base(false),
             function(NULL),
-            blocks(0)
+            blocks(0),
+            loops(0)
     {
         locals.init();
         label_map.init();
@@ -190,7 +191,8 @@ struct Scope {
             self(false),
             base(false),
             function(NULL),
-            blocks(0)
+            blocks(0),
+            loops(0)
     {
         locals.init();
         label_map.init();
@@ -203,7 +205,8 @@ struct Scope {
             self(false),
             base(false),
             function(func),
-            blocks(0)
+            blocks(0),
+            loops(0)
     {
         locals.init();
         label_map.init();
@@ -244,6 +247,7 @@ struct Scope {
     List<keypair<std::string, int64_t>> label_map;
     List<keypair<std::string, int64_t>> undeclared_labels; // name: label ; id: 9
     int blocks;
+    int loops;
     bool self, base;
 
     void addUndeclaredLabel(string name, int64_t id) {
@@ -354,7 +358,6 @@ public:
         string_map.init();
         assembler = new m64Assembler();
 
-        contexts = new list<context>();
         scope_map = new List<Scope>();
         parse_map.key.init();
         parse_map.value.init();
@@ -399,7 +402,6 @@ private:
     list<ClassObject>* classes;
     list<keypair<string, std::list<string>>>*  import_map;
     List<string> string_map;
-    list<context>* contexts;
     List<Scope>* scope_map;
     m64Assembler* assembler;
     bool resolvedFields;
@@ -738,11 +740,33 @@ private:
 
     void handleAnonymousGoto(m64Assembler &assembler, string name);
 
-    void evaluateLabels(Block &block);
+    void resolveBlockBranches(ast *pAst, Block &block);
+
+    void partial_parseAsmDecl(Block &block, ast *pAst);
+
+    void partial_breakStatement(Block &block, ast *pAst);
+
+    int64_t get_label(string label);
+
+    bool label_exists(string label);
+
+    void partial_parseTryCatch(Block &block, ast *pAst);
+
+    void partial_parseCatchSClause(Block &block, ast *pAst);
+
+    void partial_parseFinallyBlock(Block &block, ast *pAst);
+
+    void partial_parseGotoStatement(Block &block, ast *pAst);
+
+    void parseLabelDecl(Block &block, ast *pAst);
+
+    void partial_parseStatement(Block &block, ast *pAst);
+
+    void parseVarDecl(Block &block, ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.47"
+#define progvers "0.1.48"
 
 struct options {
     /*

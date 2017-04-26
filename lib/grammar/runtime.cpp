@@ -249,8 +249,21 @@ void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
         }
     }
 
+    m64Assembler vcode, injector;
     Asm __vasm;
-    __vasm.parse(block.code, this, assembly, pAst);
+    __vasm.parse(vcode, this, assembly, pAst);
+
+    for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
+        if(block.code.injectors.key.get(i) == "asm") {
+            injector = block.code.injectors.value.at(i);
+
+            block.code.injectors.value.remove(i);
+            block.code.injectors.key.remove(i);
+            break;
+        }
+    }
+
+    block.code.inject(injector.__asm64.get(0), vcode);
 }
 
 void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
@@ -295,17 +308,11 @@ Field runtime::utypeArgToField(keypair<string, ResolvedReference> arg) {
 }
 
 void runtime::removeForLabels(Scope* scope) {
-    for(long long i = scope->label_map.size()-1; i > 0; i++) {
+    readjust:
+    for(long long i = 0; i < scope->label_map.size(); i++) {
         if(scope->label_map.get(i).key == for_label_begin_id) {
             scope->label_map.remove(i);
-            break;
-        }
-    }
-
-    for(long long i = scope->label_map.size()-1; i > 0; i++) {
-        if(scope->label_map.get(i).key == for_label_end_id) {
-            scope->label_map.remove(i);
-            break;
+            goto readjust;
         }
     }
 }
@@ -313,6 +320,7 @@ void runtime::removeForLabels(Scope* scope) {
 void runtime::parseForStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
+    scope->loops++;
 
     parseUtypeArg(pAst, scope, block);
 
@@ -326,15 +334,21 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     }
 
     // TODO: add real address
-    scope->label_map.add(keypair<std::string, int64_t>(for_label_begin_id,0));
+    stringstream ss;
+    ss << for_label_begin_id << scope->loops;
+
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
 
     parseBlock(pAst->getsubast(ast_block), block);
     // TODO: add real address
-    scope->label_map.add(keypair<std::string, int64_t>(for_label_end_id,0));
 
     // TODO: fix branch addresses for 'break;'
-    removeForLabels(scope);
+
+    stringstream ss2;
+    ss2 << for_label_end_id << scope->loops;
+    scope->label_map.add(keypair<std::string, int64_t>(ss2.str(),0));
     scope->blocks--;
+    scope->loops--;
 }
 
 void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
@@ -378,6 +392,7 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
 void runtime::parseForEachStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
+    scope->loops++;
 
     Expression arryExpression = parseExpression(pAst->getsubast(ast_expression));
     parseUtypeArg(pAst, scope, block, &arryExpression);
@@ -386,8 +401,18 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
         errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must evaluate to type array");
     }
 
+    stringstream ss;
+    ss << for_label_begin_id << scope->loops;
+
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
+
     parseBlock(pAst->getsubast(ast_block), block);
 
+    stringstream ss2;
+    ss2 << for_label_end_id << scope->loops;
+    scope->label_map.add(keypair<std::string, int64_t>(ss2.str(),0));
+
+    scope->loops--;
     scope->blocks--;
 }
 
@@ -467,18 +492,48 @@ void runtime::parseContinueStatement(Block& block, ast* pAst) {
     }
 }
 
+bool runtime::label_exists(string label) {
+    for(unsigned int i = 0; i < current_scope()->label_map.size(); i++) {
+        if(current_scope()->label_map.get(i).key == label)
+            return true;
+    }
+
+    return false;
+}
+
+int64_t runtime::get_label(string label) {
+    for(unsigned int i = 0; i < current_scope()->label_map.size(); i++) {
+        if(current_scope()->label_map.get(i).key == label)
+            return current_scope()->label_map.get(i).value;
+    }
+
+    return 0;
+}
+
 void runtime::parseBreakStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     int64_t start_addr;
 
     if((start_addr = getLastLoopBeginAddress()) != -1) {
         // TODO: jump to label address
-        block.code.addinjector_unsafe("break");
-        m64Assembler &assembler = block.code.injectors.value.last();
+        stringstream name;
+        name << for_label_end_id << scope->loops;
 
-        /* the offset address will get resolved later */
-        assembler.push_i64(block.code.__asm64.size()-1); // address to inject instruction
-        assembler.push_i64(SET_Di(start_addr, op_GOTO, 0));
+        if(label_exists(name.str())) {
+            m64Assembler injector;
+
+            for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
+                if(block.code.injectors.key.get(i) == "break") {
+                    injector = block.code.injectors.value.at(i);
+
+                    block.code.injectors.value.remove(i);
+                    block.code.injectors.key.remove(i);
+                    break;
+                }
+            }
+
+            block.code.__asm64.insert(injector.__asm64.get(0), SET_Di(start_addr, op_GOTO, get_label(name.str())));
+        }
     } else {
         // error not in loop
         errors->newerror(GENERIC, pAst, "break statement outside of loop");
@@ -507,10 +562,143 @@ void runtime::parseGotoStatement(Block& block, ast* pAst) {
     int64_t i64;
 
     if(scope->getLabel(label) != -1) {
-        block.code.push_i64(SET_Di(i64, op_GOTO, scope->getLabel(label)));
+        m64Assembler injector;
+
+        for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
+            if(block.code.injectors.key.get(i) == "goto") {
+                injector = block.code.injectors.value.at(i);
+
+                block.code.injectors.value.remove(i);
+                block.code.injectors.key.remove(i);
+                break;
+            }
+        }
+
+        block.code.__asm64.insert(injector.__asm64.get(0), SET_Di(i64, op_GOTO, scope->getLabel(label)));
     } else {
-        handleAnonymousGoto(block.code, label);
+        errors->newerror(COULD_NOT_RESOLVE, pAst, " `" + label + "`");
     }
+}
+
+void runtime::partial_parseAsmDecl(Block& block, ast* pAst) {
+    block.code.addinjector_unsafe("asm");
+    m64Assembler& vasm = block.code.injectors.value.last();
+    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
+}
+
+void runtime::partial_breakStatement(Block& block, ast* pAst) {
+    block.code.addinjector_unsafe("break");
+    m64Assembler& vasm = block.code.injectors.value.last();
+    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
+}
+
+void runtime::partial_parseGotoStatement(Block& block, ast* pAst) {
+    block.code.addinjector_unsafe("goto");
+    m64Assembler& vasm = block.code.injectors.value.last();
+    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
+}
+
+void runtime::parseLabelDecl(Block& block,ast* pAst) {
+    Scope* scope = current_scope();
+
+    string label = pAst->getentity(0).gettoken();
+    if(label_exists(label)) {
+        errors->newerror(GENERIC, pAst->getentity(0), "redefinition of label `" + label + "`");
+    } else {
+        scope->label_map.add(keypair<string, int64_t>(label, block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1));
+    }
+
+    parseStatement(block, pAst->getsubast(ast_statement));
+}
+
+/*
+ * if(scope->getLocalField(name) != NULL) {
+        // chech scope
+        field = scope->getLocalField(name);
+        if(field->key == scope->blocks) {
+            errors->newerror(GENERIC, pAst->getentity(startpos), " duplicate declaration of local variable `" + field->value.name + "`");
+            return;
+        } else {
+            warning(GENERIC, pAst->line, pAst->col, " local variable `" + field->value.name + "` hides previous declaration in higher scope");
+        }
+    } else {
+        RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                       pAst->line, pAst->col);
+
+        modCompat.addAll(modifiers);
+        scope->locals.add(keypair<int, Field>(scope->blocks, Field(NULL, uid++, name, scope->klass, modCompat, note)));
+        field = scope->getLocalField(name);
+    }
+
+    if(pAst->hassubast(ast_value)) {
+        Expression expression = parse_value(pAst->getsubast(ast_value));
+
+        Expression assignee(pAst);
+        assignee.type = expression_field;
+        assignee.utype.field = &field->value;
+        assignee.utype.type = ResolvedReference::FIELD;
+        assignee.utype.refrenceName = field->value.name;
+
+        if(equals(assignee, expression)) {
+            return;
+        }
+        // TODO: do something based on the assign expression
+    }
+ */
+void runtime::parseVarDecl(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    List<AccessModifier> modCompat;
+    int startpos=0;
+
+    parse_access_decl(pAst, modifiers, startpos);
+
+    string name =  pAst->getentity(startpos).gettoken();
+    keypair<int, Field>* field;
+
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+    Field f = Field(NULL, uid++, name, scope->klass, modCompat, note);
+
+    Expression utype = parseUtype(pAst->getsubast(ast_utype));
+    if(utype.utype.type == ResolvedReference::CLASS) {
+        f.klass = utype.utype.klass;
+        f.type = field_class;
+    } else if(utype.utype.type == ResolvedReference::NATIVE) {
+        f.nf = utype.utype.nf;
+        f.type = field_native;
+    } else {
+        f.type = field_unresolved;
+    }
+
+    f.array = utype.utype.array;
+
+    if(validateLocalField(name, pAst)) {
+        if(utype.utype.type == ResolvedReference::FIELD) {
+            errors->newerror(COULD_NOT_RESOLVE, pAst, " `" + utype.utype.field->name + "`");
+        }
+
+
+        modCompat.addAll(modifiers);
+        scope->locals.add(keypair<int, Field>(scope->blocks, f));
+        field = scope->getLocalField(name);
+
+        if(pAst->hassubast(ast_value)) {
+            Expression expression = parse_value(pAst->getsubast(ast_value));
+
+            Expression assignee(pAst);
+            assignee.type = expression_field;
+            assignee.utype.field = &field->value;
+            assignee.utype.type = ResolvedReference::FIELD;
+            assignee.utype.refrenceName = field->value.name;
+
+            if(equals(assignee, expression)) {
+                return;
+            }
+            // TODO: do something based on the assign expression
+        }
+    }
+
 }
 
 void runtime::parseStatement(Block& block, ast* pAst) {
@@ -525,7 +713,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseExpression(pAst);
             break;
         case ast_assembly_statement:
-            parseAssemblyStatement(block, pAst);
+            partial_parseAsmDecl(block, pAst);
             break;
         case ast_for_statement:
             parseForStatement(block, pAst);
@@ -549,10 +737,16 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseContinueStatement(block, pAst);
             break;
         case ast_break_statement:
-            parseBreakStatement(block, pAst);
+            partial_breakStatement(block, pAst);
             break;
         case ast_goto_statement:
-            parseGotoStatement(block, pAst); // TODO: do 2 runthroughs somehow
+            partial_parseGotoStatement(block, pAst);
+            break;
+        case ast_label_decl:
+            parseLabelDecl(block, pAst);
+            break;
+        case ast_var_decl:
+            parseVarDecl(block, pAst);
             break;
         default: {
             stringstream err;
@@ -563,14 +757,107 @@ void runtime::parseStatement(Block& block, ast* pAst) {
     }
 }
 
-void runtime::evaluateLabels(Block& block) {
-    Scope* scope = current_scope();
+void runtime::partial_parseCatchSClause(Block& block, ast* pAst) {
+    resolveBlockBranches(pAst->getsubast(ast_block), block);
+}
 
-    if(scope->label_map.size() != 0) {
-        for(unsigned int i = 0; i < scope->label_map.size(); i++) {
-            errors->newerror(COULD_NOT_RESOLVE, )
+void runtime::partial_parseFinallyBlock(Block& block, ast* pAst) {
+    resolveBlockBranches(pAst->getsubast(ast_block), block);
+}
+
+void runtime::partial_parseTryCatch(Block& block, ast* pAst) {
+    resolveBlockBranches(pAst->getsubast(ast_block), block);
+
+    ast* sub;
+    for(unsigned int i = 1; i < pAst->getsubastcount(); i++) {
+        sub = pAst->getsubast(i);
+
+        switch(sub->gettype()) {
+            case ast_catch_clause:
+                partial_parseCatchSClause(block, pAst);
+                break;
+            case ast_finally_block:
+                partial_parseFinallyBlock(block, pAst);
+                break;
         }
     }
+}
+
+void runtime::partial_parseStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+
+    switch(pAst->gettype()) {
+        case ast_return_stmnt:
+            break;
+        case ast_if_statement:
+            // TODO: partial parse this to process inner block
+            resolveBlockBranches(pAst->getsubast(ast_block), block);
+            break;
+        case ast_expression:
+            break;
+        case ast_assembly_statement:
+            parseAssemblyStatement(block, pAst);
+            break;
+        case ast_for_statement:
+            scope->loops++;
+            resolveBlockBranches(pAst->getsubast(ast_block), block);
+            scope->loops++;
+            // TODO: partial parse this to process inner block
+            break;
+        case ast_foreach_statement:
+            scope->loops++;
+            resolveBlockBranches(pAst->getsubast(ast_block), block);
+            scope->loops++;
+            break;
+        case ast_while_statement:
+            resolveBlockBranches(pAst->getsubast(ast_block), block);
+            break;
+        case ast_do_while_statement:
+            resolveBlockBranches(pAst->getsubast(ast_block), block);
+            break;
+        case ast_trycatch_statement:
+            partial_parseTryCatch(block, pAst);
+            break;
+        case ast_throw_statement:
+            break;
+        case ast_continue_statement:
+            break;
+        case ast_break_statement:
+            parseBreakStatement(block, pAst);
+            break;
+        case ast_goto_statement:
+            parseGotoStatement(block, pAst);
+            break;
+        case ast_label_decl:
+            partial_parseStatement(block, pAst->getsubast(ast_statement));
+            break;
+        default: {
+            stringstream err;
+            err << ": unknown ast type: " << pAst->gettype();
+            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
+            break;
+        }
+    }
+}
+
+void runtime::resolveBlockBranches(ast* pAst, Block& block) {
+    Scope* scope = current_scope();
+    scope->blocks++;
+
+    ast* trunk;
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        trunk = pAst->getsubast(i);
+
+        if(trunk->gettype() == ast_block) {
+            resolveBlockBranches(trunk, block);
+            continue;
+        } else
+            trunk = trunk->getsubast(0);
+
+        partial_parseStatement(block, trunk);
+    }
+
+    scope->blocks--;
 }
 
 void runtime::parseBlock(ast* pAst, Block& block) {
@@ -581,7 +868,6 @@ void runtime::parseBlock(ast* pAst, Block& block) {
     for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
         trunk = pAst->getsubast(i);
 
-        goto d;
         if(trunk->gettype() == ast_block) {
             parseBlock(trunk, block);
             continue;
@@ -591,7 +877,6 @@ void runtime::parseBlock(ast* pAst, Block& block) {
         parseStatement(block, trunk);
     }
 
-    evaluateLabels(block);
     scope->blocks--;
 }
 
@@ -624,6 +909,7 @@ void runtime::parseMethodDecl(ast* pAst) {
 
         Block fblock;
         parseBlock(pAst->getsubast(ast_block), fblock);
+        resolveBlockBranches(pAst->getsubast(ast_block), fblock);
         remove_scope();
     }
 }
@@ -4908,9 +5194,6 @@ void runtime::cleanup() {
     }
     macros->clear();
     delete (macros); macros = NULL;
-
-    contexts->clear();
-    delete (contexts); contexts = NULL;
 
     scope_map->free();
     delete (scope_map); scope_map = NULL;

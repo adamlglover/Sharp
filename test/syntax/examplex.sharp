@@ -25,9 +25,11 @@ class Main base application#X{
             "movi 138.8e+10, %ecx"
             "_sizeof %egx"
             "goto $L1"
+            "goto $foo22"
         );
 
         continue;
+        goto foo22;
         if(true) {
             Console.write("Hello, World!");
         } else if(true) {
@@ -35,12 +37,16 @@ class Main base application#X{
         } else {
             Console.write("Hello, World!");
 
+            var x;
             for(var l = 0; args < x;) {
+            XXX x = "";
                 foreach(var v : args) {
+                    break;
                     continue;
                 }
             }
         }
+        foo22:
         return b;
     }
 
