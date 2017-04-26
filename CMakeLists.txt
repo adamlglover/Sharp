@@ -11,7 +11,7 @@ set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 set(CMAKE_C_FLAGS_DEBUG  "-lstdc++ ${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_MINSIZEREL "-lstdc++ -s -O3 -Ofast ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-set(SHARPC "build")
+#set(SHARPC "build")
 
 # Linux compiler console: g++ *.cpp ../../main.cpp ../util/*.cpp parser/*.cpp parser/*/*.cpp -lstdc++ -s -O3 -Ofast -o bootstrap -std=c++11
 
@@ -22,7 +22,7 @@ if (SHARPC)
 
 else()
     #virtual machine
-    set(SOURCE_FILES main.cpp lib/runtime/startup.h lib/runtime/startup.cpp lib/util/keypair.h lib/util/file.h lib/util/file.cpp lib/runtime/internal/Environment.cpp lib/runtime/internal/Environment.h lib/runtime/oo/Method.cpp lib/runtime/oo/Method.h lib/runtime/oo/Object.cpp lib/runtime/oo/Object.h lib/runtime/oo/ClassObject.cpp lib/runtime/oo/ClassObject.h lib/runtime/alloc/GC.cpp lib/runtime/alloc/GC.h lib/runtime/Manifest.h lib/runtime/Meta.cpp lib/runtime/Meta.h lib/runtime/interp/vm.h lib/runtime/interp/vm.cpp lib/runtime/internal/Exe.h lib/runtime/internal/Exe.cpp lib/runtime/alloc/mark.h lib/runtime/oo/Field.cpp lib/runtime/oo/Field.h lib/runtime/internal/Thread.cpp lib/runtime/internal/Thread.h lib/runtime/oo/string.cpp lib/runtime/oo/string.h lib/runtime/interp/Opcode.h lib/runtime/interp/FastStack.cpp lib/runtime/interp/FastStack.h lib/runtime/internal/Monitor.cpp lib/runtime/internal/Monitor.h lib/runtime/oo/Exception.h lib/runtime/oo/Exception.cpp lib/runtime/interp/CallStack.cpp lib/runtime/interp/CallStack.h lib/runtime/interp/register.h lib/util/List.h)
+    set(SOURCE_FILES main.cpp lib/runtime/startup.h lib/runtime/startup.cpp lib/util/keypair.h lib/util/file.h lib/util/file.cpp lib/runtime/internal/Environment.cpp lib/runtime/internal/Environment.h lib/runtime/oo/Method.cpp lib/runtime/oo/Method.h lib/runtime/oo/Object.cpp lib/runtime/oo/Object.h lib/runtime/oo/ClassObject.cpp lib/runtime/oo/ClassObject.h lib/runtime/alloc/GC.cpp lib/runtime/alloc/GC.h lib/runtime/Manifest.h lib/runtime/Meta.cpp lib/runtime/Meta.h lib/runtime/interp/vm.h lib/runtime/interp/vm.cpp lib/runtime/internal/Exe.h lib/runtime/internal/Exe.cpp lib/runtime/alloc/mark.h lib/runtime/oo/Field.cpp lib/runtime/oo/Field.h lib/runtime/internal/Thread.cpp lib/runtime/internal/Thread.h lib/runtime/oo/string.cpp lib/runtime/oo/string.h lib/runtime/interp/Opcode.h lib/runtime/internal/Monitor.cpp lib/runtime/internal/Monitor.h lib/runtime/oo/Exception.h lib/runtime/oo/Exception.cpp lib/runtime/interp/CallStack.cpp lib/runtime/interp/CallStack.h lib/runtime/interp/register.h lib/util/List.h lib/runtime/internal/sh_asp.h)
 endif ()
 
 add_executable(Sharp ${SOURCE_FILES})

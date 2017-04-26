@@ -11,6 +11,11 @@ thread_local Thread* thread_self = NULL;
 Thread** Thread::threads = NULL;
 unsigned int Thread::tp = 0;
 
+/*
+ * Local registers for the thread to use
+ */
+thread_local double __rxs;
+
 void Thread::Startup() {
     threads = (Thread**)malloc(sizeof(Thread**)*MAX_THREADS);
     for(unsigned int i = 0; i < MAX_THREADS; i++) {
@@ -436,4 +441,21 @@ void*
     else
         return waitForThread(thread);
 #endif
+}
+
+void Thread::run() {
+
+}
+
+void Thread::call_asp(int64_t id) {
+    // TODO: setup stack
+    if(id < 0 || id >= env->__asp_len) {
+        // error
+    }
+
+    sh_asp* asp = env->__address_spaces+id;
+    __stack[++sp].var = sp-1; // store sp
+    __stack[++sp].var = fp; // store frame pointer
+
+    fp= sp+1;
 }

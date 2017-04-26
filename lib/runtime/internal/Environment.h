@@ -8,6 +8,7 @@
 #include "../oo/string.h"
 #include "../interp/FastStack.h"
 #include "../oo/ClassObject.h"
+#include "sh_asp.h"
 
 class Sh_object;
 class Method;
@@ -49,12 +50,14 @@ public:
     static ClassObject IndexOutOfBoundsException;
     static ClassObject NullptrException;
 
-    Sh_object* objects;
+    Sh_object* global_heap;
 
     Method* methods;
     ClassObject* classes;
+
     String* strings;
-    int64_t *bytecode;
+    int64_t *cache;
+    sh_asp* __address_spaces;
 
     void shutdown();
 
@@ -64,6 +67,8 @@ public:
     static void free(Sh_object*, int64_t);
     static void freesticky(_gc_object*, int64_t);
     static void gcinsert_stack(Sh_object *, int64_t);
+
+    int64_t __asp_len;
 };
 
 extern Environment* env;

@@ -12,6 +12,7 @@
 #include "../oo/ClassObject.h"
 #include "../oo/Exception.h"
 #include "../interp/CallStack.h"
+#include "sh_asp.h"
 
 #define MAX_THREADS 0x40fe
 
@@ -85,13 +86,14 @@ public:
     bool suspended;
     bool exited;
     nString name;
-    Method* main;
+    sh_asp* main;
     int exitVal;
     bool suspendPending;
     bool exceptionThrown;
 
-    FastStack stack;
-    CallStack cstack;
+    int64_t sp, fp;
+    stack* __stack;
+    sharp_cache cache;
     Throwable throwable;
 #ifdef WIN32_
     HANDLE thread;
@@ -107,6 +109,8 @@ public:
     static void resumeAllThreads();
 
 private:
+    void run();
+    void call_asp(int64_t id);
 
     void wait();
 
@@ -123,5 +127,8 @@ extern thread_local Thread* thread_self;
 
 #define main_threadid 0x0
 
+#define ret_asp \
+    sp = __stack[fp-2].var; \
+    fp = __stack[fp-1].var;
 
 #endif //SHARP_THREAD_H
