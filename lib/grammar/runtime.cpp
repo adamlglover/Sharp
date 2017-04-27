@@ -141,7 +141,6 @@ void runtime::parse_class_decl(ast *pAst) {
 
     add_scope(Scope(scope_class, klass));
     klass->setBaseClass(parse_base_class(pAst, ++startpos));
-    assembler->addinjector(klass->getFullName() + init_constructor_postfix);
 
     for(long i = 0; i < trunk->getsubastcount(); i++) {
         pAst = trunk->getsubast(i);
@@ -267,7 +266,10 @@ void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
 }
 
 void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
-    parseAssemblyBlock(block, pAst->getsubast(ast_assembly_block));
+    if(c_options.unsafe)
+        parseAssemblyBlock(block, pAst->getsubast(ast_assembly_block));
+    else
+        errors->newerror(GENERIC, pAst, "calling __asm without unsafe mode enabled. try recompiling your code with [-unsafe]");
 }
 
 bool runtime::validateLocalField(std::string name, ast* pAst) {
@@ -4470,9 +4472,6 @@ ClassObject *runtime::parse_base_class(ast *pAst, ClassObject* inheritor) {
                     errors->newerror(GENERIC, pAst->getsubast(base_ptr)->line, pAst->getsubast(base_ptr)->col,
                                      "cyclic dependency of class `" + ptr.refname + "` in parent class `" + inheritor->getName() + "`");
                 }
-                else {
-                    env->create_class(int_ClassObject(klass));
-                }
             }
 
             break;
@@ -5388,6 +5387,10 @@ void _srt_start(list<string> files)
 
         failed = rt.parse_map.key.size();
         succeeded = rt.parse_map.value.size();
+
+        if(errors == 0 && uo_errors == 0) {
+            rt.generate();
+        }
 
         errors+=rt.errs;
         uo_errors+=rt.uo_errs;
@@ -6338,4 +6341,18 @@ string ResolvedReference::typeToString() {
             return toString() + (array ? "[]" : "");
     }
     return toString() + (array ? "[]" : "");
+}
+
+std::string runtime::generate_header() {
+    return "";
+}
+
+void runtime::generate() {
+    file::stream _ostream;
+    _ostream.begin();
+
+    _ostream << generate_header();
+
+    file::write(c_options.out.c_str(), _ostream);
+    _ostream.end();
 }

@@ -42,10 +42,13 @@ int file::write(const char *f, stream& data)
         if(fp == 0)
             return 1;  // could not open file
 
-        unsigned int p=0;
-        do {
-            fputc( data.at(p++), fp );
-        }while(p<data.size());
+        if(data.size() > 0) {
+            unsigned int p=0;
+
+            do {
+                fputc( data.at(p++), fp );
+            }while(p<data.size());
+        }
 
         fclose(fp);
         return 0;

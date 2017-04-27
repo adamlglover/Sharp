@@ -11,14 +11,14 @@ set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 set(CMAKE_C_FLAGS_DEBUG  "-lstdc++ ${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_MINSIZEREL "-lstdc++ -s -O3 -Ofast ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-#set(SHARPC "build")
+set(SHARPC "build")
 
 # Linux compiler console: g++ *.cpp ../../main.cpp ../util/*.cpp parser/*.cpp parser/*/*.cpp -lstdc++ -s -O3 -Ofast -o bootstrap -std=c++11
 
 # compiler
 if (SHARPC)
     add_definitions(-DMAKE_COMPILER)
-    set(SOURCE_FILES main.cpp lib/grammar/parser/tokenizer/tokenentity.h lib/grammar/parser/tokenizer/tokenizer.h lib/grammar/parser/tokenizer/tokentype.h stdimports.h lib/grammar/parser/tokenizer/tokenentity.cpp lib/grammar/parser/tokenizer/tokenizer.cpp lib/grammar/parser/parseerrors.h lib/util/keypair.h lib/grammar/parser/parseerrors.cpp lib/grammar/parser/parser.h lib/runtime/interp/register.h lib/grammar/parser/ast.h lib/grammar/parser/ast.cpp lib/grammar/parser/parser.cpp lib/util/file.h  lib/util/file.cpp lib/util/List2.h lib/grammar/parser/parserstate.h lib/grammar/runtime.h lib/grammar/runtime.cpp lib/grammar/ClassObject.cpp lib/grammar/ClassObject.h lib/grammar/Method.cpp lib/grammar/Method.h lib/grammar/Field.h lib/grammar/NativeField.h lib/grammar/AccessModifier.h lib/grammar/Param.h lib/grammar/Param.cpp lib/grammar/Field.cpp lib/grammar/OperatorOverload.h lib/grammar/RuntimeNote.h lib/grammar/Environment.cpp lib/grammar/Environment.h lib/grammar/BytecodeStream.h lib/runtime/oo/string.h lib/runtime/interp/Opcode.h lib/grammar/m64Assembler.cpp lib/grammar/m64Assembler.h lib/grammar/Asm.cpp lib/grammar/Asm.h)
+    set(SOURCE_FILES main.cpp lib/grammar/parser/tokenizer/tokenentity.h lib/grammar/parser/tokenizer/tokenizer.h lib/grammar/parser/tokenizer/tokentype.h stdimports.h lib/grammar/parser/tokenizer/tokenentity.cpp lib/grammar/parser/tokenizer/tokenizer.cpp lib/grammar/parser/parseerrors.h lib/util/keypair.h lib/grammar/parser/parseerrors.cpp lib/grammar/parser/parser.h lib/runtime/interp/register.h lib/grammar/parser/ast.h lib/grammar/parser/ast.cpp lib/grammar/parser/parser.cpp lib/util/file.h  lib/util/file.cpp lib/util/List2.h lib/grammar/parser/parserstate.h lib/grammar/runtime.h lib/grammar/runtime.cpp lib/grammar/ClassObject.cpp lib/grammar/ClassObject.h lib/grammar/Method.cpp lib/grammar/Method.h lib/grammar/Field.h lib/grammar/NativeField.h lib/grammar/AccessModifier.h lib/grammar/Param.h lib/grammar/Param.cpp lib/grammar/Field.cpp lib/grammar/OperatorOverload.h lib/grammar/RuntimeNote.h lib/grammar/BytecodeStream.h lib/runtime/oo/string.h lib/runtime/interp/Opcode.h lib/grammar/m64Assembler.cpp lib/grammar/m64Assembler.h lib/grammar/Asm.cpp lib/grammar/Asm.h)
 
 else()
     #virtual machine

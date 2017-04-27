@@ -8,7 +8,6 @@
 #include "../../stdimports.h"
 #include "parser/parser.h"
 #include "ClassObject.h"
-#include "Environment.h"
 #include "BytecodeStream.h"
 #include "../runtime/oo/string.h"
 #include "m64Assembler.h"
@@ -350,13 +349,11 @@ public:
                 return;
         }
 
-        env = new Environment();
         macros = new list<Method>();
         modules = new list<string>();
         classes = new list<ClassObject>();
         import_map = new list<keypair<string, list<string>>>();
         string_map.init();
-        assembler = new m64Assembler();
 
         scope_map = new List<Scope>();
         parse_map.key.init();
@@ -392,8 +389,9 @@ public:
 
     Scope *current_scope();
 
+    void generate();
+
 private:
-    Environment* env;
     list<parser*> parsers;
     string out;
     list<string>* modules;
@@ -403,7 +401,6 @@ private:
     list<keypair<string, std::list<string>>>*  import_map;
     List<string> string_map;
     List<Scope>* scope_map;
-    m64Assembler* assembler;
     bool resolvedFields;
     int64_t ctp;
     uint64_t uid;
@@ -763,12 +760,20 @@ private:
     void partial_parseStatement(Block &block, ast *pAst);
 
     void parseVarDecl(Block &block, ast *pAst);
+
+    string generate_header();
+
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.48"
+#define progvers "0.1.49"
 
 struct options {
+    ~options()
+    {
+        out = "";
+    }
+
     /*
      * Activate aggressive error reporting for the bootstrapper.
      */
