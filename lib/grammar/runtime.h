@@ -342,7 +342,10 @@ public:
             last_note("","",0,0),
             last_notemsg(""),
             ctp(-1),
-            resolvedFields(false)
+            main(NULL),
+            resolvedFields(false),
+            address_spaces(0),
+            class_size(0)
     {
         for(parser* p : parsers) {
             if(!p->parsed)
@@ -401,9 +404,13 @@ private:
     list<keypair<string, std::list<string>>>*  import_map;
     List<string> string_map;
     List<Scope>* scope_map;
+    Method* main;
     bool resolvedFields;
     int64_t ctp;
     uint64_t uid;
+
+    int64_t address_spaces;
+    int64_t class_size;
 
     /* One off variables */
     RuntimeNote last_note;
@@ -763,6 +770,7 @@ private:
 
     string generate_header();
 
+    string generate_manifest();
 };
 
 #define progname "bootstrap"
@@ -788,6 +796,11 @@ struct options {
      * Output file to write to
      */
     string out = "out";
+
+    /*
+     * Application version
+     */
+    string vers = "1.0";
 
     /*
      * Disable warnings

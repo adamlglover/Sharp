@@ -11,6 +11,7 @@
 #include "../runtime/interp/register.h"
 #include "Asm.h"
 #include "../util/List2.h"
+#include "../runtime/internal/Exe.h"
 
 using namespace std;
 
@@ -26,9 +27,11 @@ void runtime::interpret() {
         resolveAllFields();
         resolveAllMethods();
 
+        long iter =0;
         for(parser* p : parsers) {
             errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
             _current = p;
+            iter++;
 
             ast* trunk;
             add_scope(Scope(scope_global, NULL));
@@ -62,6 +65,27 @@ void runtime::interpret() {
             } else {
                 parse_map.value.addif(p->sourcefile);
                 parse_map.key.removefirst(p->sourcefile);
+            }
+
+            if(iter == parsers.size() && errs == 0 && uo_errs == 0) {
+                string starter_classname = "Start";
+
+                ClassObject* StarterClass = getClass("application", starter_classname);
+                if(StarterClass != NULL) {
+                    List<Param> params;
+                    List<AccessModifier> modifiers;
+                    RuntimeNote note = RuntimeNote(p->sourcefile, p->geterrors()->getline(1), 1, 0);
+                    params.add(Field(fvar, 0, "args", StarterClass, modifiers, note));
+
+                    Method* main = StarterClass->getFunction("__init" , params);
+
+                    if(main == NULL) {
+                        errors->newerror(GENERIC, 1, 0, "could not locate main method '__init(var[])' in starter class");
+                    } else
+                        this->main = main;
+                } else {
+                    errors->newerror(GENERIC, 1, 0, "Could not find starter class '" + starter_classname + "' for application entry point.");
+                }
             }
 
             remove_scope();
@@ -610,7 +634,7 @@ void runtime::parseLabelDecl(Block& block,ast* pAst) {
         scope->label_map.add(keypair<string, int64_t>(label, block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1));
     }
 
-    parseStatement(block, pAst->getsubast(ast_statement));
+    parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
 }
 
 /*
@@ -831,7 +855,7 @@ void runtime::partial_parseStatement(Block& block, ast* pAst) {
             parseGotoStatement(block, pAst);
             break;
         case ast_label_decl:
-            partial_parseStatement(block, pAst->getsubast(ast_statement));
+            partial_parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
             break;
         default: {
             stringstream err;
@@ -3123,9 +3147,7 @@ Expression runtime::parseIntermExpression(ast* pAst) {
         case ast_ques_e:
             return parseQuesExpression(pAst);
         default:
-            stringstream err;
-            err << ": unknown ast type: " << pAst->gettype();
-            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
+            errors->newerror(GENERIC, pAst->line, pAst->col, "unexpected expression format");
             return Expression(pAst); // not an expression!
     }
 }
@@ -5214,6 +5236,7 @@ void help() {
     cout <<               "    -s                strip debugging info." << endl;
     cout <<               "    -O                optimize code." << endl;
     cout <<               "    -w                disable warnings." << endl;
+    cout <<               "    -v<version>       set application version." << endl;
     cout <<               "    -unsafe -u        allow unsafe code." << endl;
     cout <<               "    -werror           enable warnings as errors." << endl;
     cout <<               "    -release -r       disable debugging on application." << endl;
@@ -5274,7 +5297,13 @@ int _bootstrap(int argc, const char* argv[]) {
             else if(opt("-w")){
                 c_options.warnings = false;
             }
-            else if(opt("-u")){
+            else if(opt("-v")){
+                if(i+1 >= argc)
+                    rt_error("file version required after option `-v`");
+                else
+                    c_options.vers = string(argv[++i]);
+            }
+            else if(opt("-u") || opt("-unsafe")){
                 c_options.unsafe = true;
             }
             else if(opt("-werror")){
@@ -5388,12 +5417,12 @@ void _srt_start(list<string> files)
         failed = rt.parse_map.key.size();
         succeeded = rt.parse_map.value.size();
 
+        errors+=rt.errs;
+        uo_errors+=rt.uo_errs;
         if(errors == 0 && uo_errors == 0) {
             rt.generate();
         }
 
-        errors+=rt.errs;
-        uo_errors+=rt.uo_errs;
         rt.cleanup();
     }
     else {
@@ -6343,8 +6372,41 @@ string ResolvedReference::typeToString() {
     return toString() + (array ? "[]" : "");
 }
 
+string copychars(char c, int t) {
+    nString s;
+    int it = 0;
+
+    while (it++ < t)
+        s += c;
+
+    return s.str();
+}
+
+std::string runtime::generate_manifest() {
+    stringstream manifest;
+
+    manifest << manif;
+    manifest << ((char)0x02); manifest << c_options.out << ((char)0x0);
+    manifest << ((char)0x4); manifest << c_options.vers << ((char)0x0);
+    manifest << ((char)0x5); manifest << c_options.debug ? ((char)0x1) : ((char)0x0);
+    manifest << ((char)0x6); manifest << main->vaddr << ((char)0x0);
+    manifest << ((char)0x7); manifest << address_spaces << ((char)0x0);
+    manifest << ((char)0x8); manifest << class_size << ((char)0x0);
+    manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
+    manifest << ((char)0x0c); manifest << string_map.size() << ((char)0x0);
+    manifest << ((char)0x0e); manifest << c_options.out << ((char)0x0);
+    manifest << eoh;
+
+    return manifest.str();
+}
+
 std::string runtime::generate_header() {
-    return "";
+    stringstream header;
+    header << file_sig << "SEF" << copychars(0, 15);
+    header << digi_sig1 << digi_sig2 << digi_sig3;
+
+    header << generate_manifest();
+    return header.str();
 }
 
 void runtime::generate() {
