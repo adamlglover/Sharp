@@ -352,9 +352,10 @@ public:
                 return;
         }
 
-        macros = new list<Method>();
-        modules = new list<string>();
-        classes = new list<ClassObject>();
+        macros.init();
+        modules.init();
+        classes.init();
+        allMethods.init();
         import_map = new list<keypair<string, list<string>>>();
         string_map.init();
 
@@ -397,10 +398,10 @@ public:
 private:
     list<parser*> parsers;
     string out;
-    list<string>* modules;
-    list<Method>* macros;
+    List<string> modules;
+    List<Method> macros;
     string current_module;
-    list<ClassObject>* classes;
+    List<ClassObject> classes;
     list<keypair<string, std::list<string>>>*  import_map;
     List<string> string_map;
     List<Scope>* scope_map;
@@ -411,6 +412,7 @@ private:
 
     int64_t address_spaces;
     int64_t class_size;
+    List<Method*> allMethods;
 
     /* One off variables */
     RuntimeNote last_note;
@@ -439,8 +441,6 @@ private:
     void warning(p_errors error, int line, int col, string xcmnts);
 
     void printnote(RuntimeNote& note, string msg);
-
-    void parse_class_decl(ast *pAst, ClassObject* pObject);
 
     ClassObject *parse_base_class(ast *pAst, ClassObject* pObject);
 
@@ -771,6 +771,14 @@ private:
     string generate_header();
 
     string generate_manifest();
+
+    string generate_data_section();
+
+    string class_to_stream(ClassObject &klass);
+
+    string field_to_stream(Field &field);
+
+    string generate_string_section();
 };
 
 #define progname "bootstrap"

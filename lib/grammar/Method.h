@@ -22,6 +22,18 @@ enum return_type {
 class Method {
 
 public:
+    Method()
+    :
+            name(""),
+            pklass(NULL),
+            klass(NULL),
+            nobj(fnof),
+            module(""),
+            note(),
+            array(false)
+    {
+    }
+
     Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
            ClassObject* rtype, RuntimeNote note)
     :
@@ -62,8 +74,8 @@ public:
     size_t paramCount() { return params.size(); }
     List<Param>* getParams() { return &params; }
     Param& getParam(int p) { return params.get(p); }
-    bool isStatic() { return modifiers.check(mStatic); }
-    void clear() {
+    bool isStatic() { return modifiers.find(mStatic); }
+    void free() {
         modifiers.free();
 
         for(unsigned int i = 0; i < params.size(); i++) {
@@ -73,7 +85,7 @@ public:
     }
 
     RuntimeNote note;
-    uint64_t vaddr;
+    int64_t vaddr;
     return_type type;
     ClassObject* klass;
     NativeField nobj;

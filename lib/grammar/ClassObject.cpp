@@ -85,6 +85,18 @@ Field* ClassObject::getField(string name) {
     return NULL;
 }
 
+
+long ClassObject::getFieldIndex(string name) {
+    long iter = 0;
+    for(Field& field : *fields) {
+        if(field.name == name)
+            return iter;
+        iter++;
+    }
+
+    return iter;
+}
+
 bool ClassObject::addField(Field field) {
     if(getField(field.name) != NULL)
         return false;

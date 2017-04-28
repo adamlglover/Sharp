@@ -66,8 +66,7 @@ public:
         stream& operator<<(const std::string& _X)
         {
             for(stream_t i=0; i < _X.size(); i++) {
-                _push_back(_X.at(i++));
-                sp++;
+                _push_back(_X.at(i));
             }
             return *this;
         }

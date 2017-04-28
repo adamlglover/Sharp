@@ -21,14 +21,7 @@ class Reference;
 
 enum Type {
     nativeint=-1,
-    nativeshort=-2,
-    nativelong=-3,
-    nativechar=-4,
-    nativebool=-5,
-    nativefloat=-6,
-    nativedouble=-7,
-    classobject=-8,
-    refrenceobject=-9,
+    dynamicobject=-8,
     nilobject=-10
 };
 

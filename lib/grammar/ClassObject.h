@@ -17,6 +17,18 @@
 class ClassObject {
 
 public:
+    ClassObject()
+    :
+            name(""),
+            module_name(""),
+            uid(0),
+            modifier(),
+            base(NULL),
+            super(NULL),
+            head(NULL),
+            note()
+    {
+    }
     ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note)
     :
             name(name),
@@ -82,6 +94,25 @@ public:
         return fullName;
     }
 
+    void operator=(ClassObject& klass) {
+        this->macros = klass.macros;
+        this->base = klass.base;
+        this->childClasses = klass.childClasses;
+        this->constructors = klass.constructors;
+        this->fields = klass.fields;
+        this->fullName = klass.fullName;
+        this->functions = klass.functions;
+        this->head = klass.head;
+        this->modifier = klass.modifier;
+        this->module_name = klass.module_name;
+        this->name = klass.name;
+        this->note = klass.note;
+        this->overloads = klass.overloads;
+        this->super = klass.super;
+        this->uid = klass.uid;
+        this->vaddr = klass.vaddr;
+    }
+
     size_t constructorCount();
     Method* getConstructor(int p);
     Method* getConstructor(List<Param>& params);
@@ -124,16 +155,18 @@ public:
 
     bool matchBase(ClassObject *pObject);
 
-    unsigned int vaddr;
+    int64_t vaddr;
 
     bool hasBaseClass(ClassObject *pObject);
 
+    long getFieldIndex(string name);
+
 private:
-    const AccessModifier modifier;
-    const long uid;
-    const string name;
+    AccessModifier modifier;
+    long uid;
+    string name;
     string fullName;
-    const string module_name;
+    string module_name;
     list<Method>* constructors;
     list<Method>* functions;
     list<Method>* macros;
@@ -142,6 +175,7 @@ private:
     list<ClassObject>* childClasses;
     ClassObject *super, *head;
     ClassObject* base;
+
 };
 
 

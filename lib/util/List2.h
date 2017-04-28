@@ -155,14 +155,6 @@ public:
         push_back(_V);
     }
 
-    bool check(T _V) {
-        for(unsigned int i = 0; i < len; i++) {
-            if(_V == _Data[i])
-                return true;
-        }
-        return false;
-    }
-
     void removefirst(T _V) {
         unsigned int iter = -1;
         for(unsigned int i = 0; i < len; i++) {
@@ -189,6 +181,15 @@ public:
         for(T& t : list) {
             push_back(t);
         }
+    }
+
+    bool find(T data) {
+        for(unsigned int i = 0; i < len; i++) {
+            if(data == _Data[i]){
+                return true;
+            }
+        }
+        return false;
     }
 
 private:

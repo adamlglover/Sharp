@@ -12,6 +12,7 @@
 #include "Asm.h"
 #include "../util/List2.h"
 #include "../runtime/internal/Exe.h"
+#include "../runtime/oo/Object.h"
 
 using namespace std;
 
@@ -57,17 +58,7 @@ void runtime::interpret() {
                 }
             }
 
-            if(errors->_errs()){
-                errs+= errors->error_count();
-                uo_errs+= errors->uoerror_count();
-                parse_map.key.addif(p->sourcefile);
-                parse_map.value.removefirst(p->sourcefile);
-            } else {
-                parse_map.value.addif(p->sourcefile);
-                parse_map.key.removefirst(p->sourcefile);
-            }
-
-            if(iter == parsers.size() && errs == 0 && uo_errs == 0) {
+            if(iter == parsers.size() && errors->error_count() == 0 && errors->uoerror_count() == 0) {
                 string starter_classname = "Start";
 
                 ClassObject* StarterClass = getClass("application", starter_classname);
@@ -76,6 +67,8 @@ void runtime::interpret() {
                     List<AccessModifier> modifiers;
                     RuntimeNote note = RuntimeNote(p->sourcefile, p->geterrors()->getline(1), 1, 0);
                     params.add(Field(fvar, 0, "args", StarterClass, modifiers, note));
+                    params.get(0).field.array = true;
+                    params.get(0).field.type = field_native;
 
                     Method* main = StarterClass->getFunction("__init" , params);
 
@@ -86,6 +79,16 @@ void runtime::interpret() {
                 } else {
                     errors->newerror(GENERIC, 1, 0, "Could not find starter class '" + starter_classname + "' for application entry point.");
                 }
+            }
+
+            if(errors->_errs()){
+                errs+= errors->error_count();
+                uo_errs+= errors->uoerror_count();
+                parse_map.key.addif(p->sourcefile);
+                parse_map.value.removefirst(p->sourcefile);
+            } else {
+                parse_map.value.addif(p->sourcefile);
+                parse_map.key.removefirst(p->sourcefile);
             }
 
             remove_scope();
@@ -179,6 +182,12 @@ void runtime::parse_class_decl(ast *pAst) {
             case ast_method_decl:
                 parseMethodDecl(pAst);
                 break;
+            case ast_operator_decl:
+                break;
+            case ast_construct_decl:
+                break;
+            case ast_macros_decl:
+                break;
             default: {
                 stringstream err;
                 err << ": unknown ast type: " << pAst->gettype();
@@ -188,33 +197,6 @@ void runtime::parse_class_decl(ast *pAst) {
         }
     }
 
-//    ast* block = pAst->getsubast(pAst->getsubastcount() - 1);
-//    for(uint32_t i = 0; i < block->getsubastcount(); i++) {
-//        pAst = block->getsubast(i);
-//
-//        switch(pAst->gettype()) {
-//            case ast_class_decl:
-//                parse_class_decl(pAst, klass);
-//                break;
-//            case ast_var_decl:
-//                parse_var_decl(pAst);
-//
-//                injectConstructors();
-//                break;
-//            case ast_method_decl:
-//                rState.fn = NULL;
-//                break;
-//            case ast_operator_decl:
-//                break;
-//            case ast_construct_decl:
-//                break;
-//            case ast_macros_decl:
-//                break;
-//            default:
-//                errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, " unexpected ast type");
-//                break;
-//        }
-//    }
     remove_scope();
 }
 
@@ -920,6 +902,7 @@ void runtime::parseMethodDecl(ast* pAst) {
     Method* method = scope->klass->getFunction(name, params);
 
     if(method != NULL) {
+
         if(method->isStatic()) {
             add_scope(Scope(scope_static_block, scope->klass, method));
         } else
@@ -978,7 +961,7 @@ void runtime::parse_import_decl(ast *pAst) {
     if(import == current_module) {
         warning(REDUNDANT_IMPORT, pAst->line, pAst->col, " '" + import + "'");
     } else {
-        if(!element_has(*modules, import)) {
+        if(!modules.find(import)) {
             errors->newerror(COULD_NOT_RESOLVE, pAst->line, pAst->col,
                              " `" + import + "` ");
         }
@@ -4221,6 +4204,15 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
                     if(left.utype.field->dynamicObject()) {
                         return true;
                     }
+                } else if(right.type == expression_field) {
+                    if(right.utype.field->nativeInt()) {
+                        return left.utype.field->nativeInt();
+                    }
+                    else if(right.utype.field->dynamicObject()) {
+                        return left.utype.field->dynamicObject();
+                    }
+                } else if(right.type == expression_string) {
+                    return left.utype.field->array;
                 }
             } else if(left.utype.field->type == field_class) {
                 if(right.type == expression_lclass) {
@@ -4559,58 +4551,6 @@ ResolvedReference runtime::parse_utype(ast *pAst) {
 //    }
 //}
 
-void runtime::parse_class_decl(ast *pAst, ClassObject* pObject) {
-    // create runtime class
-    ClassObject* klass;
-    int namepos=1;
-
-    if(isaccess_decl(pAst->getentity(0))) {
-        namepos+= this->parse_access_modifier(pAst).size();
-    }
-
-    string name =  pAst->getentity(namepos).gettoken();
-    if(pObject == NULL) {
-        klass = getClass(current_module, name);
-    } else {
-        klass = pObject->getChildClass(name);
-        klass->setSuperClass(getSuper(pObject));
-    }
-
-//    rState.fn = NULL;
-//    rState.instance = env->create_class(int_ClassObject(klass));
-    klass->setBaseClass(parse_base_class(pAst, pObject));
-
-
-
-    ast* block = pAst->getsubast(pAst->getsubastcount() - 1);
-    for(uint32_t i = 0; i < block->getsubastcount(); i++) {
-        pAst = block->getsubast(i);
-
-        switch(pAst->gettype()) {
-            case ast_class_decl:
-                parse_class_decl(pAst, klass);
-                break;
-            case ast_var_decl:
-                parse_var_decl(pAst);
-
-//                injectConstructors();
-                break;
-            case ast_method_decl:
-//                rState.fn = NULL;
-                break;
-            case ast_operator_decl:
-                break;
-            case ast_construct_decl:
-                break;
-            case ast_macros_decl:
-                break;
-            default:
-                errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, " unexpected ast type");
-                break;
-        }
-    }
-}
-
 void runtime::resolveVarDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
@@ -4631,6 +4571,7 @@ void runtime::resolveVarDecl(ast* pAst) {
     }
 
     field->array = expression.utype.array;
+    field->vaddr = scope->klass->getFieldIndex(name);
 }
 
 Field runtime::fieldMapToField(string param_name, ResolvedReference utype, ast* pAst) {
@@ -4739,6 +4680,7 @@ void runtime::resolveMethodDecl(ast* pAst) {
     } else
         method.type = lvoid;
 
+    method.vaddr = address_spaces++;
     if(!scope->klass->addFunction(method)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
@@ -4793,6 +4735,8 @@ void runtime::resolveMacrosDecl(ast* pAst) {
     } else
         macro.type = lvoid;
 
+
+    macro.vaddr = address_spaces++;
     if(scope->type == scope_global) {
         addGlobalMacros(macro, pAst);
     } else {
@@ -4828,6 +4772,7 @@ void runtime::resolveOperatorDecl(ast* pAst) {
     } else
         operatorOverload.type = lvoid;
 
+    operatorOverload.vaddr = address_spaces++;
     if(!scope->klass->addOperatorOverload(operatorOverload)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
@@ -4860,6 +4805,7 @@ void runtime::resolveConstructorDecl(ast* pAst) {
         Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
         method.type = lvoid;
 
+        method.vaddr = address_spaces++;
         if(!scope->klass->addConstructor(method)) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");
@@ -4880,7 +4826,10 @@ void runtime::addDefaultConstructor(ClassObject* klass, ast* pAst) {
                                    pAst->line, pAst->col);
 
     if(klass->getConstructor(emptyParams) == NULL) {
-        klass->addConstructor(Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note));
+        Method method = Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note);
+
+        method.vaddr = address_spaces++;
+        klass->addConstructor(method);
     }
 }
 
@@ -4899,6 +4848,7 @@ void runtime::resolveClassDecl(ast* pAst) {
     else
         klass = scope->klass->getChildClass(name);
 
+    klass->vaddr = class_size++;
     add_scope(Scope(scope_class, klass));
     for(long i = 0; i < astBlock->getsubastcount(); i++) {
         trunk = astBlock->getsubast(i);
@@ -5195,14 +5145,9 @@ void runtime::cleanup() {
     }
     parsers.clear();
     delete(errors); errors = NULL;
-    modules->clear();
-    delete(modules); modules = NULL;
+    modules.free();
 
-    for(ClassObject& klass : *classes) {
-        klass.free();
-    }
-    classes->clear();
-    delete (classes); classes = NULL;
+    __freeList(classes);
 
     for(keypair<string, std::list<string>>& map : *import_map) {
         map.value.clear();
@@ -5210,11 +5155,7 @@ void runtime::cleanup() {
     import_map->clear();
     delete (import_map); import_map = NULL;
 
-    for(Method& macro : *macros) {
-        macro.clear();
-    }
-    macros->clear();
-    delete (macros); macros = NULL;
+    __freeList(macros);
 
     scope_map->free();
     delete (scope_map); scope_map = NULL;
@@ -5439,19 +5380,16 @@ void _srt_start(list<string> files)
 }
 
 bool runtime::module_exists(string name) {
-    for(string& mname : *modules) {
-        if(mname == name)
-            return true;
-    }
-
-    return false;
+    return modules.find(name);
 }
 
 bool runtime::class_exists(string module, string name) {
-    for(ClassObject& klass : *classes) {
-        if(klass.getName() == name) {
+    ClassObject* klass = NULL;
+    for(unsigned int i = 0; i < classes.size(); i++) {
+        klass = &classes.get(i);
+        if(klass->getName() == name) {
             if(module != "")
-                return klass.getModuleName() == module;
+                return klass->getModuleName() == module;
             return true;
         }
     }
@@ -5460,12 +5398,14 @@ bool runtime::class_exists(string module, string name) {
 }
 
 Method *runtime::getmacros(string module, string name, List<Param>& params) {
-    for(Method& macro : *macros) {
-        if(Param::match(*macro.getParams(), params) && name == macro.getName()) {
+    Method* macro = NULL;
+    for(unsigned int i = 0; i < macros.size(); i++) {
+        macro = &macros.get(i);
+        if(Param::match(*macro->getParams(), params) && name == macro->getName()) {
             if(module != "")
-                return module == macro.getModule() ? &macro : NULL;
+                return module == macro->getModule() ? macro : NULL;
 
-            return &macro;
+            return macro;
         }
     }
 
@@ -5474,7 +5414,7 @@ Method *runtime::getmacros(string module, string name, List<Param>& params) {
 
 bool runtime::add_macros(Method macro) {
     if(getmacros(macro.getModule(), macro.getName(), *macro.getParams()) == NULL) {
-        macros->push_back(macro);
+        macros.add(macro);
         return true;
     }
     return false;
@@ -5483,8 +5423,7 @@ bool runtime::add_macros(Method macro) {
 bool runtime::add_class(ClassObject klass) {
     if(!class_exists(klass.getModuleName(), klass.getName())) {
 
-        klass.vaddr = classUID++;
-        classes->push_back(klass);
+        classes.add(klass);
         return true;
     }
     return false;
@@ -5492,17 +5431,19 @@ bool runtime::add_class(ClassObject klass) {
 
 void runtime::add_module(string name) {
     if(!module_exists(name)) {
-        modules->push_back(name);
+        modules.push_back(name);
     }
 }
 
 ClassObject *runtime::getClass(string module, string name) {
-    for(ClassObject& klass : *classes) {
-        if(klass.getName() == name) {
-            if(module != "" && klass.getModuleName() == module)
-                return &klass;
+    ClassObject* klass = NULL;
+    for(unsigned int i = 0; i < classes.size(); i++) {
+        klass = &classes.get(i);
+        if(klass->getName() == name) {
+            if(module != "" && klass->getModuleName() == module)
+                return klass;
             else if(module == "")
-                return &klass;
+                return klass;
         }
     }
 
@@ -6394,7 +6335,6 @@ std::string runtime::generate_manifest() {
     manifest << ((char)0x8); manifest << class_size << ((char)0x0);
     manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
     manifest << ((char)0x0c); manifest << string_map.size() << ((char)0x0);
-    manifest << ((char)0x0e); manifest << c_options.out << ((char)0x0);
     manifest << eoh;
 
     return manifest.str();
@@ -6402,19 +6342,150 @@ std::string runtime::generate_manifest() {
 
 std::string runtime::generate_header() {
     stringstream header;
-    header << file_sig << "SEF" << copychars(0, 15);
+    header << file_sig << "SEF"; header << copychars(0, 15);
     header << digi_sig1 << digi_sig2 << digi_sig3;
 
     header << generate_manifest();
     return header.str();
 }
 
+long long field_tovirtual_type(Field& field) {
+    if(field.type == field_native) {
+        if(field.nf == fdynamic)
+            return dynamicobject;
+        else
+            return nativeint;
+    } else {
+        return field.klass->vaddr;
+    }
+}
+
+std::string runtime::field_to_stream(Field& field) {
+    stringstream fstream;
+
+    fstream << ((char)data_field);
+    fstream << field.name << ((char)0x0);
+    fstream << field.vaddr << ((char)0x0);
+    fstream << field_tovirtual_type(field) << ((char)0x0);
+    fstream << (field.modifiers.find(mStatic) ? ((char)1) : ((char)0)) << ((char)0x0);
+    fstream << (field.type == field_class ? field.klass->vaddr : -1) << ((char)0x0);
+    fstream << endl;
+
+    return fstream.str();
+}
+
+
+string mi64_tostr(int64_t i64)
+{
+    string str;
+    mi64_t mi;
+    SET_mi64(mi, i64);
+
+    str+=(uint8_t)GET_mi32w(mi.A);
+    str+=(uint8_t)GET_mi32x(mi.A);
+    str+=(uint8_t)GET_mi32y(mi.A);
+    str+=(uint8_t)GET_mi32z(mi.A);
+
+    str+=(uint8_t)GET_mi32w(mi.B);
+    str+=(uint8_t)GET_mi32x(mi.B);
+    str+=(uint8_t)GET_mi32y(mi.B);
+    str+=(uint8_t)GET_mi32z(mi.B);
+    return str;
+}
+
+std::string runtime::class_to_stream(ClassObject& klass) {
+    stringstream kstream;
+
+    kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)0x0);
+    kstream << mi64_tostr(klass.vaddr) << ((char)0x0);
+    kstream << klass.getFullName() << ((char)0x0);
+    kstream << klass.fieldCount() << ((char)0x0);
+    kstream << klass.functionCount() << ((char)0x0);
+    kstream << klass.constructorCount() << ((char)0x0);
+    kstream << klass.overloadCount() << ((char)0x0);
+    kstream << klass.macrosCount() << ((char)0x0);
+
+    for(long long i = 0; i < klass.fieldCount(); i++) {
+        kstream << field_to_stream(*klass.getField(i));
+    }
+
+    for(long long i = 0; i < klass.constructorCount(); i++) {
+        kstream << mi64_tostr(klass.getConstructor(i)->vaddr) << ((char)0x0);
+        allMethods.add(klass.getConstructor(i));
+    }
+
+    for(long long i = 0; i < klass.functionCount(); i++) {
+        kstream << mi64_tostr(klass.getFunction(i)->vaddr) << ((char)0x0);
+        allMethods.add(klass.getFunction(i));
+    }
+
+    for(long long i = 0; i < klass.overloadCount(); i++) {
+        kstream << mi64_tostr(klass.getOverload(i)->vaddr) << ((char)0x0);
+        allMethods.add(klass.getOverload(i));
+    }
+
+    for(long long i = 0; i < klass.macrosCount(); i++) {
+        kstream << mi64_tostr(klass.getMacros(i)->vaddr) << ((char)0x0);
+        allMethods.add(klass.getMacros(i));
+    }
+
+    for(long long i = 0; i < klass.childClassCount(); i++) {
+        kstream << class_to_stream(*klass.getChildClass(i)) << endl;
+    }
+
+    return kstream.str();
+}
+
+std::string runtime::generate_data_section() {
+    stringstream data_sec;
+    for(int64_t i = 0; i < classes.size(); i++) {
+        data_sec << class_to_stream(classes.get(i)) << endl;
+    }
+
+    for(int64_t i = 0; i < macros.size(); i++) {
+        allMethods.add(&macros.get(i));
+    }
+
+    List<Method*> reorderedList;
+    int64_t iter=0;
+
+    readjust:
+    for(int64_t i = 0; i < allMethods.size(); i++) {
+        if(allMethods.get(i)->vaddr == iter) {
+            iter++;
+            reorderedList.add(allMethods.get(i));
+            if(iter < allMethods.size())
+                goto readjust;
+        }
+    }
+
+    allMethods.addAll(reorderedList);
+    reorderedList.free();
+
+    return data_sec.str();
+}
+
+std::string runtime::generate_string_section() {
+    stringstream strings;
+
+    for(int64_t i = 0; i < string_map.size(); i++) {
+        strings << mi64_tostr(i) << string_map.get(i) << ((char)0x0);
+    }
+    return strings.str();
+}
+
 void runtime::generate() {
     file::stream _ostream;
     _ostream.begin();
 
-    _ostream << generate_header();
+    _ostream << generate_header() << "\n" ;
+    _ostream << sdata;
+    _ostream << generate_data_section() << "\n"<< "\n";
+    _ostream << generate_string_section() << "\n"<< "\n";
+
+    // TODO: process all functions and macros in list (.text section)
 
     file::write(c_options.out.c_str(), _ostream);
     _ostream.end();
+    allMethods.free();
 }

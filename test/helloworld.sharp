@@ -1,26 +1,25 @@
 mod application;
 
-import io;
+class Start {
+
+    static fn __init(var[] args) {
+
+    }
+}
+
+class Console {
+    static var [] data;
+    var x;
+
+    static fn write(var[] data2) {
+        data = "test";
+        data += data2;
+    }
+}
 
 class Main {
 
-    public fn foo( var go ) {
-        var[] nums = new var[9];
-
-        if go {
-            foreach( var i : nums ) {
-                for( var i = 0; i < 10; i++ ) {
-                    try {
-                        Console.write("Im Ready! ");
-                    } catch(RuntimeErr err) {
-                        Console.write("CRAP...");
-                    }
-                }
-            }
-        }
-    }
-
-    public static fn main( string[] args ) : __int16 {
+    static fn main( var[] args ) : __int16 {
         Console.write("Hello World");
         return 0;
     }
