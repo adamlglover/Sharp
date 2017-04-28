@@ -28,6 +28,29 @@ void runtime::interpret() {
         resolveAllFields();
         resolveAllMethods();
 
+        if(c_options.magic) {
+            List<string> lst;
+            lst.addAll(modules);
+
+            for(parser* p : parsers) {
+                bool found = false;
+
+                for(unsigned int i = 0; i < import_map.size(); i++) {
+                    if(import_map.get(i).key == p->sourcefile) {
+                        import_map.get(i).value.addAll(modules);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if(!found) {
+                    import_map.add(keypair<std::string, List<std::string>>(p->sourcefile, lst));
+                }
+            }
+
+            lst.free();
+        }
+
         long iter =0;
         for(parser* p : parsers) {
             errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
@@ -437,6 +460,7 @@ void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
 }
 
 void runtime::parseCachClause(Block& block, ast* pAst) {
+
     keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
     // TODO: add catcher to asm
     parseBlock(pAst->getsubast(ast_block), block);
@@ -455,10 +479,10 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
 
         switch(sub->gettype()) {
             case ast_catch_clause:
-                parseCachClause(block, pAst);
+                parseCachClause(block, sub);
                 break;
             case ast_finally_block:
-                parseFinallyBlock(block, pAst);
+                parseFinallyBlock(block, sub);
                 break;
         }
     }
@@ -1270,15 +1294,14 @@ ClassObject* runtime::getClassGlobal(string module, string class_name) {
     ClassObject* klass;
 
     if((klass = getClass(module, class_name)) == NULL) {
-        for(keypair<std::string, std::list<string>> &map : *import_map) {
-            if(map.key == _current->sourcefile) {
+        for(unsigned int i = 0; i < import_map.size(); i++) {
+            if(import_map.get(i).key == _current->sourcefile) {
 
-                for(string mod : map.value) {
-                    if((klass = getClass(mod, class_name)) != NULL)
+                List<string>& lst = import_map.get(i).value;
+                for(unsigned int x = 0; x < lst.size(); x++) {
+                    if((klass = getClass(lst.get(i), class_name)) != NULL)
                         return klass;
                 }
-
-                break;
             }
         }
     }
@@ -4953,8 +4976,8 @@ bool runtime::partial_parse() {
         _current = p;
 
         current_module = "$invisible";
-        keypair<string, std::list<string>> resolve_map;
-        list<string> imports;
+        keypair<string, List<string>> resolve_map;
+        List<string> imports;
 
         ast* trunk;
         add_scope(Scope(scope_global, NULL));
@@ -4977,7 +5000,7 @@ bool runtime::partial_parse() {
                     partial_parse_class_decl(trunk);
                     break;
                 case ast_import_decl:
-                    imports.push_back(parse_modulename(trunk));
+                    imports.add(parse_modulename(trunk));
                     break;
                 case ast_macros_decl: /* Will be parsed later */
                     break;
@@ -4993,7 +5016,7 @@ bool runtime::partial_parse() {
         }
 
         resolve_map.set(p->sourcefile, imports);
-        import_map->push_back(resolve_map);
+        import_map.push_back(resolve_map);
         if(errors->_errs()){
             errs+= errors->error_count();
             uo_errs+= errors->uoerror_count();
@@ -5149,11 +5172,11 @@ void runtime::cleanup() {
 
     __freeList(classes);
 
-    for(keypair<string, std::list<string>>& map : *import_map) {
-        map.value.clear();
+    for(unsigned int i = 0; i < import_map.size(); i++) {
+        import_map.get(i).value.free();
     }
-    import_map->clear();
-    delete (import_map); import_map = NULL;
+
+    import_map.free();
 
     __freeList(macros);
 
@@ -5230,6 +5253,9 @@ int _bootstrap(int argc, const char* argv[]) {
             }
             else if(opt("-s")){
                 c_options.strip = true;
+            }
+            else if(opt("-magic")){
+                c_options.magic = true;
             }
             else if(opt("-showversion")){
                 print_vers();
@@ -5513,11 +5539,12 @@ ClassObject* runtime::try_class_resolve(string intmodule, string name) {
     ClassObject* ref = NULL;
 
     if((ref = getClass(intmodule, name)) == NULL) {
-        for(keypair<string, std::list<string>> &map : *import_map) {
-            if(map.key == _current->sourcefile) {
+        for(unsigned int i = 0; i < import_map.size(); i++) {
+            if(import_map.get(i).key == _current->sourcefile) {
 
-                for(string mod : map.value) {
-                    if((ref = getClass(mod, name)) != NULL)
+                List<string>& lst = import_map.get(i).value;
+                for(unsigned int x = 0; x < lst.size(); x++) {
+                    if((ref = getClass(lst.get(i), name)) != NULL)
                         return ref;
                 }
 
@@ -6342,7 +6369,7 @@ std::string runtime::generate_manifest() {
 
 std::string runtime::generate_header() {
     stringstream header;
-    header << file_sig << "SEF"; header << copychars(0, 15);
+    header << file_sig << "SEF"; header << copychars(0, offset);
     header << digi_sig1 << digi_sig2 << digi_sig3;
 
     header << generate_manifest();
@@ -6442,6 +6469,8 @@ std::string runtime::generate_data_section() {
         data_sec << class_to_stream(classes.get(i)) << endl;
     }
 
+    data_sec << eos;
+
     for(int64_t i = 0; i < macros.size(); i++) {
         allMethods.add(&macros.get(i));
     }
@@ -6474,6 +6503,37 @@ std::string runtime::generate_string_section() {
     return strings.str();
 }
 
+std::string runtime::method_to_stream(Method* method) {
+    stringstream func;
+
+    func << endl;
+
+    for(long i = 0; i < method->code.__asm64.size(); i++) {
+        func << mi64_tostr(method->code.__asm64.get(i));
+    }
+    return func.str();
+}
+
+std::string runtime::generate_text_section() {
+    stringstream text;
+
+    text << stext;
+
+    for(long i = 0; i < allMethods.size(); i++) {
+        text << data_method;
+        text << allMethods.get(i)->getName() << ((char)0x0);
+        text << mi64_tostr(allMethods.get(i)->pklass->vaddr) << ((char)0x0);
+        text << mi64_tostr(allMethods.get(i)->paramCount()) << ((char)0x0);
+    }
+
+    text << data_byte;
+    for(long i = 0; i < allMethods.size(); i++) {
+        text << method_to_stream(allMethods.get(i));
+    }
+    text << eos;
+    return text.str();
+}
+
 void runtime::generate() {
     file::stream _ostream;
     _ostream.begin();
@@ -6483,7 +6543,9 @@ void runtime::generate() {
     _ostream << generate_data_section() << "\n"<< "\n";
     _ostream << generate_string_section() << "\n"<< "\n";
 
-    // TODO: process all functions and macros in list (.text section)
+    _ostream << generate_text_section() << "\n";
+
+    // ToDo: create line tabel and meta data
 
     file::write(c_options.out.c_str(), _ostream);
     _ostream.end();

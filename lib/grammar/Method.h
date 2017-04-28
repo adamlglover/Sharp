@@ -9,6 +9,7 @@
 #include "../../stdimports.h"
 #include "Param.h"
 #include "../util/List2.h"
+#include "m64Assembler.h"
 
 class ClassObject;
 
@@ -30,7 +31,8 @@ public:
             nobj(fnof),
             module(""),
             note(),
-            array(false)
+            array(false),
+            code()
     {
     }
 
@@ -43,7 +45,8 @@ public:
             nobj(fnof),
             module(module),
             note(note),
-            array(false)
+            array(false),
+            code()
     {
         this->modifiers.init();
         this->params.init();
@@ -60,7 +63,8 @@ public:
             klass(NULL),
             module(module),
             note(note),
-            array(false)
+            array(false),
+            code()
     {
         this->modifiers.init();
         this->params.init();
@@ -89,10 +93,11 @@ public:
     return_type type;
     ClassObject* klass;
     NativeField nobj;
+    m64Assembler code;
+    ClassObject* pklass;
     bool array;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
-    ClassObject* pklass;
     string name;
     string module;
     List<Param> params;

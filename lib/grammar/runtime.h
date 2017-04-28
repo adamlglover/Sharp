@@ -356,7 +356,7 @@ public:
         modules.init();
         classes.init();
         allMethods.init();
-        import_map = new list<keypair<string, list<string>>>();
+        import_map.init();
         string_map.init();
 
         scope_map = new List<Scope>();
@@ -402,7 +402,7 @@ private:
     List<Method> macros;
     string current_module;
     List<ClassObject> classes;
-    list<keypair<string, std::list<string>>>*  import_map;
+    List<keypair<string, List<string>>>  import_map;
     List<string> string_map;
     List<Scope>* scope_map;
     Method* main;
@@ -779,6 +779,10 @@ private:
     string field_to_stream(Field &field);
 
     string generate_string_section();
+
+    string generate_text_section();
+
+    string method_to_stream(Method *method);
 };
 
 #define progname "bootstrap"
@@ -839,6 +843,11 @@ struct options {
      * Allow unsafe code
      */
     bool unsafe = false;
+
+    /*
+     * Easter egg to enable magic mode
+     */
+    bool magic = false;
 };
 
 int _bootstrap(int argc, const char* argv[]);

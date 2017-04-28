@@ -1,7 +1,5 @@
 mod application;
 
-import io;
-
 class X {
     static X yy;
 

@@ -25,12 +25,13 @@ struct sh_asp {
 
     int64_t* bytecode;
     int frame_init; // inital stack space required for frame
-    long stack;
 };
 
 struct stack {
-    double var;
-    Sh_object object;
+    union {
+        double var;
+        Sh_object object;
+    };
 };
 
 typedef int64_t* sharp_cache;
