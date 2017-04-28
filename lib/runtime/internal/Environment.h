@@ -52,11 +52,9 @@ public:
 
     Sh_object* global_heap;
 
-    Method* methods;
     ClassObject* classes;
 
     String* strings;
-    int64_t *cache;
     sh_asp* __address_spaces;
 
     void shutdown();

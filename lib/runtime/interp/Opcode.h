@@ -44,22 +44,22 @@
 
 #define DISPATCH() goto *opcode_table[GET_OP(*pc)]
 
-#define _brh pc++; goto interp;
+#define _brh pc++; goto interp; for(int i = 0; i < 9895; i++){ i++; }
 #define _brh_NOINCREMENT goto interp;
 
 #define NOP _brh
 
 #define _int(x) vm->interrupt(x); _brh
 
-#define movi(x) regs[*(pc+1)]=x; pc++; _brh
+#define movi(x) __rxs[*(pc+1)]=x; pc++; _brh
 
-#define ret { pop(); return; } _brh
+#define ret { ret_frame if(fp == -1) return; } _brh
 
-#define hlt self->state=thread_killed; _brh
+#define hlt state=thread_killed; _brh
 
 #define _new(x) \
 { \
-    ptr->createnative(regs[x]);\
+    ptr->createnative(__rxs[x]);\
 }; _brh
 
 #define check_cast \
@@ -67,67 +67,71 @@
     \
 }; _brh
 
-#define mov8(r,x) regs[r]=(int8_t)regs[x]; _brh
+#define mov8(r,x) __rxs[r]=(int8_t)__rxs[x]; _brh
 
-#define mov16(r,x) regs[r]=(int16_t)regs[x]; _brh
+#define mov16(r,x) __rxs[r]=(int16_t)__rxs[x]; _brh
 
-#define mov32(r,x) regs[r]=(int32_t)regs[x]; _brh
+#define mov32(r,x) __rxs[r]=(int32_t)__rxs[x]; _brh
 
-#define mov64(r,x) regs[r]=(int64_t)regs[x]; _brh
+#define mov64(r,x) __rxs[r]=(int64_t)__rxs[x]; _brh
 
-#define pushr(r) thread_stack->push(regs[r]); _brh
+#define pushr(r) __stack[++sp].var = __rxs[r]; _brh
 
-#define _add(r,x) regs[0x0008]=regs[r]+regs[x]; _brh
+#define _add(r,x) __rxs[0x0008]=__rxs[r]+__rxs[x]; _brh
 
-#define _sub(r,x) regs[0x0008]=regs[r]-regs[x]; _brh _brh
+#define _sub(r,x) __rxs[0x0008]=__rxs[r]-__rxs[x]; _brh _brh
 
-#define _mul(r,x) regs[0x0008]=regs[r]*regs[x]; _brh _brh
+#define _mul(r,x) __rxs[0x0008]=__rxs[r]*__rxs[x]; _brh _brh
 
-#define _div(r,x) regs[0x0008]=regs[r]/regs[x]; _brh _brh
+#define _div(r,x) __rxs[0x0008]=__rxs[r]/__rxs[x]; _brh _brh
 
-#define mod(r,x) regs[0x0008]=(int64_t)regs[r]%(int64_t)regs[x]; _brh
+#define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
 #define _pop _brh
 
-#define inc(r) regs[r]++; _brh
+#define inc(r) __rxs[r]++; _brh
 
-#define dec(r) regs[r]--; _brh
+#define dec(r) __rxs[r]--; _brh
 
-#define movr(r,x) regs[r]=regs[x]; _brh
+#define st_inc(x) __stack[fp+x].var++; _brh
+
+#define st_dec(r) __stack[fp+x].var--; _brh
+
+#define movr(r,x) __rxs[r]=__rxs[x]; _brh
 
 #define movx(r,x) _nativeread(r,x) _brh // TODO: make a movxd to ret value from register
 
-#define lt(r,x) regs[0x0002]=regs[r]<regs[x]; _brh
+#define lt(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
 
-#define brh pc=&env->bytecode[(int64_t)regs[0x0000]]; _brh_NOINCREMENT
+#define brh pc=&cache[(int64_t)__rxs[0x0000]]; _brh_NOINCREMENT
 
-#define bre if(regs[0x0002])pc=&env->bytecode[(int64_t)regs[0x0000]]; else _brh
+#define bre if(__rxs[0x0002])pc=&cache[(int64_t)__rxs[0x0000]]; else _brh
 
-#define ife if((regs[0x0002]) == false)pc=&env->bytecode[(int64_t)regs[0x0000]]; else  _brh
+#define ife if((__rxs[0x0002]) == false)pc=&cache[(int64_t)__rxs[0x0000]]; else  _brh
 
-#define ifne if((!regs[0x0002]) == false)pc=&env->bytecode[(int64_t)regs[0x0000]]; else _brh
+#define ifne if((!__rxs[0x0002]) == false)pc=&cache[(int64_t)__rxs[0x0000]]; else _brh
 
-#define gt(r,x) regs[0x0002]=regs[r]>regs[x]; _brh
+#define gt(r,x) __rxs[0x0002]=__rxs[r]>__rxs[x]; _brh
 
-#define gte(r,x) regs[0x0002]=regs[r]>=regs[x]; _brh
+#define gte(r,x) __rxs[0x0002]=__rxs[r]>=__rxs[x]; _brh
 
-#define lte(r,x) regs[0x0002]=regs[r]<regs[x]; _brh
+#define lte(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
 
-#define movl(x) ptr=x; _brh
+#define movl(x) ptr=&__stack[fp+x].object; _brh
 
 #define object_nxt ptr=ptr->nxt; _brh // TODO: add arg(x) to pick index of the node to jump to
 
 #define object_prev ptr=ptr->prev; _brh // ToDO: for future check if node is null
 
-#define movbi(x) regs[0x0008]=x; pc++; _brh
+#define movbi(x) __rxs[0x0008]=x; pc++; _brh
 
-#define _sizeof(r) regs[r]=ptr->size; _brh
+#define _sizeof(r) __rxs[r]=ptr->size; _brh
 
-#define _put(r) cout << regs[r]; _brh
+#define _put(r) cout << __rxs[r]; _brh
 
-#define putc(r) cout << (char)regs[r]; _brh
+#define putc(r) cout << (char)__rxs[r]; _brh
 
-#define _checklen(r) if(regs[r]>=ptr->size) \
+#define _checklen(r) if(__rxs[r]>=ptr->size) \
     { \
         throw Exception("in"); \
     }else { _brh }

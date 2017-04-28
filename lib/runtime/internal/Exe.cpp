@@ -31,6 +31,8 @@ ClassObject *findClass(int64_t superClass);
 
 bool overflowOp(int op) ;
 
+int64_t getmi64(file::stream& exe) ;
+
 int Process_Exe(std::string exe)
 {
     file::stream _fStream;
@@ -83,25 +85,19 @@ int Process_Exe(std::string exe)
                     manifest.debug = _fStream.at(n++) != nil;
                     break;
                 case 0x6:
-                    manifest.entry =getlong(_fStream);
+                    manifest.entry =getmi64(_fStream);
                     break;
                 case 0x7:
-                    manifest.methods =getlong(_fStream);
+                    manifest.addresses =getmi64(_fStream);
                     break;
                 case 0x8:
-                    manifest.classes =getlong(_fStream);
+                    manifest.classes =getmi64(_fStream);
                     break;
                 case 0x9:
                     manifest.fvers =getlong(_fStream);
                     break;
-                case 0x0b:
-                    manifest.isize =getlong(_fStream);
-                    break;
                 case 0x0c:
-                    manifest.strings =getlong(_fStream);
-                    break;
-                case 0x0e:
-                    manifest.baseaddr =getlong(_fStream);
+                    manifest.strings =getmi64(_fStream);
                     break;
                 default:
                     throw std::runtime_error("file `" + exe + "` may be corrupt");
@@ -129,13 +125,12 @@ int Process_Exe(std::string exe)
         int64_t classRefptr=0, macroRefptr=0;
 
         env->classes =(ClassObject*)malloc(sizeof(ClassObject)*manifest.classes);
-        env->objects = (Sh_object*)malloc(sizeof(Sh_object)*manifest.classes);
-        env->methods = (Method*)malloc(sizeof(Method)*manifest.methods);
+        env->__address_spaces = (sh_asp*)malloc(sizeof(sh_asp)*manifest.addresses);
         env->strings = (String*)malloc(sizeof(String)*manifest.strings);
-        env->bytecode = (int64_t*)malloc(sizeof(int64_t)*manifest.isize);
+        env->global_heap = (Sh_object*)malloc(sizeof(int64_t)*manifest.classes);
 
-        if(env->classes == NULL || env->objects == NULL || env->methods == NULL
-                || env->strings == NULL || env->bytecode == NULL) {
+        if(env->classes == NULL || env->__address_spaces == NULL || env->global_heap == NULL
+                || env->strings == NULL) {
             throw Exception("Failed to allocate memory for program,"
                                     " try reducing program size!");
         }
@@ -154,7 +149,7 @@ int Process_Exe(std::string exe)
                     ClassObject* c = &env->classes[classRefptr++];
                     mClasses.push_back(MetaClass(c, getlong(_fStream)));
 
-                    c->id = getlong(_fStream);
+                    c->id = getmi64(_fStream);
                     c->name.init();
                     c->name = getstring(_fStream);
                     c->fieldCount = getlong(_fStream);
@@ -327,6 +322,18 @@ int Process_Exe(std::string exe)
     }
 
     return 0;
+}
+
+int64_t getmi64(file::stream& exe) {
+    int64_t i64 =GET_mi64(
+            SET_mi32(exe.at(n), exe.at(n+1),
+                     exe.at(n+2), exe.at(n+3)
+            ), SET_mi32(exe.at(n+4), exe.at(n+5),
+                        exe.at(n+6), exe.at(n+7)
+    )
+    ); n+=MI_BYTES;
+
+    return i64;
 }
 
 bool overflowOp(int op) {

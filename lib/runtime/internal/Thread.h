@@ -91,6 +91,7 @@ public:
     bool suspendPending;
     bool exceptionThrown;
 
+    int64_t *pc;
     int64_t sp, fp;
     stack* __stack;
     sharp_cache cache;

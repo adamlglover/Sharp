@@ -25,6 +25,10 @@ struct sh_asp {
 
     int64_t* bytecode;
     int frame_init; // inital stack space required for frame
+    ClassObject* owner;
+    nString name;
+    int64_t* params;
+    bool* arrayFlag; // array flag for each parameter
 };
 
 struct stack {
@@ -33,6 +37,9 @@ struct stack {
         Sh_object object;
     };
 };
+
+#define ret_frame \
+    { sp = __stack[fp-2].var; fp = __stack[fp-1].var; }
 
 typedef int64_t* sharp_cache;
 

@@ -943,6 +943,8 @@ void runtime::parseMethodDecl(ast* pAst) {
         Block fblock;
         parseBlock(pAst->getsubast(ast_block), fblock);
         resolveBlockBranches(pAst->getsubast(ast_block), fblock);
+
+        method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
 }
@@ -6340,6 +6342,24 @@ string ResolvedReference::typeToString() {
     return toString() + (array ? "[]" : "");
 }
 
+string mi64_tostr(int64_t i64)
+{
+    string str;
+    mi64_t mi;
+    SET_mi64(mi, i64);
+
+    str+=(uint8_t)GET_mi32w(mi.A);
+    str+=(uint8_t)GET_mi32x(mi.A);
+    str+=(uint8_t)GET_mi32y(mi.A);
+    str+=(uint8_t)GET_mi32z(mi.A);
+
+    str+=(uint8_t)GET_mi32w(mi.B);
+    str+=(uint8_t)GET_mi32x(mi.B);
+    str+=(uint8_t)GET_mi32y(mi.B);
+    str+=(uint8_t)GET_mi32z(mi.B);
+    return str;
+}
+
 string copychars(char c, int t) {
     nString s;
     int it = 0;
@@ -6357,11 +6377,11 @@ std::string runtime::generate_manifest() {
     manifest << ((char)0x02); manifest << c_options.out << ((char)0x0);
     manifest << ((char)0x4); manifest << c_options.vers << ((char)0x0);
     manifest << ((char)0x5); manifest << c_options.debug ? ((char)0x1) : ((char)0x0);
-    manifest << ((char)0x6); manifest << main->vaddr << ((char)0x0);
-    manifest << ((char)0x7); manifest << address_spaces << ((char)0x0);
-    manifest << ((char)0x8); manifest << class_size << ((char)0x0);
+    manifest << ((char)0x6); manifest << mi64_tostr(main->vaddr) << ((char)0x0);
+    manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)0x0);
+    manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)0x0);
     manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
-    manifest << ((char)0x0c); manifest << string_map.size() << ((char)0x0);
+    manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)0x0);
     manifest << eoh;
 
     return manifest.str();
@@ -6402,35 +6422,15 @@ std::string runtime::field_to_stream(Field& field) {
 }
 
 
-string mi64_tostr(int64_t i64)
-{
-    string str;
-    mi64_t mi;
-    SET_mi64(mi, i64);
-
-    str+=(uint8_t)GET_mi32w(mi.A);
-    str+=(uint8_t)GET_mi32x(mi.A);
-    str+=(uint8_t)GET_mi32y(mi.A);
-    str+=(uint8_t)GET_mi32z(mi.A);
-
-    str+=(uint8_t)GET_mi32w(mi.B);
-    str+=(uint8_t)GET_mi32x(mi.B);
-    str+=(uint8_t)GET_mi32y(mi.B);
-    str+=(uint8_t)GET_mi32z(mi.B);
-    return str;
-}
-
 std::string runtime::class_to_stream(ClassObject& klass) {
     stringstream kstream;
 
+    kstream << data_class;
     kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)0x0);
     kstream << mi64_tostr(klass.vaddr) << ((char)0x0);
     kstream << klass.getFullName() << ((char)0x0);
     kstream << klass.fieldCount() << ((char)0x0);
     kstream << klass.functionCount() << ((char)0x0);
-    kstream << klass.constructorCount() << ((char)0x0);
-    kstream << klass.overloadCount() << ((char)0x0);
-    kstream << klass.macrosCount() << ((char)0x0);
 
     for(long long i = 0; i < klass.fieldCount(); i++) {
         kstream << field_to_stream(*klass.getField(i));
@@ -6524,6 +6524,8 @@ std::string runtime::generate_text_section() {
         text << allMethods.get(i)->getName() << ((char)0x0);
         text << mi64_tostr(allMethods.get(i)->pklass->vaddr) << ((char)0x0);
         text << mi64_tostr(allMethods.get(i)->paramCount()) << ((char)0x0);
+
+        // TODO: add all parameters here and a bit flag that means array
     }
 
     text << data_byte;

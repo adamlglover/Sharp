@@ -5,6 +5,7 @@
 #include "Thread.h"
 #include "Exe.h"
 #include "../interp/vm.h"
+#include "../interp/Opcode.h"
 
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
@@ -14,7 +15,7 @@ unsigned int Thread::tp = 0;
 /*
  * Local registers for the thread to use
  */
-thread_local double __rxs;
+thread_local double __rxs[10];
 
 void Thread::Startup() {
     threads = (Thread**)malloc(sizeof(Thread**)*MAX_THREADS);
@@ -443,8 +444,175 @@ void*
 #endif
 }
 
-void Thread::run() {
+double exponent(int64_t n){
+    if (n < 100000){
+        // 5 or less
+        if (n < 100){
+            // 1 or 2
+            if (n < 10)
+                return n*0.1;
+            else
+                return n*0.01;
+        }else{
+            // 3 or 4 or 5
+            if (n < 1000)
+                return n*0.001;
+            else{
+                // 4 or 5
+                if (n < 10000)
+                    return n*0.0001;
+                else
+                    return n*0.00001;
+            }
+        }
+    } else {
+        // 6 or more
+        if (n < 10000000) {
+            // 6 or 7
+            if (n < 1000000)
+                return n*0.000001;
+            else
+                return n*0.0000001;
+        } else if(n < 1000000000) {
+            // 8 to 10
+            if (n < 100000000)
+                return n*0.00000001;
+            else {
+                // 9 or 10
+                if (n < 1000000000)
+                    return n*0.000000001;
+                else
+                    return n*0.0000000001;
+            }
+        } else if(n < 1000000000000000) {
+            // 11 to 15
+            if (n < 100000000000)
+                return n*0.00000000001;
+            else {
+                // 12 to 15
+                if (n < 1000000000000)
+                    return n*0.000000000001;
+                else if (n < 10000000000000)
+                    return n*0.0000000000001;
+                else if (n < 100000000000000)
+                    return n*0.00000000000001;
+                else
+                    return n*0.000000000000001;
+            }
+        }
+        else {
+            return n*0.0000000000000001;
+        }
+    }
+}
 
+void Thread::run() {
+    Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
+
+    pc = &cache[0];
+    _init_opcode_table
+
+    try {
+        for (;;) {
+            interp:
+            if(suspendPending)
+                Thread::suspendSelf();
+            if(state == thread_killed)
+                return;
+
+            DISPATCH();
+            _NOP:
+            NOP
+                    _INT:
+            _int(GET_Da(*pc))
+            MOVI:
+            movi(GET_Da(*pc))
+            RET:
+            ret
+                    HLT:
+            hlt
+                    NEW: /* Requires register value */
+            _new(GET_Da(*pc))
+            CHECK_CAST:
+            check_cast
+                    MOV8:
+            mov8(GET_Ca(*pc),GET_Cb(*pc))
+            MOV16:
+            mov16(GET_Ca(*pc),GET_Cb(*pc))
+            MOV32:
+            mov32(GET_Ca(*pc),GET_Cb(*pc))
+            MOV64:
+            mov64(GET_Ca(*pc),GET_Cb(*pc))
+            PUSHR:
+            pushr(GET_Da(*pc))
+            ADD:
+            _add(GET_Ca(*pc),GET_Cb(*pc))
+            SUB:
+            _sub(GET_Ca(*pc),GET_Cb(*pc))
+            MUL:
+            _mul(GET_Ca(*pc),GET_Cb(*pc))
+            DIV:
+            _div(GET_Ca(*pc),GET_Cb(*pc))
+            MOD:
+            mod(GET_Ca(*pc),GET_Cb(*pc))
+            POP:
+            _pop
+                    INC:
+            inc(GET_Da(*pc))
+            DEC:
+            dec(GET_Da(*pc))
+            MOVR:
+            movr(GET_Ca(*pc),GET_Cb(*pc))
+            MOVX: /* Requires register value */
+            movx(GET_Ca(*pc),GET_Cb(*pc))
+            LT:
+            lt(GET_Ca(*pc),GET_Cb(*pc))
+            BRH:
+            brh
+                    BRE:
+            bre
+                    IFE:
+            ife
+                    IFNE:
+            ifne
+                    GT:
+            gt(GET_Ca(*pc),GET_Cb(*pc))
+            GTE:
+            gte(GET_Ca(*pc),GET_Cb(*pc))
+            LTE:
+            lte(GET_Ca(*pc),GET_Cb(*pc))
+            MOVL:
+            movl(GET_Da(*pc))
+            OBJECT_NXT:
+            object_nxt
+                    OBJECT_PREV:
+            object_prev
+                    RMOV:
+            _nativewrite2((int64_t)regs[GET_Ca(*pc)],regs[GET_Cb(*pc)]) _brh
+                    MOV:
+            _nativewrite3((int64_t)regs[GET_Ca(*pc)],GET_Cb(*pc)) _brh
+                    MOVD:
+            _nativewrite2((int64_t)regs[GET_Ca(*pc)],GET_Cb(*pc)) _brh
+                    MOVBI:
+            movbi(GET_Da(*pc) + exponent(*(pc+1)))
+            _SIZEOF:
+            _sizeof(GET_Da(*pc))
+            PUT:
+            _put(GET_Da(*pc))
+            PUTC:
+            putc(GET_Da(*pc))
+            CHECKLEN:
+            _checklen(GET_Da(*pc))
+
+        }
+    } catch (std::bad_alloc &e) {
+        // TODO: throw out of memory error
+    } catch (Exception &e) {
+        self->throwable = e.getThrowable();
+        self->exceptionThrown = true;
+
+        // TODO: handle exception
+    }
 }
 
 void Thread::call_asp(int64_t id) {

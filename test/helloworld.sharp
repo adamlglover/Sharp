@@ -3,7 +3,20 @@ mod application;
 class Start {
 
     static fn __init(var[] args) {
-
+        __asm(
+            "movi #99,%ebx"
+            "movl 3"
+            "hlt"
+            ".L1:"
+            "movi 3,%adx"
+            ".L2:"
+            "add %ecx,%ebx"
+            "movbi 138.8e+11"
+            "movbi #4,#7"
+            "movi 138.8e+10, %ecx"
+            "_sizeof %egx"
+            "goto $L1"
+        );
     }
 }
 
@@ -14,6 +27,19 @@ class Console {
     static fn write(var[] data2) {
         data = "test";
         data += data2;
+        Console.write("Hello World");
+
+        __asm(
+            "movi #99,%ebx"
+            "movbi 138.8e+11"
+            "movbi #4,#7"
+            "add %ecx,%ebx"
+            "movi 138.8e+10, %ecx"
+            "_sizeof %egx"
+            "movl 3"
+            ".L2:"
+            "hlt"
+        );
     }
 }
 
@@ -21,6 +47,18 @@ class Main {
 
     static fn main( var[] args ) : __int16 {
         Console.write("Hello World");
+
+        __asm(
+            "movbi #4,#7"
+            "movi 138.8e+10, %ecx"
+            "_sizeof %egx"
+            "movi #99,%ebx"
+            "movl 3"
+            ".L2:"
+            "add %ecx,%ebx"
+            "movbi 138.8e+11"
+            "hlt"
+        );
         return 0;
     }
 }

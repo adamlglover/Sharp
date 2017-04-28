@@ -14,18 +14,15 @@ class Method;
  * Application info
  */
 struct Manifest {
-
     nString executable;
     nString application;
     nString version;
     bool debug;
     int64_t entry;
-    size_t methods, classes;
+    int64_t addresses, classes;
     int fvers;
     int target;
-    int64_t isize;
-    size_t strings;
-    int64_t baseaddr;
+    int64_t strings;
     Method* main;
 };
 

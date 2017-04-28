@@ -13,7 +13,7 @@ void error(string message);
 
 #define progname "sharp"
 #define rev "r2"
-#define progvers "1.2.27" rev
+#define progvers "1.2.28" rev
 
 struct options {
 

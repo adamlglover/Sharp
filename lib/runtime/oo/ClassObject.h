@@ -28,16 +28,15 @@ public:
     }
 
     ClassObject(string name, Field* fields, int64_t fc,
-                Method* methods, int64_t mc, ClassObject* super,
-                int64_t id)
+                ClassObject* super, int64_t id)
     :
             name(name),
             flds(fields),
-            methods(methods),
+            methods(NULL),
             super(super),
             id(id),
             fieldCount(fc),
-            methodCount(mc),
+            methodCount(0),
             fields(NULL)
     {
     }
@@ -45,7 +44,7 @@ public:
     nString name;
     Field* flds;
     Sh_object* fields;
-    Method* methods;
+    int64_t *methods;
     ClassObject* super;
     int64_t id, fieldCount, methodCount;
 
