@@ -4,7 +4,6 @@
 
 #include "Environment.h"
 #include "Exe.h"
-#include "../oo/Method.h"
 #include "../oo/Exception.h"
 #include "../oo/Object.h"
 #include "../alloc/GC.h"
@@ -15,17 +14,6 @@ ClassObject Environment::RuntimeException;
 ClassObject Environment::ThreadStackException;
 ClassObject Environment::IndexOutOfBoundsException;
 ClassObject Environment::NullptrException;
-
-Method *Environment::getMethod(int64_t id) {
-    for(uint64_t i = 0; i < manifest.methods; i++) {
-        if(env->methods[i].id == id)
-            return &env->methods[i];
-    }
-
-    stringstream msg;
-    msg << "method not found @id:" << id;
-    throw Exception(msg.str());
-}
 
 ClassObject *Environment::findClass(string name) {
     for (uint64_t i = 0; i < manifest.classes; i++) {
@@ -45,16 +33,6 @@ ClassObject *Environment::tryFindClass(string name) {
     return NULL;
 }
 
-Method *Environment::getMethodFromClass(ClassObject *classObject, int64_t id) {
-    if(classObject == NULL || id >= classObject->methodCount) {
-        stringstream msg;
-        msg << "method not found @id:" << id;
-        throw Exception(msg.str());
-    }
-
-    return &classObject->methods[id];
-}
-
 ClassObject *Environment::findClass(int64_t id) {
     for (uint64_t i = 0; i < manifest.classes; i++) {
         if (env->classes[i].id == id)
@@ -67,7 +45,10 @@ ClassObject *Environment::findClass(int64_t id) {
 }
 
 void Environment::shutdown() {
-    std::free (this->bytecode);
+    for(unsigned int i = 0; i < manifest.addresses; i++) {
+        this->__address_spaces[i].free();
+    }
+    std::free (this->__address_spaces);
     for(int64_t i = 0; i < manifest.strings; i++)
         this->strings->value.free();
     std::free (this->strings);
@@ -78,8 +59,8 @@ void Environment::shutdown() {
 
     // TODO: free objects and aux classes
     for(int64_t i = 0; i < manifest.classes; i++)
-        this->objects->free();
-    std::free (this->objects);
+        this->global_heap[i].free();
+    std::free (this->global_heap);
 
     this->IndexOutOfBoundsException.free();
     this->NullptrException.free();
@@ -94,10 +75,10 @@ void Environment::shutdown() {
 }
 
 void Environment::newClass(int64_t object, int64_t klass) {
-    if(objects[object].mark == gc_green)
-        objects[object].free();
+    if(global_heap[object].mark == gc_green)
+        global_heap[object].free();
 
-    objects[object].mark = gc_green;
+    global_heap[object].mark = gc_green;
 }
 
 void Environment::newClass(Sh_object* object, int64_t klass) {
@@ -177,6 +158,19 @@ void Environment::freesticky(_gc_object *objects, int64_t len) {
         for(int64_t i = 0; i < len; i++) {
             // TodO: implement
             objects[i].free();
+        }
+    }
+}
+
+void Environment::init(stack *st, int64_t stack_size) {
+    if(stack_size > 0 && st != NULL) {
+        for(int64_t i = 0; i < stack_size; i++) {
+            st[i].object.HEAD=NULL;
+            st[i].object._Node = NULL, st[i].object.prev=NULL,st[i].object.nxt=NULL;
+            st[i].object.mark = gc_orange;
+            st[i].object.size = 0;
+            st[i].object.monitor = Monitor();
+            st[i].object.refs.init();
         }
     }
 }

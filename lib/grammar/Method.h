@@ -32,7 +32,8 @@ public:
             module(""),
             note(),
             array(false),
-            code()
+            code(),
+            local_count(0)
     {
     }
 
@@ -46,7 +47,8 @@ public:
             module(module),
             note(note),
             array(false),
-            code()
+            code(),
+            local_count(0)
     {
         this->modifiers.init();
         this->params.init();
@@ -64,7 +66,8 @@ public:
             module(module),
             note(note),
             array(false),
-            code()
+            code(),
+            local_count(0)
     {
         this->modifiers.init();
         this->params.init();
@@ -96,6 +99,7 @@ public:
     m64Assembler code;
     ClassObject* pklass;
     bool array;
+    int64_t local_count;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
     string name;

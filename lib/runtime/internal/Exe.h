@@ -25,7 +25,7 @@ struct mi64_t {
 #define manif 0x1
 #define eoh 0x03
 #define nil 0x0
-#define hsz 0x0a
+#define hsz 0x09
 #define eos 0x1d
 #define sdata 0x05
 #define sstring 0x02

@@ -36,7 +36,7 @@ enum Type {
     ptr->HEAD[ix]+=data;
 
 #define _nativeread(r,rx) \
-    regs[r]=ptr->HEAD[(int64_t)regs[rx]];
+    __rxs[r]=ptr->HEAD[(int64_t)__rxs[rx]];
 
 #define Sh_InvRef(x) { \
 x->HEAD=NULL; \
@@ -60,10 +60,10 @@ public:
     int64_t size;
     Sh_object *_Node, *prev, *nxt;
     Monitor monitor;
-    List<Sh_object**> refs;
+    List<Sh_object*> refs;
     Sh_object* _rNode;
 
-    void _Sh_IncRef(Sh_object* o,Sh_object**);
+    void _Sh_IncRef(Sh_object*);
     void free();
     void createnative(int64_t size);
     void copy_object(Sh_object *pObject);

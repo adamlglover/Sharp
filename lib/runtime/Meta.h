@@ -9,7 +9,6 @@
 
 class ClassObject;
 class Field;
-class Method;
 
 /**
  * File and debugging info, line

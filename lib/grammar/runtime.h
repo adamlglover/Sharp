@@ -507,35 +507,13 @@ private:
 
     void setHeadClass(ClassObject *pObject);
 
-    Expression parse_literal(ast *pAst);
-
-    void parse_charliteral(string basic_string, m64Assembler &assembler);
-
-    void parse_intliteral(string int_string, m64Assembler &assembler, ast* pAst);
-
-    void parse_hexliteral(string hex_string, m64Assembler &assembler, ast *pAst);
-
-    void parse_string_literal(string basic_string, m64Assembler &assembler);
-
-    int64_t add_string(string basic_string);
-
-    bool has_string(string basic_string);
-
     int64_t get_string(string basic_string);
 
-    void parse_boolliteral(string basic_string, m64Assembler &assembler);
-
-    void parse_native_cast(ResolvedReference reference, Expression expression, ast *pAst);
-
     void mov_field(Expression &expression, ast* pAst);
-
-    void parse_class_cast(ResolvedReference &reference, Expression &expression, ast *pAst);
 
     Scope* add_scope(Scope scope);
 
     void remove_scope();
-
-    bool parse_global_utype(ref_ptr &ptr, Expression &expression, ast* pAst);
 
     void resolveAllFields();
 
@@ -746,8 +724,6 @@ private:
 
     void resolveBlockBranches(ast *pAst, Block &block);
 
-    void partial_parseAsmDecl(Block &block, ast *pAst);
-
     void partial_breakStatement(Block &block, ast *pAst);
 
     int64_t get_label(string label);
@@ -848,6 +824,11 @@ struct options {
      * Easter egg to enable magic mode
      */
     bool magic = false;
+
+    /*
+     * Machine platform target to runon
+     */
+    int target = versions.BASE;
 };
 
 int _bootstrap(int argc, const char* argv[]);

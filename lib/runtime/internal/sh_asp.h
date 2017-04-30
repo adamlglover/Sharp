@@ -29,17 +29,42 @@ struct sh_asp {
     nString name;
     int64_t* params;
     bool* arrayFlag; // array flag for each parameter
+    int param_size;
+    int64_t cache_size;
+
+    void free() {
+        if(param_size != 0) {
+            if(arrayFlag != NULL)
+                std::free(arrayFlag);
+            if(params != NULL)
+                std::free(params);
+        }
+
+        owner = NULL;
+        if(bytecode != NULL) {
+            std::free(bytecode);
+        }
+    }
+
+    void init() {
+        name.init();
+        params = NULL;
+        arrayFlag = NULL;
+        param_size = 0;
+        owner = NULL;
+        frame_init = 0;
+        bytecode = NULL;
+        id = 0;
+    }
 };
 
 struct stack {
-    union {
-        double var;
-        Sh_object object;
-    };
+    double var;
+    Sh_object object;
 };
 
 #define ret_frame \
-    { sp = __stack[fp-2].var; fp = __stack[fp-1].var; }
+    { if(curr_adsp == main->id) return; else { pc = sp = __stack[fp-2].var; fp = __stack[fp-1].var; } }
 
 typedef int64_t* sharp_cache;
 

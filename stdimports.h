@@ -41,6 +41,17 @@ using namespace std;
     #define POSIX_USEC_INTERVAL 1000
 #endif
 
+struct Sharp {
+    /**
+     * Jan 13, 2017 Initial build release of sharp 1.3, this contains
+     * all the base level support for running sharp. Sharp was
+     * developed to support both windows and linux operating systems
+     */
+    int BASE  = 1;
+};
+
+extern Sharp versions;
+
 void* memalloc(size_t bytes);
 void* memcalloc(size_t n, size_t bytes);
 void* memrealloc(void *ptr, size_t bytes);

@@ -6,6 +6,7 @@
 #include "Exe.h"
 #include "../interp/vm.h"
 #include "../interp/Opcode.h"
+#include "Environment.h"
 
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
@@ -25,7 +26,7 @@ void Thread::Startup() {
 
     Thread* main = (Thread*)malloc(
             sizeof(Thread)*1);
-    main->main = manifest.main;
+    main->main = &env->__address_spaces[manifest.entry];
     main->Create("Main");
 }
 
@@ -33,11 +34,10 @@ void Thread::Create(string name, ClassObject* klass, int64_t method) {
     this->monitor = Monitor();
     this->name.init();
 
-    this->main = env->getMethodFromClass(klass, method);
+    this->main = NULL;//env->getMethodFromClass(klass, method);
     this->name = name;
     this->id = Thread::tid++;
-    this->stack.init();
-    this->cstack.init();
+    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -45,6 +45,8 @@ void Thread::Create(string name, ClassObject* klass, int64_t method) {
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
+    this->sp = -1;
+    this->fp = 0;
 
     push_thread(this);
 }
@@ -55,9 +57,7 @@ void Thread::Create(string name) {
 
     this->name = name;
     this->id = Thread::tid++;
-    this->stack.init();
-    this->cstack.init();
-    this->cstack.thread_stack = &this->stack;
+    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -65,6 +65,8 @@ void Thread::Create(string name) {
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
+    this->sp = -1;
+    this->fp = 0;
 
     push_thread(this);
 }
@@ -75,9 +77,7 @@ void Thread::CreateDaemon(string) {
 
     this->name = name;
     this->id = Thread::tid++;
-    this->stack=FastStack();
-    this->cstack=CallStack();
-    this->cstack.thread_stack = &this->stack;
+    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -85,6 +85,8 @@ void Thread::CreateDaemon(string) {
     this->daemon = true;
     this->state = thread_init;
     this->exitVal = 0;
+    this->sp = -1;
+    this->fp = 0;
 
     push_thread(this);
 }
@@ -303,8 +305,7 @@ void Thread::suspendThread(Thread *thread) {
 
 void Thread::term() {
     this->monitor.unlock();
-    this->stack.free();
-    this->cstack.free();
+    // TODO: free stack
     this->name.free();
 }
 
@@ -509,7 +510,12 @@ double exponent(int64_t n){
 void Thread::run() {
     Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
-    pc = &cache[0];
+    pc = 0;
+    fp = 0; sp = -1;
+
+    Environment::init(__stack, STACK_SIZE);
+    init_frame();
+    call_asp(main->id);
     _init_opcode_table
 
     try {
@@ -524,49 +530,49 @@ void Thread::run() {
             _NOP:
             NOP
                     _INT:
-            _int(GET_Da(*pc))
+            _int(GET_Da(cache[pc]))
             MOVI:
-            movi(GET_Da(*pc))
+            movi(GET_Da(cache[pc]))
             RET:
             ret
                     HLT:
             hlt
                     NEW: /* Requires register value */
-            _new(GET_Da(*pc))
+            _new(GET_Da(cache[pc]))
             CHECK_CAST:
             check_cast
                     MOV8:
-            mov8(GET_Ca(*pc),GET_Cb(*pc))
+            mov8(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV16:
-            mov16(GET_Ca(*pc),GET_Cb(*pc))
+            mov16(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV32:
-            mov32(GET_Ca(*pc),GET_Cb(*pc))
+            mov32(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV64:
-            mov64(GET_Ca(*pc),GET_Cb(*pc))
+            mov64(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             PUSHR:
-            pushr(GET_Da(*pc))
+            pushr(GET_Da(cache[pc]))
             ADD:
-            _add(GET_Ca(*pc),GET_Cb(*pc))
+            _add(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             SUB:
-            _sub(GET_Ca(*pc),GET_Cb(*pc))
+            _sub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MUL:
-            _mul(GET_Ca(*pc),GET_Cb(*pc))
+            _mul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             DIV:
-            _div(GET_Ca(*pc),GET_Cb(*pc))
+            _div(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOD:
-            mod(GET_Ca(*pc),GET_Cb(*pc))
+            mod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             POP:
             _pop
                     INC:
-            inc(GET_Da(*pc))
+            inc(GET_Da(cache[pc]))
             DEC:
-            dec(GET_Da(*pc))
+            dec(GET_Da(cache[pc]))
             MOVR:
-            movr(GET_Ca(*pc),GET_Cb(*pc))
+            movr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOVX: /* Requires register value */
-            movx(GET_Ca(*pc),GET_Cb(*pc))
+            movx(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             LT:
-            lt(GET_Ca(*pc),GET_Cb(*pc))
+            lt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             BRH:
             brh
                     BRE:
@@ -576,54 +582,81 @@ void Thread::run() {
                     IFNE:
             ifne
                     GT:
-            gt(GET_Ca(*pc),GET_Cb(*pc))
+            gt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             GTE:
-            gte(GET_Ca(*pc),GET_Cb(*pc))
+            gte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             LTE:
-            lte(GET_Ca(*pc),GET_Cb(*pc))
+            lte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOVL:
-            movl(GET_Da(*pc))
+            movl(GET_Da(cache[pc]))
             OBJECT_NXT:
             object_nxt
                     OBJECT_PREV:
             object_prev
                     RMOV:
-            _nativewrite2((int64_t)regs[GET_Ca(*pc)],regs[GET_Cb(*pc)]) _brh
+            _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh
                     MOV:
-            _nativewrite3((int64_t)regs[GET_Ca(*pc)],GET_Cb(*pc)) _brh
+            _nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
                     MOVD:
-            _nativewrite2((int64_t)regs[GET_Ca(*pc)],GET_Cb(*pc)) _brh
+            _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
                     MOVBI:
-            movbi(GET_Da(*pc) + exponent(*(pc+1)))
+            movbi(GET_Da(cache[pc]) + exponent(cache[pc+1]))
             _SIZEOF:
-            _sizeof(GET_Da(*pc))
+            _sizeof(GET_Da(cache[pc]))
             PUT:
-            _put(GET_Da(*pc))
+            _put(GET_Da(cache[pc]))
             PUTC:
-            putc(GET_Da(*pc))
+            putc(GET_Da(cache[pc]))
             CHECKLEN:
-            _checklen(GET_Da(*pc))
+            _checklen(GET_Da(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error
     } catch (Exception &e) {
-        self->throwable = e.getThrowable();
-        self->exceptionThrown = true;
+        throwable = e.getThrowable();
+        exceptionThrown = true;
 
         // TODO: handle exception
     }
 }
 
 void Thread::call_asp(int64_t id) {
-    // TODO: setup stack
-    if(id < 0 || id >= env->__asp_len) {
-        // error
+    if(id < 0 || id >= manifest.addresses) {
+        stringstream ss;
+        ss << "could not call method @" << id << "; method not found.";
+        throw Exception(ss.str());
     }
 
-    sh_asp* asp = env->__address_spaces+id;
-    __stack[++sp].var = sp-1; // store sp
-    __stack[++sp].var = fp; // store frame pointer
+    sh_asp* asp = &env->__address_spaces[id];
 
-    fp= sp+1;
+    /*
+     * Do we have enough space to allocate this new frame?
+     */
+    if((sp+(asp->frame_init-asp->param_size)) < STACK_SIZE) {
+        this->curr_adsp = asp->id;
+        this->cache = asp->bytecode;
+
+        fp= sp-asp->param_size;
+        sp = fp+asp->frame_init;
+        pc = 0;
+    } else {
+        // stack overflow err
+    }
+}
+
+void Thread::init_frame() {
+    int64_t old_sp = sp, frame_alloc = 4;
+
+    /*
+     * Do we have enough space to allocate this new frame?
+     */
+    if(sp+frame_alloc < STACK_SIZE) {
+        __stack[++sp].var = old_sp; // store sp
+        __stack[++sp].var = fp; // store frame pointer
+        __stack[++sp].var = pc; // store pc
+        __stack[++sp].var = curr_adsp; // store address_space id
+    } else {
+        // stack overflow err
+    }
 }

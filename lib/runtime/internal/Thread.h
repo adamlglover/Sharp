@@ -8,15 +8,13 @@
 
 #include "../../../stdimports.h"
 #include "Monitor.h"
-#include "../interp/FastStack.h"
 #include "../oo/ClassObject.h"
 #include "../oo/Exception.h"
-#include "../interp/CallStack.h"
 #include "sh_asp.h"
 
 #define MAX_THREADS 0x40fe
 
-class Method;
+#define STACK_SIZE 0xefba
 
 enum ThreadState {
     thread_init=0x000,
@@ -91,7 +89,7 @@ public:
     bool suspendPending;
     bool exceptionThrown;
 
-    int64_t *pc;
+    int64_t pc, curr_adsp;
     int64_t sp, fp;
     stack* __stack;
     sharp_cache cache;
@@ -109,9 +107,11 @@ public:
 
     static void resumeAllThreads();
 
-private:
     void run();
+
+private:
     void call_asp(int64_t id);
+    void init_frame();
 
     void wait();
 

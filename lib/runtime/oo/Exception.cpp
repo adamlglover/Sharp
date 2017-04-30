@@ -2,9 +2,7 @@
 // Created by BraxtonN on 2/27/2017.
 //
 #include "Exception.h"
-#include "Method.h"
 #include "../internal/Environment.h"
-#include "../interp/CallStack.h"
 #include "ClassObject.h"
 
 string Throwable::buildMessage(CallStack &cs) {

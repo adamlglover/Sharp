@@ -6,7 +6,6 @@
 #define SHARP_ENVIRONMENT_H
 
 #include "../oo/string.h"
-#include "../interp/FastStack.h"
 #include "../oo/ClassObject.h"
 #include "sh_asp.h"
 
@@ -19,18 +18,15 @@ class Environment {
 public:
     Environment()
     :
-            objects(NULL),
-            methods(NULL),
+            global_heap(NULL),
             classes(NULL),
             strings(NULL),
-            bytecode(NULL)
+            __address_spaces(NULL)
     {
     }
 
     int CallMainMethod(Method*, void*, int);
     void DropLocals();
-    Method* getMethod(int64_t id);
-    Method* getMethodFromClass(ClassObject* classObject, int64_t id);
     ClassObject* findClass(string name);
     ClassObject* tryFindClass(string name);
     ClassObject* findClass(int64_t id);
@@ -61,17 +57,16 @@ public:
 
     static void init(_gc_object*,int64_t);
     static void init(Sh_object*,int64_t);
+    static void init(stack*,int64_t);
 
     static void free(Sh_object*, int64_t);
     static void freesticky(_gc_object*, int64_t);
     static void gcinsert_stack(Sh_object *, int64_t);
-
-    int64_t __asp_len;
 };
 
 extern Environment* env;
 
-#define mvers 1
+#define mvers versions.BASE
 
 
 #endif //SHARP_ENVIRONMENT_H

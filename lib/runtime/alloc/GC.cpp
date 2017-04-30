@@ -4,6 +4,7 @@
 
 #include "GC.h"
 #include "../internal/Thread.h"
+#include "../internal/Environment.h"
 
 size_t gc_max_heap_size = 128 * 1024 ;
 GC* GC::gc = NULL;

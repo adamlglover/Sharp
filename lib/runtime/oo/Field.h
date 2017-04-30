@@ -31,6 +31,7 @@ public:
     int64_t id;
     int type;
     bool isstatic;
+    bool array;
     ClassObject* owner;
 
     void free() {

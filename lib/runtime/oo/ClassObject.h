@@ -22,8 +22,7 @@ public:
             super(NULL),
             id(-1),
             fieldCount(0),
-            methodCount(0),
-            fields(NULL)
+            methodCount(0)
     {
     }
 
@@ -36,14 +35,12 @@ public:
             super(super),
             id(id),
             fieldCount(fc),
-            methodCount(0),
-            fields(NULL)
+            methodCount(0)
     {
     }
 
     nString name;
     Field* flds;
-    Sh_object* fields;
     int64_t *methods;
     ClassObject* super;
     int64_t id, fieldCount, methodCount;
@@ -51,7 +48,6 @@ public:
     void free();
 
     ClassObject *newdup();
-    Sh_object* get_field(int64_t);
 };
 
 

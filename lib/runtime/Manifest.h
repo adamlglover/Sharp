@@ -23,7 +23,6 @@ struct Manifest {
     int fvers;
     int target;
     int64_t strings;
-    Method* main;
 };
 
 

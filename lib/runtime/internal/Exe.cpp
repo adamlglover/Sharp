@@ -8,7 +8,6 @@
 #include "Environment.h"
 #include "../oo/Field.h"
 #include "../interp/vm.h"
-#include "../oo/Method.h"
 #include "../oo/Object.h"
 #include "../interp/Opcode.h"
 
@@ -99,6 +98,9 @@ int Process_Exe(std::string exe)
                 case 0x0c:
                     manifest.strings =getmi64(_fStream);
                     break;
+                case 0x0e:
+                    manifest.target =getlong(_fStream);
+                    break;
                 default:
                     throw std::runtime_error("file `" + exe + "` may be corrupt");
             }
@@ -146,74 +148,66 @@ int Process_Exe(std::string exe)
 
                 case data_class: {
                     int64_t fieldPtr=0, functionPtr=0;
-                    ClassObject* c = &env->classes[classRefptr++];
-                    mClasses.push_back(MetaClass(c, getlong(_fStream)));
+                    ClassObject* klass = &env->classes[classRefptr++];
+                    mClasses.push_back(MetaClass(klass, getlong(_fStream)));
 
-                    c->id = getmi64(_fStream);
-                    c->name.init();
-                    c->name = getstring(_fStream);
-                    c->fieldCount = getlong(_fStream);
-                    c->methodCount = getlong(_fStream);
+                    klass->id = getmi64(_fStream);
+                    klass->name.init();
+                    klass->name = getstring(_fStream);
+                    klass->fieldCount = getlong(_fStream);
+                    klass->methodCount = getlong(_fStream);
 
-                    if(c->fieldCount != 0) {
-                        c->flds = (Field*)malloc(sizeof(Field)*c->fieldCount);
+                    if(klass->fieldCount != 0) {
+                        klass->flds = (Field*)malloc(sizeof(Field)*klass->fieldCount);
                     } else
-                        c->flds = NULL;
-                    if(c->methodCount != 0) {
-                        c->methods = (Method*)malloc(sizeof(Method)*c->methodCount);
+                        klass->flds = NULL;
+                    if(klass->methodCount != 0) {
+                        klass->methods = (int64_t *)malloc(sizeof(int64_t)*klass->methodCount);
                     } else
-                        c->methods = NULL;
-                    c->super = NULL;
-                    c->fields = NULL;
+                        klass->methods = NULL;
+                    klass->super = NULL;
 
-                    if(c->fieldCount != 0) {
+                    if(klass->fieldCount != 0) {
                         for( ;; ) {
                             if(_fStream.at(n) == data_field) {
                                 n++;
-                                getField(_fStream, mFields, &c->flds[fieldPtr++]);
+                                getField(_fStream, mFields, &klass->flds[fieldPtr++]);
                             } else if(_fStream.at(n) == 0x0a || _fStream.at(n) == 0x0d) {
                                 n++;
                             } else
                                 break;
                         }
 
-                        if(fieldPtr != c->fieldCount) {
+                        if(fieldPtr != klass->fieldCount) {
                             throw std::runtime_error("invalid field size");
                         }
                     }
 
-                    if(c->methodCount != 0) {
+                    if(klass->methodCount != 0) {
                         for( ;; ) {
                             if(_fStream.at(n) == data_method) {
                                 n++;
-                                getMethod(_fStream, c, &c->methods[functionPtr]);
-
-                                if(manifest.entry == c->methods[functionPtr].id)
-                                    manifest.main = &c->methods[functionPtr];
-                                functionPtr++;
+                                klass->methods[functionPtr++] = getmi64(_fStream);
+                                n++;
                             } else if(_fStream.at(n) == 0x0a || _fStream.at(n) == 0x0d){
                                 n++;
                             } else
                                 break;
                         }
 
-                        if(functionPtr != c->methodCount) {
+                        if(functionPtr != klass->methodCount) {
                             throw std::runtime_error("invalid method size");
                         }
                     }
                     break;
                 }
-
-                case data_method:
-                    getMethod(_fStream, NULL, &env->methods[macroRefptr++]);
-                    break;
-                case sstring:
+                case eos:
                     break;
                 default:
                     throw std::runtime_error("file `" + exe + "` may be corrupt");
             }
 
-            if(__bitFlag == sstring) {
+            if(__bitFlag == eos) {
                 break;
             }
         }
@@ -241,7 +235,7 @@ int Process_Exe(std::string exe)
                     break;
 
                 case data_string: {
-                    env->strings[stringPtr].id = getlong(_fStream);
+                    env->strings[stringPtr].id = getmi64(_fStream); n++;
                     env->strings[stringPtr].value.init();
                     env->strings[stringPtr].value = getstring(_fStream);
 
@@ -267,7 +261,48 @@ int Process_Exe(std::string exe)
             throw std::runtime_error("file `" + exe + "` may be corrupt");
 
         /* Text section */
-        uint64_t bRef=0;
+        uint64_t aspRef=0;
+
+        for (;;) {
+
+            __bitFlag = _fStream.at(n++);
+            switch (__bitFlag) {
+                case 0x0:
+                case 0x0a:
+                case 0x0d:
+                    break;
+
+                case data_method: {
+                    if(aspRef >= manifest.addresses)
+                        throw std::runtime_error("text section may be corrupt");
+
+                    sh_asp* adsp = &env->__address_spaces[aspRef++];
+                    adsp->init();
+
+                    adsp->id = getmi64(_fStream);
+                    adsp->name = getstring(_fStream);
+                    adsp->owner = findClass(getmi64(_fStream));
+                    adsp->param_size = getmi64(_fStream);
+                    adsp->frame_init = getmi64(_fStream);
+                    adsp->cache_size = getmi64(_fStream);
+                    break;
+                }
+
+                case data_byte:
+                    break;
+                default:
+                    throw std::runtime_error("file `" + exe + "` may be corrupt");
+            }
+
+            if(__bitFlag == data_byte) {
+                if(aspRef != manifest.addresses)
+                    throw std::runtime_error("text section may be corrupt");
+                n--;
+                break;
+            }
+        }
+
+        aspRef=0;
 
         for (;;) {
 
@@ -279,28 +314,23 @@ int Process_Exe(std::string exe)
                     break;
 
                 case data_byte: {
-                    if(bRef >= manifest.isize)
-                        throw std::runtime_error("text section may be corrupt");
+                    sh_asp* adsp = &env->__address_spaces[aspRef++];
 
-                    env->bytecode[bRef] = GET_mi64(
-                            SET_mi32(_fStream.at(n), _fStream.at(n+1),
-                            _fStream.at(n+2), _fStream.at(n+3)
-                        ), SET_mi32(_fStream.at(n+4), _fStream.at(n+5),
-                            _fStream.at(n+6), _fStream.at(n+7)
-                        )
-                    ); n+=MI_BYTES;
-
-                    if(overflowOp(GET_OP(env->bytecode[bRef])))
-                    {
-                        env->bytecode[++bRef] = GET_mi64(
-                                SET_mi32(_fStream.at(n), _fStream.at(n+1),
-                            _fStream.at(n+2), _fStream.at(n+3)
-                        ), SET_mi32(_fStream.at(n+4), _fStream.at(n+5),
-                            _fStream.at(n+6), _fStream.at(n+7)
-                        )
-                        ); n+=MI_BYTES;
+                    if(adsp->param_size > 0) {
+                        adsp->params = (int64_t*)malloc(sizeof(int64_t)*adsp->param_size);
+                        adsp->arrayFlag = (bool*)malloc(sizeof(bool)*adsp->param_size);
+                        for(unsigned int i = 0; i < adsp->param_size; i++) {
+                            adsp->params[i] = getlong(_fStream);
+                            adsp->arrayFlag[i] = (bool)getlong(_fStream);
+                        }
                     }
-                    bRef++;
+
+                    if(adsp->cache_size > 0) {
+                        adsp->bytecode = (int64_t*)malloc(sizeof(int64_t)*adsp->cache_size);
+                        for(int64_t i = 0; i < adsp->cache_size; i++) {
+                            adsp->bytecode[i] = getmi64(_fStream);
+                        }
+                    }
                     break;
                 }
 
@@ -311,8 +341,6 @@ int Process_Exe(std::string exe)
             }
 
             if(__bitFlag == eos) {
-                if(bRef != manifest.isize)
-                    throw std::runtime_error("text section may be corrupt");
                 break;
             }
         }
@@ -350,28 +378,20 @@ ClassObject *findClass(int64_t superClass) {
     return NULL;
 }
 
-void getMethod(file::stream& exe, ClassObject *parent, Method* method) {
-    method->name.init();
-    method->name = getstring(exe);
-    method->id = getlong(exe);
-    method->entry = getlong(exe);
-    method->locals = getlong(exe);
-    method->owner = parent;
-    method->retAdr = -1;
-}
-
 void getField(file::stream& exe, list <MetaField>& mFields, Field* field) {
     field->name.init();
     field->name = getstring(exe);
     field->id = getlong(exe);
     field->type = (int)getlong(exe);
     field->isstatic = (bool)getlong(exe);
+    field->array = (bool)getlong(exe);
     field->owner = NULL;
     mFields.push_back(MetaField(field, getlong(exe)));
 }
 
 nString getstring(file::stream& exe) {
     nString s;
+    char c = exe.at(n);
     while(exe.at(n++) != nil) {
         s+=exe.at(n-1);
     }

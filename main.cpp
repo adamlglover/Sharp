@@ -15,7 +15,7 @@
 #endif
 
 #define WIN32_LEAN_AND_MEAN
-
+Sharp versions;
 
 #ifndef MAKE_COMPILER
 string copychars(char c, int t) {

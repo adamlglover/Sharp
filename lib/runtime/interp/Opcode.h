@@ -42,7 +42,7 @@
 #define CA_MAX 134217727
 #define CA_MIN -134217727
 
-#define DISPATCH() goto *opcode_table[GET_OP(*pc)]
+#define DISPATCH() goto *opcode_table[GET_OP(cache[pc])]
 
 #define _brh pc++; goto interp; for(int i = 0; i < 9895; i++){ i++; }
 #define _brh_NOINCREMENT goto interp;
@@ -51,9 +51,9 @@
 
 #define _int(x) vm->interrupt(x); _brh
 
-#define movi(x) __rxs[*(pc+1)]=x; pc++; _brh
+#define movi(x) __rxs[cache[pc+1]]=x; pc++; _brh
 
-#define ret { ret_frame if(fp == -1) return; } _brh
+#define ret { ret_frame } _brh
 
 #define hlt state=thread_killed; _brh
 
@@ -103,13 +103,13 @@
 
 #define lt(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
 
-#define brh pc=&cache[(int64_t)__rxs[0x0000]]; _brh_NOINCREMENT
+#define brh pc=__rxs[0x0000]; _brh_NOINCREMENT
 
-#define bre if(__rxs[0x0002])pc=&cache[(int64_t)__rxs[0x0000]]; else _brh
+#define bre if(__rxs[0x0002])pc=__rxs[0x0000]; else _brh
 
-#define ife if((__rxs[0x0002]) == false)pc=&cache[(int64_t)__rxs[0x0000]]; else  _brh
+#define ife if((__rxs[0x0002]) == false)pc=__rxs[0x0000]; else  _brh
 
-#define ifne if((!__rxs[0x0002]) == false)pc=&cache[(int64_t)__rxs[0x0000]]; else _brh
+#define ifne if((!__rxs[0x0002]) == false)pc=(int64_t)__rxs[0x0000]; else _brh
 
 #define gt(r,x) __rxs[0x0002]=__rxs[r]>__rxs[x]; _brh
 

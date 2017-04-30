@@ -426,13 +426,13 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_int();
 
                 if(i2.low_bytes != -1) {
-                    assembler.push_i64(SET_Ci(i64, op_MOVBI, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+                    assembler.push_i64(SET_Di(i64, op_MOVBI, i2.high_bytes), i2.low_bytes);
                 } else {
                     itmp = i2;
                     expect(",");
                     expect_int();
 
-                    assembler.push_i64(SET_Ci(i64, op_MOVBI, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+                    assembler.push_i64(SET_Di(i64, op_MOVBI, itmp.high_bytes), i2.high_bytes);
                 }
 
             } else if(instruction_is("_sizeof")) {

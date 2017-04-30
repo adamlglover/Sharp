@@ -7,7 +7,6 @@
 #include "../internal/Exe.h"
 #include "../internal/Thread.h"
 #include "../oo/Field.h"
-#include "../oo/Method.h"
 #include "../oo/Object.h"
 #include "../alloc/GC.h"
 
@@ -22,6 +21,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
     if(Process_Exe(exe) != 0)
         return 1;
 
+    vm->class_ids = manifest.classes;
     Thread::Startup();
     GC::GCStartup();
 
@@ -33,62 +33,50 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             NULL,
-            0,
-            NULL,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
 
     env->RuntimeException = ClassObject(
             "sharp.lang#RuntimeException",
             NULL,
             0,
-            NULL,
-            0,
             &env->Throwable,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
 
     env->StackOverflowErr = ClassObject(
             "sharp.lang#StackOverflowErr",
             NULL,
             0,
-            NULL,
-            0,
             &env->RuntimeException,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
 
     env->ThreadStackException = ClassObject(
             "sharp.lang#ThreadStackException",
             NULL,
             0,
-            NULL,
-            0,
             &env->RuntimeException,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
 
     env->IndexOutOfBoundsException = ClassObject(
             "sharp.lang#IndexOutOfBoundsException",
             NULL,
             0,
-            NULL,
-            0,
             &env->RuntimeException,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
 
     env->NullptrException = ClassObject(
             "sharp.lang#NullptrException",
             NULL,
             0,
-            NULL,
-            0,
             &env->RuntimeException,
-            ++manifest.baseaddr
+            ++vm->class_ids
     );
     cout.precision(16);
-    env->init(env->objects, manifest.classes);
+    env->init(env->global_heap, manifest.classes);
 
     return 0;
 }
@@ -113,12 +101,8 @@ void*
         thread_self->state = thread_running;
 
         try {
-            Method* main = thread_self->main;
-            if(main != NULL) {
-                vm->CallMain(main);
-            } else {
-                // handle error
-            }
+            // TODO: setup inital stack frame
+            thread_self->run();
         } catch (Exception &e) {
             thread_self->throwable = e.getThrowable();
             thread_self->exceptionThrown = true;
@@ -158,25 +142,16 @@ void SharpVM::Shutdown() {
 void SharpVM::interrupt(int32_t signal) {
     switch (signal) {
         case 0x9f:
-            cout << env->strings[(int64_t )thread_self->stack.popn()].value.str();
+            cout << env->strings[(int64_t )thread_self->__stack[thread_self->sp--].var].value.str();
             break;
         case 0xa0: // TodO: convert to instructions
-            thread_self->stack.pop()->monitor.acquire();
+            // __lock()
             break;
         case 0xa1:
-            thread_self->stack.pop()->monitor.unlock();
+            // __unlock()
             break;
         default:
             // unsupported
             break;
     }
-}
-
-int64_t* SharpVM::CallMain(Method *func) {
-    int64_t* oldpc = thread_self->cstack.pc;
-    thread_self->cstack.push(func);
-    thread_self->cstack.instance = NULL;
-
-    thread_self->cstack.Execute();
-    return oldpc;
 }

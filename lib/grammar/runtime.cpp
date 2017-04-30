@@ -277,21 +277,8 @@ void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
         }
     }
 
-    m64Assembler vcode, injector;
     Asm __vasm;
-    __vasm.parse(vcode, this, assembly, pAst);
-
-    for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
-        if(block.code.injectors.key.get(i) == "asm") {
-            injector = block.code.injectors.value.at(i);
-
-            block.code.injectors.value.remove(i);
-            block.code.injectors.key.remove(i);
-            break;
-        }
-    }
-
-    block.code.inject(injector.__asm64.get(0), vcode);
+    __vasm.parse(block.code, this, assembly, pAst);
 }
 
 void runtime::parseAssemblyStatement(Block& block, ast* pAst) {
@@ -612,12 +599,6 @@ void runtime::parseGotoStatement(Block& block, ast* pAst) {
     }
 }
 
-void runtime::partial_parseAsmDecl(Block& block, ast* pAst) {
-    block.code.addinjector_unsafe("asm");
-    m64Assembler& vasm = block.code.injectors.value.last();
-    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
-}
-
 void runtime::partial_breakStatement(Block& block, ast* pAst) {
     block.code.addinjector_unsafe("break");
     m64Assembler& vasm = block.code.injectors.value.last();
@@ -745,7 +726,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseExpression(pAst);
             break;
         case ast_assembly_statement:
-            partial_parseAsmDecl(block, pAst);
+            parseAssemblyStatement(block, pAst);
             break;
         case ast_for_statement:
             parseForStatement(block, pAst);
@@ -828,7 +809,6 @@ void runtime::partial_parseStatement(Block& block, ast* pAst) {
         case ast_expression:
             break;
         case ast_assembly_statement:
-            parseAssemblyStatement(block, pAst);
             break;
         case ast_for_statement:
             scope->loops++;
@@ -998,142 +978,6 @@ Expression runtime::parse_value(ast *pAst) {
     return parseExpression(pAst->getsubast(ast_expression));
 }
 
-Expression runtime::parse_literal(ast *pAst) {
-    Expression expression;
-
-    switch(pAst->getentity(0).getid()) {
-        case CHAR_LITERAL: {
-            expression.type = expression_var;
-            parse_charliteral(pAst->getentity(0).gettoken(), expression.code);
-            return expression;
-        }
-        case INTEGER_LITERAL:
-            expression.type = expression_var;
-            parse_intliteral(pAst->getentity(0).gettoken(), expression.code, pAst);
-            return expression;
-        case HEX_LITERAL:
-            expression.type = expression_var;
-            parse_hexliteral(pAst->getentity(0).gettoken(), expression.code, pAst);
-            return expression;
-        case STRING_LITERAL:
-            expression.type = expression_string;
-            parse_string_literal(pAst->getentity(0).gettoken(), expression.code);
-            return expression;
-        default:
-            break;
-    }
-
-    if(pAst->getentity(0).gettoken() == "true" ||
-       pAst->getentity(0).gettoken() == "false") {
-        expression.type = expression_var;
-        parse_boolliteral(pAst->getentity(0).gettoken(), expression.code);
-    }
-
-    return expression;
-}
-
-void runtime::parse_native_cast(ResolvedReference utype, Expression expression, ast *pAst) {
-    int64_t i64;
-    if(utype.nf >= fi8 && utype.nf <= fui64) {
-        if(expression.type == expression_class) {
-            mov_field(expression, pAst);
-        }
-
-        switch(utype.nf) {
-            case fi8:
-                expression.code.push_i64(SET_Ci(i64, op_MOV8, ecx,0, ebx));
-                break;
-            case fi16:
-                expression.code.push_i64(SET_Ci(i64, op_MOV16, ecx,0, ebx));
-                break;
-            case fi32:
-                expression.code.push_i64(SET_Ci(i64, op_MOV32, ecx,0, ebx));
-                break;
-            case fi64:
-                expression.code.push_i64(SET_Ci(i64, op_MOV64, ecx,0, ebx));
-                break;
-            case fui8:
-                expression.code.push_i64(SET_Ci(i64, op_MOVU8, ecx,0, ebx));
-                break;
-            case fui16:
-                expression.code.push_i64(SET_Ci(i64, op_MOVU16, ecx,0, ebx));
-                break;
-            case fui32:
-                expression.code.push_i64(SET_Ci(i64, op_MOVU32, ecx,0, ebx));
-                break;
-            case fui64:
-                expression.code.push_i64(SET_Ci(i64, op_MOVU64, ecx,0, ebx));
-                break;
-        }
-    } else if(utype.nf == fvar) {
-
-    } else if(utype.nf == fdynamic) {
-
-    }
-}
-
-bool runtime::parse_global_utype(ref_ptr& ptr, Expression& expression, ast* pAst) {
-    Scope* scope = current_scope();
-
-    if(getClass(ptr.module, ptr.refname) != NULL) {
-        expression.type = expression_class;
-        expression.utype.type = ResolvedReference::CLASS;
-        expression.utype.klass = getClass(ptr.module, ptr.refname);
-        expression.utype.refrenceName = ptr.refname;
-        return true;
-    }
-
-    return false;
-}
-
-//Expression runtime::parse_utype_expression(ast *pAst) {
-//    Scope* scope = current_scope();
-//    ref_ptr pointer = parse_type_identifier(pAst->getsubast(ast_type_identifier));
-//    Expression expression;
-//
-//
-//    if(pointer.module == "" && pointer.class_heiarchy->size() == 0 && parser::isnative_type(pointer.refname)) {
-//        expression.utype.nf = token_tonativefield(pointer.refname);
-//        expression.utype.type = ResolvedReference::NATIVE;
-//        expression.utype.refrenceName = pointer.refname;
-//        expression.type = expression_native;
-//
-//        if(pAst->hasentity(LEFTBRACE) && pAst->hasentity(RIGHTBRACE)) {
-//            expression.utype.array = true;
-//        }
-//
-//        if(pAst->hassubast(ast_mem_access_flag)) {
-//            expression.utype.mflag = parse_mem_accessflag(pAst->getsubast(ast_mem_access_flag));
-//        }
-//        pointer.free();
-//        return expression;
-//    }
-//
-//    expression = resolve_refrence_ptr_expression(pointer, pAst);
-//
-//    ref_ptr ptr=parse_type_identifier(pAst->getsubast(0));
-//    ResolvedReference refrence;
-//
-//    if(ptr.module == "" && parser::isnative_type(ptr.refname)) {
-//        refrence.nf = token_tonativefield(ptr.refname);
-//        refrence.type = ResolvedReference::NATIVE;
-//        refrence.refrenceName = ptr.toString();
-//        ptr.free();
-//        return refrence;
-//    }
-//
-//    refrence = resolve_refrence_ptr(ptr);
-//    refrence.refrenceName = ptr.toString();
-//
-//    if(refrence.type == ResolvedReference::NOTRESOLVED) {
-//        errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(0)->line, pAst->col, " `" + refrence.refrenceName + "` " +
-//                                                                                 (ptr.module == "" ? "" : "in module {" + ptr.module + "} "));
-//    }
-//
-//    ptr.free();
-//    return refrence;
-//}
-
 void runtime::parseCharLiteral(token_entity token, Expression& expression) {
     expression.type = expression_var;
 
@@ -1256,7 +1100,7 @@ void runtime::parseStringLiteral(token_entity token, Expression& expression) {
         }
     }
 
-    string_map.push_back(parsed_string);
+    string_map.addif(parsed_string);
 }
 
 void parseBoolLiteral(token_entity token, Expression& expression) {
@@ -4873,7 +4717,9 @@ void runtime::resolveClassDecl(ast* pAst) {
     else
         klass = scope->klass->getChildClass(name);
 
-    klass->vaddr = class_size++;
+    if(resolvedFields)
+        klass->vaddr = class_size++;
+
     add_scope(Scope(scope_class, klass));
     for(long i = 0; i < astBlock->getsubastcount(); i++) {
         trunk = astBlock->getsubast(i);
@@ -5204,6 +5050,7 @@ void help() {
     cout <<               "    -w                disable warnings." << endl;
     cout <<               "    -v<version>       set application version." << endl;
     cout <<               "    -unsafe -u        allow unsafe code." << endl;
+    cout <<               "    -target           specify target platform to run on. i.e sharp:" << endl;
     cout <<               "    -werror           enable warnings as errors." << endl;
     cout <<               "    -release -r       disable debugging on application." << endl;
     cout <<               "    --h -?            display this help message." << endl;
@@ -5213,6 +5060,14 @@ void help() {
 void _srt_start(list<string> files);
 
 void print_vers();
+
+std::string to_lower(string s) {
+    string newstr = "";
+    for(char c : s) {
+        newstr += tolower(c);
+    }
+    return newstr;
+}
 
 int _bootstrap(int argc, const char* argv[]) {
     int_errs();
@@ -5262,6 +5117,22 @@ int _bootstrap(int argc, const char* argv[]) {
             else if(opt("-showversion")){
                 print_vers();
                 cout << endl;
+            }
+            else if(opt("-target")){
+                if(i+1 >= argc)
+                    rt_error("file version required after option `-target`");
+                else {
+                    std::string x = std::string(argv[++i]);
+                    if(runtime::all_integers(x))
+                        c_options.target = strtol(x.c_str(), NULL, 0);
+                    else {
+                        if(to_lower(x) == "base") {
+                            c_options.target = versions.BASE;
+                        } else {
+                            rt_error("unknown target " + x);
+                        }
+                    }
+                }
             }
             else if(opt("-w")){
                 c_options.warnings = false;
@@ -5968,133 +5839,6 @@ void runtime::parse_var_access_modifiers(std::list <AccessModifier> &modifiers, 
     }
 }
 
-/*
- * Convert a string that contains a representation of a character liter
- * i.e 'c' or '\n' to its real representation
- */
-void runtime::parse_charliteral(string char_string, m64Assembler &assembler) {
-    int64_t  i64;
-    if(char_string.size() > 1) {
-        switch(char_string.at(1)) {
-            case 'n':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\n'), ebx);
-                break;
-            case 't':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\t'), ebx);
-                break;
-            case 'b':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\b'), ebx);
-                break;
-            case 'v':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\v'), ebx);
-                break;
-            case 'r':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\r'), ebx);
-                break;
-            case 'f':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\f'), ebx);
-                break;
-            case '\\':
-                assembler.push_i64(SET_Di(i64, op_MOVI, '\\'), ebx);
-                break;
-            default:
-                assembler.push_i64(SET_Di(i64, op_MOVI, char_string.at(1)), ebx);
-                break;
-        }
-    } else {
-        assembler.push_i64(SET_Di(i64, op_MOVI, char_string.at(0)), ebx);
-    }
-}
-
-void runtime::parse_intliteral(string int_string, m64Assembler &assembler, ast* pAst) {
-    int64_t i64;
-    double var;
-    int_string = invalidate_underscores(int_string);
-
-    if(all_integers(int_string)) {
-        var = std::strtod (int_string.c_str(), NULL);
-        if(var > DA_MAX || var < DA_MIN) {
-            stringstream ss;
-            ss << "integral number too large: " + int_string;
-            errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
-        }
-        assembler.push_i64(SET_Di(i64, op_MOVI, var), ebx);
-    }else {
-        var = std::strtod (int_string.c_str(), NULL);
-        if((int64_t )var > DA_MAX || (int64_t )get_low_bytes(var) < DA_MIN) {
-            stringstream ss;
-            ss << "integral number too large: " + int_string;
-            errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
-        }
-
-        assembler.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), get_low_bytes(var));
-    }
-}
-
-void runtime::parse_hexliteral(string hex_string, m64Assembler &assembler, ast *pAst) {
-    int64_t i64;
-    double var;
-    hex_string = invalidate_underscores(hex_string);
-
-    var = std::strtod (hex_string.c_str(), NULL);
-    if(var > DA_MAX || var < DA_MIN) {
-        stringstream ss;
-        ss << "integral number too large: " + hex_string;
-        errors->newerror(GENERIC, pAst->line, pAst->col, ss.str());
-    }
-    assembler.push_i64(SET_Di(i64, op_MOVI, var), ebx);
-}
-
-void runtime::parse_string_literal(string basic_string, m64Assembler &assembler) {
-    int64_t i64;
-    string new_string = "";
-    for(unsigned int i = 0; i < basic_string.size(); i++) {
-        if(basic_string.at(i) == '\\') {
-            if((i+1) >= basic_string.size()) {
-                break;
-            } else {
-                i++;
-                switch(basic_string.at(i)) {
-                    case 'n':
-                        new_string +='\n';
-                        break;
-                    case 't':
-                        new_string +='\t';
-                        break;
-                    case 'b':
-                        new_string +='\b';
-                        break;
-                    case 'v':
-                        new_string +='\v';
-                        break;
-                    case 'r':
-                        new_string +='\r';
-                        break;
-                    case 'f':
-                        new_string +='\f';
-                        break;
-                    case '\\':
-                        new_string +='\\';
-                        break;
-                    default:
-                        new_string +=basic_string.at(i);
-                        break;
-                }
-            }
-        } else {
-            new_string += basic_string.at(i);
-        }
-    }
-
-
-    assembler.push_i64(SET_Di(i64, op_MOVI, add_string(new_string)), ebx);
-}
-
-void runtime::parse_boolliteral(string bool_string, m64Assembler &assembler) {
-    int64_t i64;
-    assembler.push_i64(SET_Di(i64, op_MOVI, (bool_string == "true" ? 1 : 0)), ebx);
-}
-
 bool runtime::all_integers(string int_string) {
     for(char c : int_string) {
         if(!isdigit(c))
@@ -6131,22 +5875,6 @@ int64_t runtime::get_low_bytes(double var) {
     return 0;
 }
 
-int64_t runtime::add_string(string basic_string) {
-    if(!has_string(basic_string)) {
-        string_map.push_back(basic_string);
-        return string_map.size()-1;
-    }
-    return get_string(basic_string);
-}
-
-bool runtime::has_string(string basic_string) {
-    for(unsigned int i = 0; i < string_map.size(); i++) {
-        if(string_map.at(i) == basic_string)
-            return true;
-    }
-    return false;
-}
-
 int64_t runtime::get_string(string basic_string) {
     for(unsigned int i = 0; i < string_map.size(); i++) {
         if(string_map.at(i) == basic_string)
@@ -6163,23 +5891,6 @@ void runtime::mov_field(Expression &expression, ast* pAst) {
         expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, egx));
     } else {
         errors->newerror(GENERIC, pAst->line, pAst->col, "variable expected");
-    }
-}
-
-void runtime::parse_class_cast(ResolvedReference &utype, Expression &expression, ast *pAst) {
-    if(utype.type != ResolvedReference::NOTRESOLVED) {
-        if(expression.type == expression_var) {
-            errors->newerror(INVALID_CAST, pAst->getsubast(ast_expression)->line,
-                             pAst->getsubast(ast_expression)->col, " '" + expression.utype.toString() + "' and '" + utype.toString() + "'");
-        } else if(expression.type == expression_class) {
-            if(utype.klass->match(expression.utype.klass)) {
-                errors->newerror(REDUNDANT_CAST, pAst->getsubast(ast_expression)->line,
-                                 pAst->getsubast(ast_expression)->col, " '" + expression.utype.toString() + "' and '" + utype.toString() + "'");
-            } else if(utype.klass->getHeadClass()->curcular(expression.utype.klass)) {
-
-            }
-
-        }
     }
 }
 
@@ -6373,7 +6084,7 @@ string copychars(char c, int t) {
 std::string runtime::generate_manifest() {
     stringstream manifest;
 
-    manifest << manif;
+    manifest << (char)manif;
     manifest << ((char)0x02); manifest << c_options.out << ((char)0x0);
     manifest << ((char)0x4); manifest << c_options.vers << ((char)0x0);
     manifest << ((char)0x5); manifest << c_options.debug ? ((char)0x1) : ((char)0x0);
@@ -6381,16 +6092,17 @@ std::string runtime::generate_manifest() {
     manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)0x0);
     manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)0x0);
     manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
-    manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)0x0);
-    manifest << eoh;
+    manifest << ((char)0x0c); manifest  << mi64_tostr(string_map.size()) << ((char)0x0);
+    manifest << ((char)0x0e); manifest << c_options.target << ((char)0x0);
+    manifest << '\n' << (char)eoh;
 
     return manifest.str();
 }
 
 std::string runtime::generate_header() {
     stringstream header;
-    header << file_sig << "SEF"; header << copychars(0, offset);
-    header << digi_sig1 << digi_sig2 << digi_sig3;
+    header << (char)file_sig << "SEF"; header << copychars(0, offset);
+    header << (char)digi_sig1 << (char)digi_sig2 << (char)digi_sig3;
 
     header << generate_manifest();
     return header.str();
@@ -6414,7 +6126,8 @@ std::string runtime::field_to_stream(Field& field) {
     fstream << field.name << ((char)0x0);
     fstream << field.vaddr << ((char)0x0);
     fstream << field_tovirtual_type(field) << ((char)0x0);
-    fstream << (field.modifiers.find(mStatic) ? ((char)1) : ((char)0)) << ((char)0x0);
+    fstream << (field.modifiers.find(mStatic) ? 1 : 0) << ((char)0x0);
+    fstream << (field.array ? 1 : 0) << ((char)0x0);
     fstream << (field.type == field_class ? field.klass->vaddr : -1) << ((char)0x0);
     fstream << endl;
 
@@ -6425,33 +6138,37 @@ std::string runtime::field_to_stream(Field& field) {
 std::string runtime::class_to_stream(ClassObject& klass) {
     stringstream kstream;
 
-    kstream << data_class;
+    kstream << (char)data_class;
     kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)0x0);
-    kstream << mi64_tostr(klass.vaddr) << ((char)0x0);
+    kstream << mi64_tostr(klass.vaddr);
     kstream << klass.getFullName() << ((char)0x0);
     kstream << klass.fieldCount() << ((char)0x0);
-    kstream << klass.functionCount() << ((char)0x0);
+    kstream << (klass.functionCount()+klass.constructorCount()+klass.overloadCount()+klass.macrosCount()) << ((char)0x0);
 
     for(long long i = 0; i < klass.fieldCount(); i++) {
         kstream << field_to_stream(*klass.getField(i));
     }
 
     for(long long i = 0; i < klass.constructorCount(); i++) {
+        kstream << (char)data_method;
         kstream << mi64_tostr(klass.getConstructor(i)->vaddr) << ((char)0x0);
         allMethods.add(klass.getConstructor(i));
     }
 
     for(long long i = 0; i < klass.functionCount(); i++) {
+        kstream << (char)data_method;
         kstream << mi64_tostr(klass.getFunction(i)->vaddr) << ((char)0x0);
         allMethods.add(klass.getFunction(i));
     }
 
     for(long long i = 0; i < klass.overloadCount(); i++) {
+        kstream << (char)data_method;
         kstream << mi64_tostr(klass.getOverload(i)->vaddr) << ((char)0x0);
         allMethods.add(klass.getOverload(i));
     }
 
     for(long long i = 0; i < klass.macrosCount(); i++) {
+        kstream << (char)data_method;
         kstream << mi64_tostr(klass.getMacros(i)->vaddr) << ((char)0x0);
         allMethods.add(klass.getMacros(i));
     }
@@ -6469,7 +6186,7 @@ std::string runtime::generate_data_section() {
         data_sec << class_to_stream(classes.get(i)) << endl;
     }
 
-    data_sec << eos;
+    data_sec << "\n"<< "\n" << (char)eos;
 
     for(int64_t i = 0; i < macros.size(); i++) {
         allMethods.add(&macros.get(i));
@@ -6498,15 +6215,22 @@ std::string runtime::generate_string_section() {
     stringstream strings;
 
     for(int64_t i = 0; i < string_map.size(); i++) {
-        strings << mi64_tostr(i) << string_map.get(i) << ((char)0x0);
+        strings << (char)data_string;
+        strings << mi64_tostr(i) << ((char)0x0) << string_map.get(i) << ((char)0x0);
     }
+
+    strings << "\n"<< "\n" << (char)eos;
+
     return strings.str();
 }
 
 std::string runtime::method_to_stream(Method* method) {
     stringstream func;
 
-    func << endl;
+    for(unsigned int i = 0; i < method->paramCount(); i++) {
+        func << field_tovirtual_type(method->getParam(i).field) << ((char)0x0);
+        func << method->getParam(i).field.array << ((char)0x0);
+    }
 
     for(long i = 0; i < method->code.__asm64.size(); i++) {
         func << mi64_tostr(method->code.__asm64.get(i));
@@ -6517,22 +6241,23 @@ std::string runtime::method_to_stream(Method* method) {
 std::string runtime::generate_text_section() {
     stringstream text;
 
-    text << stext;
+    text << (char)stext;
 
     for(long i = 0; i < allMethods.size(); i++) {
-        text << data_method;
+        text << (char)data_method;
+        text << mi64_tostr(allMethods.get(i)->vaddr);
         text << allMethods.get(i)->getName() << ((char)0x0);
-        text << mi64_tostr(allMethods.get(i)->pklass->vaddr) << ((char)0x0);
-        text << mi64_tostr(allMethods.get(i)->paramCount()) << ((char)0x0);
-
-        // TODO: add all parameters here and a bit flag that means array
+        text << mi64_tostr(allMethods.get(i)->pklass->vaddr);
+        text << mi64_tostr(allMethods.get(i)->paramCount());
+        text << mi64_tostr(allMethods.get(i)->local_count);
+        text << mi64_tostr(allMethods.get(i)->code.__asm64.size());
     }
 
-    text << data_byte;
     for(long i = 0; i < allMethods.size(); i++) {
-        text << method_to_stream(allMethods.get(i));
+        text << (char)data_byte;
+        text << method_to_stream(allMethods.get(i)) << endl;
     }
-    text << eos;
+    text << "\n" << (char)eos;
     return text.str();
 }
 
@@ -6540,12 +6265,12 @@ void runtime::generate() {
     file::stream _ostream;
     _ostream.begin();
 
-    _ostream << generate_header() << "\n" ;
-    _ostream << sdata;
-    _ostream << generate_data_section() << "\n"<< "\n";
-    _ostream << generate_string_section() << "\n"<< "\n";
+    _ostream << generate_header() ;
+    _ostream << (char)sdata;
+    _ostream << generate_data_section();
+    _ostream << generate_string_section();
 
-    _ostream << generate_text_section() << "\n";
+    _ostream << generate_text_section();
 
     // ToDo: create line tabel and meta data
 
