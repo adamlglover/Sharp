@@ -129,7 +129,7 @@ int Process_Exe(std::string exe)
         env->classes =(ClassObject*)malloc(sizeof(ClassObject)*manifest.classes);
         env->__address_spaces = (sh_asp*)malloc(sizeof(sh_asp)*manifest.addresses);
         env->strings = (String*)malloc(sizeof(String)*manifest.strings);
-        env->global_heap = (Sh_object*)malloc(sizeof(int64_t)*manifest.classes);
+        env->global_heap = (Sh_object*)malloc(sizeof(Sh_object)*manifest.classes);
 
         if(env->classes == NULL || env->__address_spaces == NULL || env->global_heap == NULL
                 || env->strings == NULL) {
