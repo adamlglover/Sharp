@@ -5,6 +5,7 @@
 #include "Object.h"
 #include "../internal/Environment.h"
 #include "ClassObject.h"
+#include "../alloc/GC.h"
 
 Sh_object::Sh_object() {
     this->mark = gc_orange;
@@ -63,4 +64,24 @@ void Sh_object::_Sh_IncRef(Sh_object *ptr) {
     ptr->size=size;
     ptr->_Node=_Node;
     ptr->_rNode=this;
+}
+
+void Sh_object::createstr(int64_t ref) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
+    nString str = env->getstring(ref);
+    if(str.len == 0)
+        HEAD = NULL;
+    else
+        HEAD= (double*)memalloc(sizeof(double)*str.len);
+    this->size=str.len;
+    prev = NULL, nxt=NULL;
+    _Node=NULL, _rNode=NULL;
+    mark = gc_green;
+
+    for(int64_t i=0; i<size; i++){
+        _nativewrite(i,str.chars[i])
+    }
 }

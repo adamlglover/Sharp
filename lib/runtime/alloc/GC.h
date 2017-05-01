@@ -8,6 +8,8 @@
 #include "../../../stdimports.h"
 #include "../internal/Monitor.h"
 #include "../oo/Object.h"
+#include "../internal/sh_asp.h"
+
 
 struct _gc_object;
 
@@ -22,6 +24,7 @@ public:
     static void _collect_GC_EXPLICIT();
     static void _insert(Sh_object*);
     static void _insert_stack(Sh_object*, unsigned long);
+    static void _insert_stack(data_stack* st, unsigned long sz);
 private:
     Monitor mutex;
     _gc_object* gc_alloc_heap;

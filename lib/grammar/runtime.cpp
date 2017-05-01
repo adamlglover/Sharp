@@ -663,6 +663,7 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
     list<AccessModifier> modifiers;
     List<AccessModifier> modCompat;
     int startpos=0;
+    int64_t i64;
 
     parse_access_decl(pAst, modifiers, startpos);
 
@@ -673,6 +674,8 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
                                    pAst->line, pAst->col);
     Field f = Field(NULL, uid++, name, scope->klass, modCompat, note);
 
+    f.vaddr = scope->function->local_count;
+    scope->function->local_count++;
     Expression utype = parseUtype(pAst->getsubast(ast_utype));
     if(utype.utype.type == ResolvedReference::CLASS) {
         f.klass = utype.utype.klass;
@@ -696,8 +699,21 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
         scope->locals.add(keypair<int, Field>(scope->blocks, f));
         field = scope->getLocalField(name);
 
+        if(!(f.nativeInt() && !f.array))
+            block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
+
         if(pAst->hassubast(ast_value)) {
             Expression expression = parse_value(pAst->getsubast(ast_value));
+
+            if(f.type == field_native) {
+                if(f.nativeInt()) {
+                    switch(expression.type) {
+                        case expression_string:
+                            block.code.__asm64.push_back(SET_Di(i64, op_NEWSTR, get_string(expression.value)));
+                            break;
+                    }
+                }
+            }
 
             Expression assignee(pAst);
             assignee.type = expression_field;
@@ -709,6 +725,8 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
                 return;
             }
             // TODO: do something based on the assign expression
+        } else {
+            // create variable
         }
     }
 
@@ -842,6 +860,8 @@ void runtime::partial_parseStatement(Block& block, ast* pAst) {
             break;
         case ast_label_decl:
             partial_parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
+            break;
+        case ast_var_decl:
             break;
         default: {
             stringstream err;
@@ -986,6 +1006,7 @@ void runtime::parseCharLiteral(token_entity token, Expression& expression) {
         switch(token.gettoken().at(1)) {
             case 'n':
                 expression.code.push_i64(SET_Di(i64, op_MOVI, '\n'), ebx);
+                expression.value = '\n';
                 break;
             case 't':
                 expression.code.push_i64(SET_Di(i64, op_MOVI, '\t'), ebx);
@@ -1100,6 +1121,7 @@ void runtime::parseStringLiteral(token_entity token, Expression& expression) {
         }
     }
 
+    expression.value = parsed_string;
     string_map.addif(parsed_string);
 }
 
@@ -4550,6 +4572,7 @@ void runtime::resolveMethodDecl(ast* pAst) {
         method.type = lvoid;
 
     method.vaddr = address_spaces++;
+    method.local_count = params.size();
     if(!scope->klass->addFunction(method)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
@@ -4606,6 +4629,7 @@ void runtime::resolveMacrosDecl(ast* pAst) {
 
 
     macro.vaddr = address_spaces++;
+    macro.local_count = params.size();
     if(scope->type == scope_global) {
         addGlobalMacros(macro, pAst);
     } else {
@@ -4642,6 +4666,7 @@ void runtime::resolveOperatorDecl(ast* pAst) {
         operatorOverload.type = lvoid;
 
     operatorOverload.vaddr = address_spaces++;
+    operatorOverload.local_count = params.size();
     if(!scope->klass->addOperatorOverload(operatorOverload)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
@@ -4675,6 +4700,7 @@ void runtime::resolveConstructorDecl(ast* pAst) {
         method.type = lvoid;
 
         method.vaddr = address_spaces++;
+        method.local_count = params.size();
         if(!scope->klass->addConstructor(method)) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");

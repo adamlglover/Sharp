@@ -217,3 +217,34 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
     }
     gc->mutex.unlock();
 }
+
+void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
+    gc->mutex.acquire(INDEFINITE);
+    if(gc->allocptr == gc_max_heap_size) {
+        _collect_GC_EXPLICIT();
+    }
+
+    if(stack_size > 0 && st != NULL) {
+        for(int64_t i = 0; i < stack_size; i++) {
+            if(gc->allocptr == gc_max_heap_size) {
+                _collect_GC_CONCURRENT();
+            }
+
+            gc->gc_alloc_heap[gc->allocptr].nxt=st[i].object.nxt;
+            gc->gc_alloc_heap[gc->allocptr].prev=st[i].object.prev;
+            gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
+            gc->gc_alloc_heap[gc->allocptr]._Node=st[i].object._Node;
+
+            gc->allocptr++;
+
+            st[i].object.HEAD=NULL;
+            st[i].object._Node = NULL, st[i].object.prev=NULL,st[i].object.nxt=NULL;
+            st[i].object.mark = gc_orange;
+            st[i].object.size = 0;
+            st[i].object.monitor = Monitor();
+            st[i].object.refs.init();
+        }
+    }
+
+    gc->mutex.unlock();
+}

@@ -36,6 +36,13 @@
 #define GET_Ca(i) (((i >> 8) & 1) ? (-1*(i >> 9 & 0x7FFFFFF)) : (i >> 9 & 0x7FFFFFF))
 #define GET_Cb(i) (i >> 36)
 
+#ifdef DEBUGGING
+int64_t getop(int64_t);
+int64_t get_da(int64_t);
+int64_t get_ca(int64_t);
+int64_t get_cb(int64_t);
+#endif
+
 #define DA_MAX 36028797018963967
 #define DA_MIN -36028797018963968
 
@@ -57,10 +64,9 @@
 
 #define hlt state=thread_killed; _brh
 
-#define _new(x) \
-{ \
-    ptr->createnative(__rxs[x]);\
-}; _brh
+#define _newi(x) ptr->createnative(__rxs[x]); _brh
+
+#define _newstr(x) ptr->createstr(x); _brh
 
 #define check_cast \
 { \
@@ -136,6 +142,10 @@
         throw Exception("in"); \
     }else { _brh }
 
+#define _goto(x) pc = x;
+
+#define _loadx(r) __rxs[r] = pc;
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -143,7 +153,7 @@
         &&MOVI,	\
         &&RET,	\
         &&HLT,	\
-        &&NEW,	\
+        &&NEWi,	\
         &&CHECK_CAST,	\
 		&&MOV8,	\
 		&&MOV16,    \
@@ -178,7 +188,17 @@
 		&&_SIZEOF,	\
 		&&PUT,	\
 		&&PUTC,	\
-		&&CHECKLEN \
+		&&CHECKLEN, \
+        &&_NOP,	\
+        &&_NOP,	\
+        &&_NOP,	\
+        &&_NOP,	\
+        &&_NOP,	\
+        &&GOTO,	\
+        &&_NOP,	\
+        &&_NOP,	\
+        &&LOADX, \
+        &&NEWstr \
     };
 
 /*
@@ -191,7 +211,7 @@ enum OPCODE {
     op_MOVI=0x2,
     op_RET=0x3,
     op_HLT=0x4,
-    op_NEW=0x5,
+    op_NEWi=0x5,
     op_CHECK_CAST=0x6,
     op_MOV8=0x7,
     op_MOV16=0x8,
@@ -237,6 +257,8 @@ enum OPCODE {
 	op_GOTO=0x2e,
     op_MOVG=0x2f, /* move ptr = &env->objects[r]; */
     op_MOVSELF=0x30, /* move ptr = instance; */
+    op_LOADX=0x31,
+    op_NEWSTR=0x32,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

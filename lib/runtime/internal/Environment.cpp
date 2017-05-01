@@ -162,7 +162,7 @@ void Environment::freesticky(_gc_object *objects, int64_t len) {
     }
 }
 
-void Environment::init(stack *st, int64_t stack_size) {
+void Environment::init(data_stack *st, int64_t stack_size) {
     if(stack_size > 0 && st != NULL) {
         for(int64_t i = 0; i < stack_size; i++) {
             st[i].object.HEAD=NULL;
@@ -173,4 +173,19 @@ void Environment::init(stack *st, int64_t stack_size) {
             st[i].object.refs.init();
         }
     }
+}
+
+nString Environment::getstring(int64_t ref) {
+    if(ref < 0 || ref >= manifest.strings)
+        return nString("");
+    else if(ref == strings[ref].id)
+        return strings[ref].value;
+    else {
+        for(unsigned int i = 0; i < manifest.strings; i++) {
+            if(strings[i].id == ref)
+                return strings[i].value;
+        }
+    }
+
+    return nString("");
 }

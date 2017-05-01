@@ -7,6 +7,7 @@
 #include "../interp/vm.h"
 #include "../interp/Opcode.h"
 #include "Environment.h"
+#include "../alloc/GC.h"
 
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
@@ -37,7 +38,7 @@ void Thread::Create(string name, ClassObject* klass, int64_t method) {
     this->main = NULL;//env->getMethodFromClass(klass, method);
     this->name = name;
     this->id = Thread::tid++;
-    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
+    this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -57,7 +58,7 @@ void Thread::Create(string name) {
 
     this->name = name;
     this->id = Thread::tid++;
-    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
+    this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -77,7 +78,7 @@ void Thread::CreateDaemon(string) {
 
     this->name = name;
     this->id = Thread::tid++;
-    this->__stack = (stack*)memalloc(sizeof(stack)*STACK_SIZE);
+    this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -305,7 +306,7 @@ void Thread::suspendThread(Thread *thread) {
 
 void Thread::term() {
     this->monitor.unlock();
-    // TODO: free stack
+    GC::_insert_stack(__stack, STACK_SIZE);
     this->name.free();
 }
 
@@ -512,8 +513,8 @@ void Thread::run() {
 
     pc = 0;
     fp = 0; sp = -1;
-
     Environment::init(__stack, STACK_SIZE);
+
     init_frame();
     call_asp(main->id);
     _init_opcode_table
@@ -537,8 +538,8 @@ void Thread::run() {
             ret
                     HLT:
             hlt
-                    NEW: /* Requires register value */
-            _new(GET_Da(cache[pc]))
+                    NEWi: /* Requires register value */
+            _newi(GET_Da(cache[pc]))
             CHECK_CAST:
             check_cast
                     MOV8:
@@ -609,6 +610,12 @@ void Thread::run() {
             putc(GET_Da(cache[pc]))
             CHECKLEN:
             _checklen(GET_Da(cache[pc]))
+            GOTO:
+                _goto(GET_Da(cache[pc]))
+            LOADX:
+                _loadx(GET_Da(cache[pc]))
+            NEWstr:
+                _newstr(GET_Da(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {
@@ -620,6 +627,24 @@ void Thread::run() {
         // TODO: handle exception
     }
 }
+
+
+
+#ifdef  DEBUGGING
+int64_t getop(int64_t i) {
+    return (i & OPCODE_MASK);
+}
+int64_t get_da(int64_t i){
+    return (i >> 8);
+}
+int64_t get_ca(int64_t i) {
+    return (((i >> 8) & 1) ? (-1*(i >> 9 & 0x7FFFFFF)) : (i >> 9 & 0x7FFFFFF));
+}
+int64_t get_cb(int64_t i) {
+    return (i >> 36);
+}
+#endif
+
 
 void Thread::call_asp(int64_t id) {
     if(id < 0 || id >= manifest.addresses) {

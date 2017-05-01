@@ -140,6 +140,7 @@ struct Expression {
     m64Assembler code;
     ast* lnk;
     bool dot, _new;
+    string value;
 
     string typeToString();
     void free() {

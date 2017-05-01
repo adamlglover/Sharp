@@ -91,7 +91,7 @@ public:
 
     int64_t pc, curr_adsp;
     int64_t sp, fp;
-    stack* __stack;
+    data_stack* __stack;
     sharp_cache cache;
     Throwable throwable;
 #ifdef WIN32_

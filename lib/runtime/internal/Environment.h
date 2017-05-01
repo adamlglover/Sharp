@@ -55,9 +55,11 @@ public:
 
     void shutdown();
 
+    nString getstring(int64_t ref);
+
     static void init(_gc_object*,int64_t);
     static void init(Sh_object*,int64_t);
-    static void init(stack*,int64_t);
+    static void init(data_stack*,int64_t);
 
     static void free(Sh_object*, int64_t);
     static void freesticky(_gc_object*, int64_t);

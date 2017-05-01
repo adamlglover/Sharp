@@ -110,6 +110,16 @@ void Asm::expect_int_or_register() {
             npos++;
         }
 
+        if(current() == "+") {
+            npos++;
+
+            int64_t adx = i2.high_bytes;
+            expect_int();
+
+            int64_t offset = i2.high_bytes;
+            i2.high_bytes = offset + adx;
+        }
+
         i2.low_bytes = -1;
     } else
         expect_int();
@@ -258,7 +268,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 assembler.push_i64(SET_Ei(i64, op_HLT));
             } else if(instruction_is("new")) {
                 expect_int_or_register();
-                assembler.push_i64(SET_Di(i64, op_NEW, i2.high_bytes));
+                assembler.push_i64(SET_Di(i64, op_NEWi, i2.high_bytes));
             } else if(instruction_is("check_cast")) {
                 assembler.push_i64(SET_Ei(i64, op_CHECK_CAST));
             } else if(instruction_is("mov8")) {
@@ -338,7 +348,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("inc")) {
                 expect_int_or_register();
 
-                assembler.push_i64(SET_Di(i64, op_INC, itmp.high_bytes));
+                assembler.push_i64(SET_Di(i64, op_INC, i2.high_bytes));
             } else if(instruction_is("dec")) {
                 expect_int_or_register();
 
@@ -469,8 +479,18 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("goto")) {
                 expect("$");
                 string name = expect_identifier();
+                if(current() == "+") {
+                    npos++;
+
+                    int64_t adx = get_label(name);
+                    expect_int();
+
+                    int64_t offset = i2.high_bytes;
+                    i2.high_bytes = offset + adx;
+                }
+
                 if(label_exists(name)) {
-                    assembler.push_i64(SET_Di(i64, op_GOTO, get_label(name)));
+                    assembler.push_i64(SET_Di(i64, op_GOTO, i2.high_bytes));
                 } else {
                     npos--;
                     tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");

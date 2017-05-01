@@ -66,6 +66,7 @@ public:
     void _Sh_IncRef(Sh_object*);
     void free();
     void createnative(int64_t size);
+    void createstr(int64_t size);
     void copy_object(Sh_object *pObject);
 };
 

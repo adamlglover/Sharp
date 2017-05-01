@@ -58,13 +58,13 @@ struct sh_asp {
     }
 };
 
-struct stack {
+struct data_stack {
     double var;
     Sh_object object;
 };
 
 #define ret_frame \
-    { if(curr_adsp == main->id) return; else { pc = sp = __stack[fp-2].var; fp = __stack[fp-1].var; } }
+    if(curr_adsp == main->id) return; else { pc = sp = __stack[fp-2].var; fp = __stack[fp-1].var; }
 
 typedef int64_t* sharp_cache;
 
