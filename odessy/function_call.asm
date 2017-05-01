@@ -5,8 +5,16 @@
 ***********************************/
 
 .function_call:
-    movl <message>
-    iframe
-    pushref
-    call <foo>
+    movi #0,%egx
+    movi #100000,%edf
+    ._run:
+        movi $_run,%adx
+        movl <message>
+        iframe
+        pushref
+        call <foo>
+        inc %egx
+        put %egx
+        lt %egx,%edf
+        bre
     ret
