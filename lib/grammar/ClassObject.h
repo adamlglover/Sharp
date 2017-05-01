@@ -121,6 +121,7 @@ public:
     size_t functionCount();
     Method* getFunction(int p);
     Method* getFunction(string name, List<Param>& params);
+    Method* getFunction(string name, int64_t _offset);
     bool addFunction(Method function);
 
     size_t overloadCount();
@@ -130,6 +131,7 @@ public:
     OperatorOverload* getPreIncOverload();
     OperatorOverload* getPreDecOverload();
     OperatorOverload* getOverload(_operator op, List<Param>& params);
+    OperatorOverload* getOverload(_operator op, int64_t _offset);
     bool hasOverload(_operator op);
     bool addOperatorOverload(OperatorOverload overload);
 
@@ -141,6 +143,7 @@ public:
     size_t macrosCount();
     Method* getMacros(int p);
     Method* getMacros(string name, List<Param>& params);
+    Method* getMacros(string name, int64_t _offset);
     bool addMacros(Method macros);
 
     size_t childClassCount();

@@ -109,9 +109,11 @@ public:
 
     void run();
 
+    void init_frame();
+
 private:
     void call_asp(int64_t id);
-    void init_frame();
+    void return_asp();
 
     void wait();
 
@@ -127,9 +129,5 @@ private:
 extern thread_local Thread* thread_self;
 
 #define main_threadid 0x0
-
-#define ret_asp \
-    sp = __stack[fp-2].var; \
-    fp = __stack[fp-1].var;
 
 #endif //SHARP_THREAD_H

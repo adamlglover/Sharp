@@ -63,8 +63,12 @@ struct data_stack {
     Sh_object object;
 };
 
-#define ret_frame \
-    if(curr_adsp == main->id) return; else { pc = sp = __stack[fp-2].var; fp = __stack[fp-1].var; }
+#define ret_frame(x) \
+    if(curr_adsp == main->id) return; else { x }
+
+#define pc_offset 2
+#define fp_offset 3
+#define sp_offset 4
 
 typedef int64_t* sharp_cache;
 

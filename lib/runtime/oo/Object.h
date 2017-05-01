@@ -63,7 +63,8 @@ public:
     List<Sh_object*> refs;
     Sh_object* _rNode;
 
-    void _Sh_IncRef(Sh_object*);
+    void inc_ref(Sh_object *ptr);
+    void del_ref();
     void free();
     void createnative(int64_t size);
     void createstr(int64_t size);

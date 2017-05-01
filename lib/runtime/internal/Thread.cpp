@@ -512,10 +512,8 @@ void Thread::run() {
     Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
     pc = 0;
-    fp = 0; sp = -1;
     Environment::init(__stack, STACK_SIZE);
 
-    init_frame();
     call_asp(main->id);
     _init_opcode_table
 
@@ -616,6 +614,14 @@ void Thread::run() {
                 _loadx(GET_Da(cache[pc]))
             NEWstr:
                 _newstr(GET_Da(cache[pc]))
+            PUSHREF:
+                pushref(ptr)
+            DELREF:
+                delref(ptr)
+            INIT_FRAME:
+                _init_frame()
+            CALL:
+                call(GET_Da(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {
@@ -653,7 +659,7 @@ void Thread::call_asp(int64_t id) {
         throw Exception(ss.str());
     }
 
-    sh_asp* asp = &env->__address_spaces[id];
+    sh_asp* asp = env->__address_spaces+id;
 
     /*
      * Do we have enough space to allocate this new frame?
@@ -662,8 +668,9 @@ void Thread::call_asp(int64_t id) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
 
-        fp= sp-asp->param_size;
-        sp = fp+asp->frame_init;
+        fp= ((sp+1)-asp->param_size);
+        sp = asp->frame_init == 0 ? fp : fp+(asp->frame_init-1);
+        if(fp != 0) __stack[fp-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
         // stack overflow err
@@ -679,9 +686,25 @@ void Thread::init_frame() {
     if(sp+frame_alloc < STACK_SIZE) {
         __stack[++sp].var = old_sp; // store sp
         __stack[++sp].var = fp; // store frame pointer
-        __stack[++sp].var = pc; // store pc
+        ++sp; // store pc
         __stack[++sp].var = curr_adsp; // store address_space id
     } else {
         // stack overflow err
     }
+}
+
+void Thread::return_asp() {
+    int64_t id = (int64_t )__stack[fp-1].var;
+    if(id < 0 || id >= manifest.addresses) {
+        stringstream ss;
+        ss << "could not return from method @" << id << "; method not found.";
+        throw Exception(ss.str());
+    }
+
+    sh_asp* asp = &env->__address_spaces[id];
+    curr_adsp = asp->id;
+    cache = asp->bytecode;
+    pc = (int64_t )__stack[fp-pc_offset].var;
+    sp = (int64_t )__stack[fp-sp_offset].var;
+    fp = (int64_t )__stack[fp-fp_offset].var;
 }

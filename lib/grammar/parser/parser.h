@@ -53,13 +53,14 @@ public:
      */
     bool panic;
 
+    static bool iskeyword(string key);
+
 private:
     void parse();
     bool isend();
     token_entity current();
     void advance();
     token_entity peek(int forward);
-    static bool iskeyword(string key);
 
     int64_t cursor;
     list<ast> *tree;

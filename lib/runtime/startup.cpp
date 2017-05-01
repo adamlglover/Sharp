@@ -87,6 +87,8 @@ int __vinit(string exe, list<string> pArgs) {
         goto bail;
     }
 
+    Thread::threads[main_threadid]->init_frame();
+    Thread::threads[main_threadid]->sp++;
     vm->InterpreterThreadStart(Thread::threads[main_threadid]);
     result=vm->exitVal;
 

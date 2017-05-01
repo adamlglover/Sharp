@@ -207,6 +207,11 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
             _collect_GC_CONCURRENT();
         }
 
+        if(ptr->refs.size() > 0) {
+            for(unsigned long i=0; i < ptr->refs.size(); i++) {
+                Sh_InvRef(ptr->refs.at(i));
+            }
+        }
         gc->gc_alloc_heap[gc->allocptr].nxt=ptr->nxt;
         gc->gc_alloc_heap[gc->allocptr].prev=ptr->prev;
         gc->gc_alloc_heap[gc->allocptr].HEAD=ptr->HEAD;

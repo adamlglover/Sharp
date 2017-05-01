@@ -63,6 +63,14 @@ private:
     int64_t current_address();
 
     int64_t get_label(string name);
+
+    void expect_function();
+
+    List<string> parse_modulename();
+
+    Method *getScopedMethod(ClassObject *klass, string method, int64_t _offset, long line, long col);
+
+    void removeDots(List<string> lst);
 };
 
 

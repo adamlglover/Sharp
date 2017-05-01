@@ -229,7 +229,7 @@ struct Scope {
                 return i;
             }
         }
-        return 0;
+        return -1;
     }
 
     int64_t getLabel(std::string name) {
@@ -375,6 +375,7 @@ public:
     void add_module(string name);
     ClassObject* getClass(string module, string name);
     Method* getmacros(string module, string name, List<Param> &params);
+    Method* getmacros(string module, string name, int64_t);
     void cleanup();
 
     Errors* errors;
@@ -763,7 +764,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.54"
+#define progvers "0.1.56"
 
 struct options {
     ~options()

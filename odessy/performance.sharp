@@ -1,0 +1,20 @@
+mod application;
+
+class Start {
+
+    static fn foo(var[] message) {
+        __asm(
+            "movl 0"
+        );
+        __asm(
+            "test/print.asm"
+        );
+    }
+
+    static fn __init(var[] args) {
+        var[] message = "I called foo!\n";
+        __asm(
+            "odessy/function_call.asm"
+        );
+    }
+}

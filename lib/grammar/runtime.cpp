@@ -5337,6 +5337,30 @@ Method *runtime::getmacros(string module, string name, List<Param>& params) {
     return NULL;
 }
 
+Method *runtime::getmacros(string module, string name, int64_t _offset) {
+    Method* macro = NULL;
+    for(unsigned int i = 0; i < macros.size(); i++) {
+        macro = &macros.get(i);
+        if(name == macro->getName()) {
+            if(module != "") {
+                if(module == macro->getModule()) {
+                    if(_offset == 0)
+                        return macro;
+                    else
+                        _offset--;
+                }
+            }
+
+            if(_offset == 0)
+                return macro;
+            else
+                _offset--;
+        }
+    }
+
+    return NULL;
+}
+
 bool runtime::add_macros(Method macro) {
     if(getmacros(macro.getModule(), macro.getName(), *macro.getParams()) == NULL) {
         macros.add(macro);

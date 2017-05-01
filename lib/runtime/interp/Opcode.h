@@ -60,7 +60,7 @@ int64_t get_cb(int64_t);
 
 #define movi(x) __rxs[cache[pc+1]]=x; pc++; _brh
 
-#define ret { ret_frame } _brh
+#define ret ret_frame(return_asp();) _brh
 
 #define hlt state=thread_killed; _brh
 
@@ -142,9 +142,17 @@ int64_t get_cb(int64_t);
         throw Exception("in"); \
     }else { _brh }
 
-#define _goto(x) pc = x;
+#define _goto(x) pc = x; _brh_NOINCREMENT
 
-#define _loadx(r) __rxs[r] = pc;
+#define _loadx(r) __rxs[r] = pc; _brh
+
+#define pushref(x) ptr->inc_ref(&__stack[++sp].object); _brh
+
+#define delref(x) ptr->del_ref(); _brh
+
+#define _init_frame() init_frame(); _brh
+
+#define call(x) call_asp(x); _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \
@@ -198,7 +206,11 @@ int64_t get_cb(int64_t);
         &&_NOP,	\
         &&_NOP,	\
         &&LOADX, \
-        &&NEWstr \
+        &&NEWstr, \
+        &&PUSHREF, \
+        &&DELREF,   \
+        &&INIT_FRAME, \
+        &&CALL         \
     };
 
 /*
@@ -256,9 +268,12 @@ enum OPCODE {
     op_MOVN=0x2d, /* move ptr = &ptr->_Node[r]; */
 	op_GOTO=0x2e,
     op_MOVG=0x2f, /* move ptr = &env->objects[r]; */
-    op_MOVSELF=0x30, /* move ptr = instance; */
     op_LOADX=0x31,
     op_NEWSTR=0x32,
+    op_PUSHREF=0x33,
+    op_DELREF=0x34,
+    op_INIT_FRAME=0x35,
+    op_CALL=0x36,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

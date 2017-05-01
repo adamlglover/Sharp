@@ -21,6 +21,15 @@ public:
         _Data[len-1]=data;
     }
 
+
+    void addif(T _V) {
+        for(unsigned int i = 0; i < len; i++) {
+            if(_V == _Data[i])
+                return;
+        }
+        push_back(_V);
+    }
+
     /*
      * Programmer must be responsible
      * for freeing that data himself
@@ -57,7 +66,7 @@ public:
      * Programmer must be responsible
      * for freeing that data himself
      */
-    void remove(T& _X) {
+    void remove(T _X) {
         for(unsigned long i = 0; i < len; i++) {
             if(_X == _Data[i]) {
                 remove(i);

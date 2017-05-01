@@ -226,6 +226,142 @@ void Asm::expect(string token) {
     }
 }
 
+List<string> Asm::parse_modulename() {
+    List<string> name;
+    name.add(current().gettoken());
+
+    npos++;
+    while(current().gettokentype() == DOT) {
+        name.add(current().gettoken());
+        name.add(expect_identifier());
+    }
+
+    return name;
+}
+
+extern _operator string_toop(string op);
+
+Method* Asm::getScopedMethod(ClassObject* klass, string method, int64_t _offset, long line, long col) {
+
+    Method* func;
+
+    if((func = klass->getFunction(method, _offset))) {
+        if(klass->getMacros(method, _offset)) {
+            tk->geterrors()->newerror(GENERIC, line, col, "call to function method `" + method + "` is ambiguous");
+        }
+        return func;
+    } else if((func = klass->getMacros(method, _offset))) {
+        return func;
+    } else if((func = klass->getOverload(string_toop(method), _offset))) {
+        return func;
+    } else if(method == klass->getName()) {
+        if(_offset < klass->constructorCount()) {
+            return klass->getConstructor(_offset);
+        }
+    }
+
+    return NULL;
+}
+
+void Asm::removeDots(List<string> lst) {
+    readjust:
+        for(unsigned int i = 0; i < lst.size(); i++) {
+            if(lst.at(i) == ".") {
+                lst.remove(i);
+                goto readjust;
+            }
+        }
+}
+
+void Asm::expect_function() {
+    if(!(current().getid() == IDENTIFIER && !parser::iskeyword(current().gettoken()))) {
+        tk->geterrors()->newerror(GENERIC, current(), "expected identifier");
+        return;
+    }
+
+    List<string> module = parse_modulename();
+    List<string> function;
+
+    if(current().gettokentype() == HASH) {
+        npos++;
+
+        function.add(expect_identifier());
+
+        while(current().gettokentype() == DOT ) {
+            npos++;
+            function.add(expect_identifier());
+        }
+    }
+
+    int64_t offset = 0;
+    if(current() == "+") {
+        npos++;
+        expect_int();
+
+        offset = i2.high_bytes;
+    }
+
+    string module_name = "";
+    if(function.size() > 0) {
+        removeDots(function);
+
+        for(unsigned int i = 0; i < module.size(); i++) {
+            module_name += module.at(i);
+        }
+
+        module.addAll(function);
+    } else {
+        removeDots(module);
+    }
+
+    Method* method;
+    if(module.size() == 1) {
+        if((method = instance->getmacros(module_name, module.get(0), offset)) != NULL){
+            i2.high_bytes = method->vaddr;
+        } else {
+
+            string mname = module.at(0);
+            if(instance->current_scope()->klass != NULL) {
+                method = getScopedMethod(instance->current_scope()->klass, mname, offset, current().getline(), current().getcolumn());
+
+                if(method != NULL) {
+                    i2.high_bytes = method->vaddr;
+                } else {
+                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + mname + "`");
+                    return;
+                }
+            } else {
+                tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + mname + "`");
+                return;
+            }
+        }
+    } else {
+        ClassObject* klass = instance->getClass(module_name, module.get(0));
+
+        if(klass != NULL) {
+            for(unsigned int i = 1; i < module.size() - 1; i++) {
+                if((klass = klass->getChildClass(module.get(i))) == NULL) {
+                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(i) + "`");
+                    return;
+                }
+            }
+
+            string mname = module.at(module.size()-1);
+            method = getScopedMethod(klass, mname, offset, current().getline(), current().getcolumn());
+
+            if(method != NULL) {
+                i2.high_bytes = method->vaddr;
+            } else {
+                tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + mname + "`");
+                return;
+            }
+        } else {
+            tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(0) + "`");
+            return;
+        }
+    }
+}
+
 void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* pAst) {
     if(code == "") return;
 
@@ -404,7 +540,17 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_LTE, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("movl")) {
-                expect_int();
+                if(current() == "<") {
+                    npos++;
+                    string local = expect_identifier();
+
+                    if((i2.high_bytes = instance->current_scope()->getLocalFieldIndex(local)) == -1)  {
+                        tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + local + "`");
+                    }
+                    expect(">");
+                } else {
+                    expect_int();
+                }
 
                 assembler.push_i64(SET_Di(i64, op_MOVL, i2.high_bytes));
             } else if(instruction_is("obj_next")) {
@@ -496,6 +642,17 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                     tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
                     npos++;
                 }
+            } else if(instruction_is("pushref")) {
+                assembler.push_i64(SET_Ei(i64, op_PUSHREF));
+            } else if(instruction_is("del_ref")) {
+                assembler.push_i64(SET_Ei(i64, op_DELREF));
+            } else if(instruction_is("iframe")) {
+                assembler.push_i64(SET_Ei(i64, op_INIT_FRAME));
+            } else if(instruction_is("call")) {
+                expect("<");
+                expect_function();
+                expect(">");
+                assembler.push_i64(SET_Di(i64, op_CALL, i2.high_bytes));
             } else {
                 npos++;
                 tk->geterrors()->newerror(GENERIC, current(), "expected instruction");

@@ -30,10 +30,6 @@ void Sh_object::free() {
     if(HEAD != NULL)
         std::free(HEAD); HEAD = NULL;
 
-    for(unsigned long i=0; i < refs.size(); i++) {
-        Sh_InvRef(refs.at(i));
-    }
-
     size=0;
     refs.free();
 }
@@ -56,8 +52,8 @@ void Sh_object::createnative(int64_t size) {
     }
 }
 
-void Sh_object::_Sh_IncRef(Sh_object *ptr) {
-    this->refs.push_back(ptr);
+void Sh_object::inc_ref(Sh_object *ptr) {
+    this->refs.addif(ptr);
     ptr->HEAD=HEAD;
     ptr->nxt==nxt;
     ptr->prev=prev;
@@ -83,5 +79,18 @@ void Sh_object::createstr(int64_t ref) {
 
     for(int64_t i=0; i<size; i++){
         _nativewrite(i,str.chars[i])
+    }
+}
+
+void Sh_object::del_ref() {
+    if(_Node != NULL) {
+        _rNode->refs.remove(this);
+
+        HEAD=NULL;
+        nxt==NULL;
+        prev=NULL;
+        size=0;
+        _Node=NULL;
+        _rNode=NULL;
     }
 }

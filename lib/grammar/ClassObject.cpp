@@ -60,6 +60,19 @@ Method *ClassObject::getFunction(string name, List<Param>& params) {
     return NULL;
 }
 
+Method *ClassObject::getFunction(string name, int64_t _offset) {
+    for(Method& function : *functions) {
+        if(name == function.getName()) {
+            if(_offset == 0)
+                return &function;
+            else
+                _offset--;
+        }
+    }
+
+    return NULL;
+}
+
 bool ClassObject::addFunction(Method function) {
     if(getFunction(function.getName(), *function.getParams()) != NULL)
         return false;
@@ -145,6 +158,19 @@ OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params) {
     return NULL;
 }
 
+OperatorOverload *ClassObject::getOverload(_operator op, int64_t _offset) {
+    for(OperatorOverload& oper : *overloads) {
+        if(op == oper.getOperator()) {
+            if(_offset == 0)
+                return &oper;
+            else
+                _offset--;
+        }
+    }
+
+    return NULL;
+}
+
 bool ClassObject::addOperatorOverload(OperatorOverload overload) {
     if(getOverload(overload.getOperator(), *overload.getParams()) != NULL)
         return false;
@@ -165,6 +191,19 @@ Method *ClassObject::getMacros(string name, List<Param> &params) {
     for(Method& macro : *macros) {
         if(Param::match(*macro.getParams(), params) && name == macro.getName())
             return &macro;
+    }
+
+    return NULL;
+}
+
+Method *ClassObject::getMacros(string name, int64_t _offset) {
+    for(Method& macro : *macros) {
+        if(name == macro.getName()) {
+            if(_offset == 0)
+                return &macro;
+            else
+                _offset--;
+        }
     }
 
     return NULL;
