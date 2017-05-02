@@ -226,8 +226,8 @@ void Asm::expect(string token) {
     }
 }
 
-List<nString> Asm::parse_modulename() {
-    List<nString> name;
+List<string> Asm::parse_modulename() {
+    List<string> name;
     name.add(current().gettoken());
 
     npos++;
@@ -266,13 +266,16 @@ Method* Asm::getScopedMethod(ClassObject* klass, string method, int64_t _offset,
 }
 
 void Asm::removeDots(List<string>& lst) {
-    readjust:
-        for(unsigned int i = 0; i < lst.size(); i++) {
-            if(lst.at(i) == ".") {
-                lst.remove(i);
-                goto readjust;
-            }
+    List<string> slst;
+    for(unsigned int i = 0; i < lst.size(); i++) {
+        if(lst.at(i) == ".") {
+            continue;
+        } else {
+            slst.push_back(lst.get(i));
         }
+    }
+
+    lst.addAll(slst);
 }
 
 void Asm::removeDots(List<nString>& lst) {
@@ -292,8 +295,8 @@ void Asm::expect_function() {
         return;
     }
 
-    List<nString> module = parse_modulename();
-    List<nString> function;
+    List<string> module = parse_modulename();
+    List<string> function;
 
     if(current().gettokentype() == HASH) {
         npos++;
@@ -319,7 +322,7 @@ void Asm::expect_function() {
         removeDots(function);
 
         for(unsigned int i = 0; i < module.size(); i++) {
-            module_name += module.at(i).str();
+            module_name += module.at(i);
         }
 
         module.addAll(function);
@@ -329,11 +332,11 @@ void Asm::expect_function() {
 
     Method* method;
     if(module_name == "" && module.size() == 1) {
-        if((method = instance->getmacros(module_name, module.get(0).str(), offset)) != NULL){
+        if((method = instance->getmacros(module_name, module.at(0), offset)) != NULL){
             i2.high_bytes = method->vaddr;
         } else {
 
-            string mname = module.at(0).str();
+            string mname = module.at(0);
             if(instance->current_scope()->klass != NULL) {
                 method = getScopedMethod(instance->current_scope()->klass, mname, offset, current().getline(), current().getcolumn());
 
@@ -349,17 +352,17 @@ void Asm::expect_function() {
             }
         }
     } else {
-        ClassObject* klass = instance->getClass(module_name, module.get(0).str());
+        ClassObject* klass = instance->getClass(module_name, module.get(0));
 
         if(klass != NULL) {
             for(unsigned int i = 1; i < module.size() - 1; i++) {
-                if((klass = klass->getChildClass(module.get(i).str())) == NULL) {
-                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(i).str() + "`");
+                if((klass = klass->getChildClass(module.get(i))) == NULL) {
+                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(i) + "`");
                     return;
                 }
             }
 
-            string mname = module.at(module.size()-1).str();
+            string mname = module.at(module.size()-1);
             method = getScopedMethod(klass, mname, offset, current().getline(), current().getcolumn());
 
             if(method != NULL) {
@@ -369,7 +372,7 @@ void Asm::expect_function() {
                 return;
             }
         } else {
-            tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(0).str() + "`");
+            tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.get(0) + "`");
             return;
         }
     }
@@ -381,8 +384,8 @@ void Asm::expect_class() {
         return;
     }
 
-    List<nString> module = parse_modulename();
-    List<nString> klassHeiarchy;
+    List<string> module = parse_modulename();
+    List<string> klassHeiarchy;
 
     if(current().gettokentype() == HASH) {
         npos++;
@@ -400,7 +403,7 @@ void Asm::expect_class() {
         removeDots(klassHeiarchy);
 
         for(unsigned int i = 0; i < module.size(); i++) {
-            module_name += module.at(i).str();
+            module_name += module.at(i);
         }
 
         module.addAll(klassHeiarchy);
@@ -410,11 +413,11 @@ void Asm::expect_class() {
 
     ClassObject* klass;
     if(module_name == "" && module.size() == 1) {
-        if((klass = instance->getClass(module_name, module.get(0).str())) != NULL){
+        if((klass = instance->getClass(module_name, module.get(0))) != NULL){
             i2.high_bytes = klass->vaddr;
         } else {
 
-            string kname = module.at(0).str();
+            string kname = module.at(0);
             if(instance->current_scope()->klass != NULL) {
                 klass = instance->current_scope()->klass->getChildClass(kname);
 
@@ -430,12 +433,12 @@ void Asm::expect_class() {
             }
         }
     } else {
-        ClassObject* klass = instance->getClass(module_name, module.at(0).str());
+        ClassObject* klass = instance->getClass(module_name, module.at(0));
 
         if(klass != NULL) {
             for(unsigned int i = 1; i < module.size(); i++) {
-                if((klass = klass->getChildClass(module.at(i).str())) == NULL) {
-                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(i).str() + "`");
+                if((klass = klass->getChildClass(module.at(i))) == NULL) {
+                    tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(i) + "`");
                     return;
                 }
             }
@@ -443,11 +446,11 @@ void Asm::expect_class() {
             if(klass != NULL) {
                 i2.high_bytes = klass->vaddr;
             } else {
-                tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(0).str() + "`");
+                tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(0) + "`");
                 return;
             }
         } else {
-            tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(0).str() + "`");
+            tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + module.at(0) + "`");
             return;
         }
     }

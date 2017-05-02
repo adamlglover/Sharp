@@ -66,7 +66,7 @@ private:
 
     void expect_function();
 
-    List<nString> parse_modulename();
+    List<string> parse_modulename();
 
     Method *getScopedMethod(ClassObject *klass, string method, int64_t _offset, long line, long col);
 
