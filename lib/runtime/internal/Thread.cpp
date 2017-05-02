@@ -510,6 +510,7 @@ double exponent(int64_t n){
 }
 
 void Thread::run() {
+    thread_self = this;
     Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
     pc = 0;
@@ -526,8 +527,6 @@ void Thread::run() {
             if(state == thread_killed)
                 return;
 
-            if(__rxs[egx] > 87000)
-                cout << pc << ":" << endl;
             DISPATCH();
             _NOP:
             NOP
@@ -714,4 +713,13 @@ void Thread::return_asp() {
     pc = (int64_t )__stack[fp-pc_offset].var;
     sp = (int64_t )__stack[fp-sp_offset].var;
     fp = (int64_t )__stack[fp-fp_offset].var;
+}
+
+void __os_sleep(int64_t INTERVAL) {
+#ifdef WIN32_
+    Sleep(INTERVAL);
+#endif
+#ifdef POSIX_
+    usleep(INTERVAL*POSIX_USEC_INTERVAL);
+#endif
 }

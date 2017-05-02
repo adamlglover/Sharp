@@ -55,6 +55,7 @@ extern Sharp versions;
 void* memalloc(size_t bytes);
 void* memcalloc(size_t n, size_t bytes);
 void* memrealloc(void *ptr, size_t bytes);
+void __os_sleep(int64_t);
 
 #define CXX11_INLINE inline
 

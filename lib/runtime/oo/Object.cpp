@@ -30,6 +30,13 @@ void Sh_object::free() {
     if(HEAD != NULL)
         std::free(HEAD); HEAD = NULL;
 
+    if(_Node != NULL) {
+        for(int64_t i = 0; i < size; i++) {
+            _Node[i].free();
+        }
+        std::free(_Node); _Node = NULL;
+    }
+
     size=0;
     refs.free();
 }

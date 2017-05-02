@@ -47,10 +47,19 @@ struct _gc_object{
     double *HEAD;
     Sh_object *_Node, *prev, *nxt;
     Sh_object* _rNode;
+    int64_t size;
 
     void free(){
         if(HEAD != NULL)
             std::free(HEAD); HEAD = NULL;
+        if(_Node != NULL) {
+            for(int64_t i = 0; i < size; i++) {
+                _Node[i].free();
+            }
+            std::free(_Node); _Node = NULL;
+        }
+
+        size = 0;
     }
 };
 

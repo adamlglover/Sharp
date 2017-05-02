@@ -21,7 +21,7 @@ bool Monitor::acquire(int32_t spins) {
     wait:
         _thread_wait_for_lock(spins);
 
-    if(!do_lock())
+    if(locked())
     {
         if(spins == INDEFINITE)
             goto wait;
@@ -35,10 +35,13 @@ bool Monitor::acquire(int32_t spins) {
     }
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 void Monitor::_thread_wait_for_lock(int32_t spins)
 {
     int32_t retryCount = 1;
-    while (!do_lock())
+
+    while (locked())
     {
         if(retryCount++ == spins)
         {
@@ -52,3 +55,4 @@ void Monitor::_thread_wait_for_lock(int32_t spins)
         }
     }
 }
+#pragma GCC pop_options

@@ -72,12 +72,10 @@ void GC::_collect_GC_CONCURRENT() {
 }
 
 void GC::_collect_GC_EXPLICIT() {
-    cout << "collecting..." << endl;
     gc->mutex.acquire(INDEFINITE);
     Thread::suspendAllThreads();
         _collect();
     Thread::resumeAllThreads();
-    cout << "collection done" << endl;
     gc->mutex.unlock();
 }
 
@@ -100,10 +98,18 @@ void GC::_insert(Sh_object *gc_obj) {
         _collect_GC_EXPLICIT();
     }
 
+    if(gc_obj->refs.size() > 0) {
+        for(unsigned long i=0; i < gc_obj->refs.size(); i++) {
+            Sh_InvRef(gc_obj->refs.at(i));
+        }
+        gc_obj->refs.free();
+    }
+
     gc->gc_alloc_heap[gc->allocptr].nxt=gc_obj->nxt;
     gc->gc_alloc_heap[gc->allocptr].prev=gc_obj->prev;
     gc->gc_alloc_heap[gc->allocptr].HEAD=gc_obj->HEAD;
     gc->gc_alloc_heap[gc->allocptr]._Node=gc_obj->_Node;
+    gc->gc_alloc_heap[gc->allocptr].size=gc_obj->size;
     gc->allocptr++;
     gc->mutex.unlock();
 }
@@ -177,12 +183,8 @@ void GC::_GC_run() {
         if (retryCount++ == sMaxRetries)
         {
             retryCount = 0;
-#ifdef WIN32_
-            Sleep(GC_SLEEP_INTERVAL);
-#endif
-#ifdef POSIX_
-            usleep(GC_SLEEP_INTERVAL*POSIX_USEC_INTERVAL);
-#endif
+
+            __os_sleep(GC_SLEEP_INTERVAL);
         } else {
             /*
              * Try to keep all de-allocations running
@@ -212,11 +214,13 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
             for(unsigned long i=0; i < ptr->refs.size(); i++) {
                 Sh_InvRef(ptr->refs.at(i));
             }
+            ptr->refs.free();
         }
         gc->gc_alloc_heap[gc->allocptr].nxt=ptr->nxt;
         gc->gc_alloc_heap[gc->allocptr].prev=ptr->prev;
         gc->gc_alloc_heap[gc->allocptr].HEAD=ptr->HEAD;
         gc->gc_alloc_heap[gc->allocptr]._Node=ptr->_Node;
+        gc->gc_alloc_heap[gc->allocptr].size=ptr->size;
 
         gc->allocptr++;
         ptr++;
@@ -240,6 +244,7 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
             gc->gc_alloc_heap[gc->allocptr].prev=st[i].object.prev;
             gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
             gc->gc_alloc_heap[gc->allocptr]._Node=st[i].object._Node;
+            gc->gc_alloc_heap[gc->allocptr].size=st[i].object.size;
 
             gc->allocptr++;
 

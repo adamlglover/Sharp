@@ -51,7 +51,7 @@ int64_t get_cb(int64_t);
 
 #define DISPATCH() goto *opcode_table[GET_OP(cache[pc])]
 
-#define _brh pc++; goto interp; for(int i = 0; i < 9895; i++){ i++; }
+#define _brh pc++; for(int i = 0; i < 9895; i++){ i++; } goto interp;
 #define _brh_NOINCREMENT goto interp;
 
 #define NOP _brh

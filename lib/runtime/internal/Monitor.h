@@ -29,8 +29,8 @@ public:
     }
 
     CXX11_INLINE
-    bool do_lock() {
-        return status == monitor_free;
+    bool locked() {
+        return status == monitor_busy;
     }
 
     void _thread_wait_for_lock(int32_t);
