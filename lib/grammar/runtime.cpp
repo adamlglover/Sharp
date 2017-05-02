@@ -6184,7 +6184,7 @@ std::string runtime::generate_manifest() {
     manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)0x0);
     manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)0x0);
     manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
-    manifest << ((char)0x0c); manifest  << mi64_tostr(string_map.size()) << ((char)0x0);
+    manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)0x0);
     manifest << ((char)0x0e); manifest << c_options.target << ((char)0x0);
     manifest << '\n' << (char)eoh;
 

@@ -79,7 +79,7 @@ void Thread::CreateDaemon(string) {
 
     this->name = name;
     this->id = Thread::tid++;
-    this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
+    this->__stack = NULL;
     this->suspendPending = false;
     this->exceptionThrown = false;
     this->suspended = false;
@@ -307,7 +307,8 @@ void Thread::suspendThread(Thread *thread) {
 
 void Thread::term() {
     this->monitor.unlock();
-    GC::_insert_stack(__stack, STACK_SIZE);
+    if(__stack != NULL)
+        GC::_insert_stack(__stack, STACK_SIZE);
     this->name.free();
 }
 
