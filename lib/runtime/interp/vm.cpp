@@ -9,6 +9,7 @@
 #include "../oo/Field.h"
 #include "../oo/Object.h"
 #include "../alloc/GC.h"
+#include "register.h"
 
 SharpVM* vm;
 Environment* env;
@@ -142,7 +143,7 @@ void SharpVM::Shutdown() {
 void SharpVM::interrupt(int32_t signal) {
     switch (signal) {
         case 0x9f:
-            cout << env->strings[(int64_t )thread_self->__stack[thread_self->sp--].var].value.str();
+            cout << env->strings[(int64_t )thread_self->__stack[(int64_t)__rxs[sp]--].var].value.str();
             break;
         case 0xa0: // TodO: convert to instructions
             // __lock()

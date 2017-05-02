@@ -126,6 +126,7 @@ private:
 };
 
 extern thread_local Thread* thread_self;
+extern thread_local double __rxs[12];
 
 #define main_threadid 0x0
 

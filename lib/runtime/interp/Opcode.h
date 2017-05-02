@@ -81,7 +81,7 @@ int64_t get_cb(int64_t);
 
 #define mov64(r,x) __rxs[r]=(int64_t)__rxs[x]; _brh
 
-#define pushr(r) __stack[++__rxs[sp]].var = __rxs[r]; _brh
+#define pushr(r) __stack[(int64_t)++__rxs[sp]].var = __rxs[r]; _brh
 
 #define _add(r,x) __rxs[0x0008]=__rxs[r]+__rxs[x]; _brh
 
@@ -99,9 +99,9 @@ int64_t get_cb(int64_t);
 
 #define dec(r) __rxs[r]--; _brh
 
-#define smov(r,ofset) __rxs[r]=__stack[__rxs[0x0000]+ofset].var; _brh
+#define smov(r,ofset) __rxs[r]=__stack[(int64_t)__rxs[0x0000]+ofset].var; _brh
 
-#define smovr(r,ofset) __stack[__rxs[0x0000]+ofset].var=__rxs[r];  _brh
+#define smovr(r,ofset) __stack[(int64_t)__rxs[0x0000]+ofset].var=__rxs[r];  _brh
 
 #define movr(r,x) __rxs[r]=__rxs[x]; _brh
 
@@ -123,7 +123,7 @@ int64_t get_cb(int64_t);
 
 #define lte(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
 
-#define movl(x) ptr=&__stack[fp+x].object; _brh
+#define movl(x) ptr=&__stack[(int64_t)__rxs[fp]+x].object; _brh
 
 #define object_nxt ptr=ptr->nxt; _brh // TODO: add arg(x) to pick index of the node to jump to
 
@@ -146,7 +146,7 @@ int64_t get_cb(int64_t);
 
 #define _loadx(r) __rxs[r] = pc; _brh
 
-#define pushref(x) ptr->inc_ref(&__stack[++__rxs[sp]].object); _brh
+#define pushref(x) ptr->inc_ref(&__stack[(int64_t)++__rxs[sp]].object); _brh
 
 #define delref(x) ptr->del_ref(); _brh
 

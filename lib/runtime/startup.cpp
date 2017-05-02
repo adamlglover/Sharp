@@ -11,6 +11,7 @@
 #include "internal/Environment.h"
 #include "internal/Exe.h"
 #include "internal/Thread.h"
+#include "interp/register.h"
 
 options c_options;
 int __vinit(string e, list<string> pArgs);
@@ -88,7 +89,7 @@ int __vinit(string exe, list<string> pArgs) {
     }
 
     Thread::threads[main_threadid]->init_frame();
-    Thread::threads[main_threadid]->sp++;
+    __rxs[sp]++;
     vm->InterpreterThreadStart(Thread::threads[main_threadid]);
     result=vm->exitVal;
 
