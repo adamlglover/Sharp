@@ -105,6 +105,7 @@ void GC::_insert(Sh_object *gc_obj) {
         gc_obj->HEAD=NULL;
         gc_obj->_Node=NULL;
         gc_obj->size=0;
+        gc->mutex.unlock();
         return;
     }
 
