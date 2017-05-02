@@ -9,4 +9,7 @@
     movn 0          // get address to x in class Start
     movi #1,%ehf
     new_i %ehf
+
+    movl 0
+    del_ref
     ret

@@ -90,7 +90,6 @@ public:
     bool exceptionThrown;
 
     int64_t pc, curr_adsp;
-    int64_t sp, fp;
     data_stack* __stack;
     sharp_cache cache;
     Throwable throwable;

@@ -3,7 +3,6 @@ mod application;
 class Start {
 
     var x;
-    Start instance;
 
     static fn foo(var[] message) {
         __asm(
@@ -20,11 +19,31 @@ class Start {
         );
     }
 
+    fn mult(var x) {
+        __asm(
+            ""
+        );
+    }
+
     static fn __init(var[] args) {
         var[] message = "I called foo!\n";
         Start start;
         __asm(
             "odessy/function_call.asm"
         );
+
+        __asm(
+            "movl <start>"            // start = new Start();
+            "iframe"
+            "pushref"
+            "movn 0"
+            "movi #5,%ebx"
+            "movi #0,%adx "
+            "movx %ebx,%adx"
+            "pushr %ebx"
+            "call <mult>"
+        );
+
+        __asm("ret");
     }
 }

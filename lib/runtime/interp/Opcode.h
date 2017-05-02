@@ -81,7 +81,7 @@ int64_t get_cb(int64_t);
 
 #define mov64(r,x) __rxs[r]=(int64_t)__rxs[x]; _brh
 
-#define pushr(r) __stack[++sp].var = __rxs[r]; _brh
+#define pushr(r) __stack[++__rxs[sp]].var = __rxs[r]; _brh
 
 #define _add(r,x) __rxs[0x0008]=__rxs[r]+__rxs[x]; _brh
 
@@ -93,15 +93,15 @@ int64_t get_cb(int64_t);
 
 #define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
-#define _pop _brh
+#define _pop --__rxs[sp]; _brh
 
 #define inc(r) __rxs[r]++; _brh
 
 #define dec(r) __rxs[r]--; _brh
 
-#define st_inc(x) __stack[fp+x].var++; _brh
+#define smov(r,ofset) __rxs[r]=__stack[__rxs[0x0000]+ofset].var; _brh
 
-#define st_dec(r) __stack[fp+x].var--; _brh
+#define smovr(r,ofset) __stack[__rxs[0x0000]+ofset].var=__rxs[r];  _brh
 
 #define movr(r,x) __rxs[r]=__rxs[x]; _brh
 
@@ -146,7 +146,7 @@ int64_t get_cb(int64_t);
 
 #define _loadx(r) __rxs[r] = pc; _brh
 
-#define pushref(x) ptr->inc_ref(&__stack[++sp].object); _brh
+#define pushref(x) ptr->inc_ref(&__stack[++__rxs[sp]].object); _brh
 
 #define delref(x) ptr->del_ref(); _brh
 
@@ -280,6 +280,8 @@ enum OPCODE {
     op_INIT_FRAME=0x35,
     op_CALL=0x36,
     op_NEW_CLASS=0x37,
+	op_SMOV=0x38,
+	op_SMOVR=0x39,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

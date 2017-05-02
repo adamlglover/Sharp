@@ -6,7 +6,7 @@
 
 .function_call:
     movi #0,%egx
-    movi #100000,%edf
+    movi #1000000,%edf
     ._run:
         movi $_run,%adx
         movl <message>
@@ -15,12 +15,12 @@
         call <foo>
         inc %egx
         put %egx
-
-            movl <start>            // start = new Start();
-            new_class <Start>
-            iframe
-            pushref
-            call <Start.Start>      // call constructor
         lt %egx,%edf
         bre
-    ret
+
+    movl <start>            // start = new Start();
+    new_class <Start>
+    iframe
+    pushref
+    call <Start.Start>      // call constructor
+    //ret

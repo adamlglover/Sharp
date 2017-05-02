@@ -18,7 +18,7 @@ unsigned int Thread::tp = 0;
 /*
  * Local registers for the thread to use
  */
-thread_local double __rxs[10];
+thread_local double __rxs[12];
 
 void Thread::Startup() {
     threads = (Thread**)malloc(sizeof(Thread**)*MAX_THREADS);
@@ -47,8 +47,6 @@ void Thread::Create(string name, ClassObject* klass, int64_t method) {
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
-    this->sp = -1;
-    this->fp = 0;
 
     push_thread(this);
 }
@@ -67,8 +65,6 @@ void Thread::Create(string name) {
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
-    this->sp = -1;
-    this->fp = 0;
 
     push_thread(this);
 }
@@ -87,8 +83,6 @@ void Thread::CreateDaemon(string) {
     this->daemon = true;
     this->state = thread_init;
     this->exitVal = 0;
-    this->sp = -1;
-    this->fp = 0;
 
     push_thread(this);
 }
@@ -675,8 +669,8 @@ void Thread::call_asp(int64_t id) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
 
-        fp= ((sp+1)-asp->param_size)-asp->self;
-        sp = asp->frame_init == 0 ? fp : fp+(asp->frame_init-1);
+        __rxs[fp]= ((sp+1)-asp->param_size)-asp->self;
+        __rxs[sp] = asp->frame_init == 0 ? fp : fp+(asp->frame_init-1);
         if(fp != 0) __stack[fp-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
@@ -691,10 +685,10 @@ void Thread::init_frame() {
      * Do we have enough space to allocate this new frame?
      */
     if(sp+frame_alloc < STACK_SIZE) {
-        __stack[++sp].var = old_sp; // store sp
-        __stack[++sp].var = fp; // store frame pointer
-        ++sp; // store pc
-        __stack[++sp].var = curr_adsp; // store address_space id
+        __stack[(int64_t )++__rxs[sp]].var = old_sp; // store sp
+        __stack[(int64_t )++__rxs[sp]].var = fp; // store frame pointer
+        ++__rxs[sp]; // store pc
+        __stack[(int64_t )++__rxs[sp]].var = curr_adsp; // store address_space id
     } else {
         // stack overflow err
     }
@@ -712,8 +706,8 @@ void Thread::return_asp() {
     curr_adsp = asp->id;
     cache = asp->bytecode;
     pc = (int64_t )__stack[fp-pc_offset].var;
-    sp = (int64_t )__stack[fp-sp_offset].var;
-    fp = (int64_t )__stack[fp-fp_offset].var;
+    __rxs[sp] = (int64_t )__stack[fp-sp_offset].var;
+    __rxs[fp] = (int64_t )__stack[fp-fp_offset].var;
 }
 
 void __os_sleep(int64_t INTERVAL) {
