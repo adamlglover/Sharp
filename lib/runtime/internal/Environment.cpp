@@ -175,9 +175,9 @@ void Environment::init(data_stack *st, int64_t stack_size) {
     }
 }
 
-nString Environment::getstring(int64_t ref) {
+nString& Environment::getstring(int64_t ref) {
     if(ref < 0 || ref >= manifest.strings)
-        return nString("");
+        return strings[0].value;
     else if(ref == strings[ref].id)
         return strings[ref].value;
     else {
@@ -187,5 +187,5 @@ nString Environment::getstring(int64_t ref) {
         }
     }
 
-    return nString("");
+    return strings[0].value;
 }

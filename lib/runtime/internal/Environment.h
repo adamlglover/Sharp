@@ -55,7 +55,7 @@ public:
 
     void shutdown();
 
-    nString getstring(int64_t ref);
+    nString& getstring(int64_t ref);
 
     static void init(_gc_object*,int64_t);
     static void init(Sh_object*,int64_t);
