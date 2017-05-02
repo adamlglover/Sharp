@@ -64,7 +64,7 @@ public:
 
         if(_str.len>0) {
             len = _str.len;
-            chars = (char*)malloc(sizeof(char)*len);
+            chars = (char*)malloc(sizeof(char)*_str.len);
             set(_str);
         }
     }
