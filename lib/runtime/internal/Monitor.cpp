@@ -47,6 +47,7 @@ void Monitor::_thread_wait_for_lock(int32_t spins)
         {
             if(spins == INDEFINITE)
             {
+                __os_sleep(1);
                 retryCount = 1;
                 continue;
             }

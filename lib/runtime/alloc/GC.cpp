@@ -183,8 +183,12 @@ void GC::_GC_run() {
         if (retryCount++ == sMaxRetries)
         {
             retryCount = 0;
-
-            __os_sleep(GC_SLEEP_INTERVAL);
+#ifdef WIN32_
+        Sleep(GC_SLEEP_INTERVAL);
+#endif
+#ifdef POSIX_
+        usleep(GC_SLEEP_INTERVAL*POSIX_USEC_INTERVAL);
+#endif
         } else {
             /*
              * Try to keep all de-allocations running

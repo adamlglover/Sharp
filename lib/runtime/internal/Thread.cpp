@@ -720,6 +720,6 @@ void __os_sleep(int64_t INTERVAL) {
     Sleep(INTERVAL);
 #endif
 #ifdef POSIX_
-    usleep(INTERVAL*POSIX_USEC_INTERVAL);
+    usleep(INTERVAL);
 #endif
 }
