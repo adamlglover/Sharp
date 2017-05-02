@@ -78,7 +78,9 @@ void Sh_object::createstr(int64_t ref) {
         GC::_insert(this);
     }
 
-    nString str = env->getstring(ref);
+    nString str;
+    str = env->getstring(ref);
+
     if(str.len == 0)
         HEAD = NULL;
     else

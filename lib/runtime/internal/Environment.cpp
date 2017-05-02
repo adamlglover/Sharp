@@ -50,7 +50,7 @@ void Environment::shutdown() {
     }
     std::free (this->__address_spaces);
     for(int64_t i = 0; i < manifest.strings; i++)
-        this->strings[i].value.free();
+        this->strings->value.free();
     std::free (this->strings);
 
     for(int64_t i = 0; i < manifest.classes; i++)
