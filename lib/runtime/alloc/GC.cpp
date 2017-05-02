@@ -99,12 +99,7 @@ void GC::_insert(Sh_object *gc_obj) {
     }
 
     if(gc_obj->_rNode != NULL) {
-        gc_obj->_rNode->refs.remove(gc_obj);
-        gc_obj->nxt = NULL;
-        gc_obj->prev=NULL;
-        gc_obj->HEAD=NULL;
-        gc_obj->_Node=NULL;
-        gc_obj->size=0;
+        gc_obj->del_ref();
         gc->mutex.unlock();
         return;
     }
@@ -225,6 +220,11 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
             _collect_GC_CONCURRENT();
         }
 
+        if(ptr->_rNode != NULL) {
+            ptr->del_ref();
+            continue;
+        }
+
         if(ptr->refs.size() > 0) {
             for(unsigned long i=0; i < ptr->refs.size(); i++) {
                 Sh_InvRef(ptr->refs.at(i));
@@ -255,6 +255,10 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
                 _collect_GC_CONCURRENT();
             }
 
+            if(st[i].object._rNode != NULL) {
+                st[i].object.del_ref();
+                continue;
+            }
             gc->gc_alloc_heap[gc->allocptr].nxt=st[i].object.nxt;
             gc->gc_alloc_heap[gc->allocptr].prev=st[i].object.prev;
             gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
