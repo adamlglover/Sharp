@@ -2,6 +2,9 @@ mod application;
 
 class Start {
 
+    var x;
+    Start instance;
+
     static fn foo(var[] message) {
         __asm(
             "movl 0"
@@ -11,8 +14,15 @@ class Start {
         );
     }
 
+    Start() {
+        __asm(
+            "odessy/constructor_call.asm"
+        );
+    }
+
     static fn __init(var[] args) {
         var[] message = "I called foo!\n";
+        Start start;
         __asm(
             "odessy/function_call.asm"
         );

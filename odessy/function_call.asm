@@ -15,6 +15,12 @@
         call <foo>
         inc %egx
         put %egx
+
+            movl <start>            // start = new Start();
+            new_class <Start>
+            iframe
+            pushref
+            call <Start.Start>      // call constructor
         lt %egx,%edf
         bre
     ret

@@ -19,7 +19,6 @@ void* memalloc(size_t bytes) {
             if(gc) {
                 throw Exception("out of memory");
             } else {
-                gc=true;
                 GC::_collect_GC_EXPLICIT();
                 goto alloc_bytes;
             }
@@ -73,10 +72,12 @@ void GC::_collect_GC_CONCURRENT() {
 }
 
 void GC::_collect_GC_EXPLICIT() {
+    cout << "collecting..." << endl;
     gc->mutex.acquire(INDEFINITE);
     Thread::suspendAllThreads();
         _collect();
     Thread::resumeAllThreads();
+    cout << "collection done" << endl;
     gc->mutex.unlock();
 }
 

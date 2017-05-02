@@ -28,6 +28,7 @@ struct sh_asp {
     ClassObject* owner;
     nString name;
     int64_t* params;
+    int self;      // allocate 1 stack frame for self?
     bool* arrayFlag; // array flag for each parameter
     int param_size;
     int64_t cache_size;
@@ -54,6 +55,7 @@ struct sh_asp {
         owner = NULL;
         frame_init = 0;
         bytecode = NULL;
+        self = 0;
         id = 0;
     }
 };

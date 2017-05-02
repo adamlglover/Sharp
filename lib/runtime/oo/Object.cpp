@@ -40,7 +40,11 @@ void Sh_object::copy_object(Sh_object *pObject) {
 
 void Sh_object::createnative(int64_t size) {
     if(mark != gc_green) {
-        HEAD= (double*)memalloc(sizeof(double)*size);
+
+        if(size == 0)
+            HEAD = NULL;
+        else
+            HEAD= (double*)memalloc(sizeof(double)*size);
         this->size=size;
         prev = NULL, nxt=NULL;
         _Node=NULL, _rNode=NULL;
@@ -79,6 +83,30 @@ void Sh_object::createstr(int64_t ref) {
 
     for(int64_t i=0; i<size; i++){
         _nativewrite(i,str.chars[i])
+    }
+}
+
+void Sh_object::createclass(int64_t k) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
+    ClassObject* klass = env->findClass(k);
+    HEAD = NULL;
+    _rNode=NULL;
+
+    mark = gc_green;
+    this->size=klass->fieldCount;
+    _Node=(Sh_object*)memalloc(sizeof(Sh_object)*size);
+    Environment::init(_Node, size);
+
+    nxt=NULL;
+    prev = NULL;
+
+    if(klass->super != NULL) {
+        prev = (Sh_object*)memalloc(sizeof(Sh_object));
+        prev->createclass(klass->super->id);
+        prev->nxt = this;
     }
 }
 

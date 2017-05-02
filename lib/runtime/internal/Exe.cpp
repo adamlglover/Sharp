@@ -285,6 +285,7 @@ int Process_Exe(std::string exe)
                     adsp->param_size = getmi64(_fStream);
                     adsp->frame_init = getmi64(_fStream);
                     adsp->cache_size = getmi64(_fStream);
+                    adsp->self = getlong(_fStream);
                     break;
                 }
 

@@ -85,11 +85,11 @@ int64_t get_cb(int64_t);
 
 #define _add(r,x) __rxs[0x0008]=__rxs[r]+__rxs[x]; _brh
 
-#define _sub(r,x) __rxs[0x0008]=__rxs[r]-__rxs[x]; _brh _brh
+#define _sub(r,x) __rxs[0x0008]=__rxs[r]-__rxs[x]; _brh
 
-#define _mul(r,x) __rxs[0x0008]=__rxs[r]*__rxs[x]; _brh _brh
+#define _mul(r,x) __rxs[0x0008]=__rxs[r]*__rxs[x]; _brh
 
-#define _div(r,x) __rxs[0x0008]=__rxs[r]/__rxs[x]; _brh _brh
+#define _div(r,x) __rxs[0x0008]=__rxs[r]/__rxs[x]; _brh
 
 #define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
@@ -154,6 +154,10 @@ int64_t get_cb(int64_t);
 
 #define call(x) call_asp(x); _brh
 
+#define new_class(x) ptr->createclass(x); _brh
+
+#define movn(x) ptr = &ptr->_Node[x]; _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -201,7 +205,7 @@ int64_t get_cb(int64_t);
         &&_NOP,	\
         &&_NOP,	\
         &&_NOP,	\
-        &&_NOP,	\
+		&&MOVN, \
         &&GOTO,	\
         &&_NOP,	\
         &&_NOP,	\
@@ -210,7 +214,8 @@ int64_t get_cb(int64_t);
         &&PUSHREF, \
         &&DELREF,   \
         &&INIT_FRAME, \
-        &&CALL         \
+        &&CALL,         \
+        &&NEW_CLASS,      \
     };
 
 /*
@@ -274,6 +279,7 @@ enum OPCODE {
     op_DELREF=0x34,
     op_INIT_FRAME=0x35,
     op_CALL=0x36,
+    op_NEW_CLASS=0x37,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

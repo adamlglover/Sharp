@@ -761,6 +761,8 @@ private:
     string generate_text_section();
 
     string method_to_stream(Method *method);
+
+    void parseConstructorDecl(ast *pAst);
 };
 
 #define progname "bootstrap"

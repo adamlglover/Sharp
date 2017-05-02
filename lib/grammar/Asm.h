@@ -66,11 +66,15 @@ private:
 
     void expect_function();
 
-    List<string> parse_modulename();
+    List<nString> parse_modulename();
 
     Method *getScopedMethod(ClassObject *klass, string method, int64_t _offset, long line, long col);
 
-    void removeDots(List<string> lst);
+    void removeDots(List<string>& lst);
+
+    void removeDots(List<nString>& lst);
+
+    void expect_class();
 };
 
 

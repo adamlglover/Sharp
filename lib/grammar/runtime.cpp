@@ -208,6 +208,7 @@ void runtime::parse_class_decl(ast *pAst) {
             case ast_operator_decl:
                 break;
             case ast_construct_decl:
+                parseConstructorDecl(pAst);
                 break;
             case ast_macros_decl:
                 break;
@@ -910,6 +911,38 @@ void runtime::parseBlock(ast* pAst, Block& block) {
     }
 
     scope->blocks--;
+}
+
+void runtime::parseConstructorDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    parse_access_decl(pAst, modifiers, startpos);
+
+    List<Param> params;
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    Method* method = scope->klass->getConstructor(params);
+
+    if(method != NULL) {
+        add_scope(Scope(scope_instance_block, scope->klass, method));
+
+        keypair<int, Field> local;
+        Scope* curr = current_scope();
+        for(unsigned int i = 0; i < params.size(); i++) {
+
+            local.set(curr->blocks, params.get(i).field);
+            curr->locals.add(local);
+        }
+
+        Block fblock;
+        parseBlock(pAst->getsubast(ast_block), fblock);
+        resolveBlockBranches(pAst->getsubast(ast_block), fblock);
+
+        method->code.__asm64.addAll(fblock.code.__asm64);
+        remove_scope();
+    }
 }
 
 void runtime::parseMethodDecl(ast* pAst) {
@@ -4573,6 +4606,9 @@ void runtime::resolveMethodDecl(ast* pAst) {
 
     method.vaddr = address_spaces++;
     method.local_count = params.size();
+
+    if(!method.isStatic())
+        method.local_count++; // hold spot for self
     if(!scope->klass->addFunction(method)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + name + "` is already defined in the scope");
@@ -4667,6 +4703,9 @@ void runtime::resolveOperatorDecl(ast* pAst) {
 
     operatorOverload.vaddr = address_spaces++;
     operatorOverload.local_count = params.size();
+
+    if(!operatorOverload.isStatic())
+        operatorOverload.local_count++; // hold spot for self
     if(!scope->klass->addOperatorOverload(operatorOverload)) {
         this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                "function `" + op + "` is already defined in the scope");
@@ -4701,6 +4740,7 @@ void runtime::resolveConstructorDecl(ast* pAst) {
 
         method.vaddr = address_spaces++;
         method.local_count = params.size();
+        method.local_count++; // hold spot for self
         if(!scope->klass->addConstructor(method)) {
             this->errors->newerror(PREVIOUSLY_DEFINED, pAst->line, pAst->col,
                                    "constructor `" + name + "` is already defined in the scope");
@@ -4782,7 +4822,8 @@ void runtime::resolveClassDecl(ast* pAst) {
         }
     }
 
-    addDefaultConstructor(klass, pAst);
+    if(resolvedFields)
+        addDefaultConstructor(klass, pAst);
     remove_scope();
 }
 
@@ -5286,7 +5327,8 @@ void _srt_start(list<string> files)
         errors+=rt.errs;
         uo_errors+=rt.uo_errs;
         if(errors == 0 && uo_errors == 0) {
-            rt.generate();
+            if(!c_options.compile)
+                rt.generate();
         }
 
         rt.cleanup();
@@ -6301,6 +6343,7 @@ std::string runtime::generate_text_section() {
         text << mi64_tostr(allMethods.get(i)->paramCount());
         text << mi64_tostr(allMethods.get(i)->local_count);
         text << mi64_tostr(allMethods.get(i)->code.__asm64.size());
+        text << (allMethods.get(i)->isStatic() ? 0 : 1) << ((char)0x0);
     }
 
     for(long i = 0; i < allMethods.size(); i++) {
@@ -6324,7 +6367,9 @@ void runtime::generate() {
 
     // ToDo: create line tabel and meta data
 
-    file::write(c_options.out.c_str(), _ostream);
+    if(file::write(c_options.out.c_str(), _ostream)) {
+        cout << progname << ": error: failed to write out to executable " << c_options.out << endl;
+    }
     _ostream.end();
     allMethods.free();
 }

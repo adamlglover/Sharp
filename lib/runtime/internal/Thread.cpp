@@ -8,6 +8,7 @@
 #include "../interp/Opcode.h"
 #include "Environment.h"
 #include "../alloc/GC.h"
+#include "../interp/register.h"
 
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
@@ -525,6 +526,8 @@ void Thread::run() {
             if(state == thread_killed)
                 return;
 
+            if(__rxs[egx] > 87000)
+                cout << pc << ":" << endl;
             DISPATCH();
             _NOP:
             NOP
@@ -622,6 +625,10 @@ void Thread::run() {
                 _init_frame()
             CALL:
                 call(GET_Da(cache[pc]))
+            NEW_CLASS:
+                new_class(GET_Da(cache[pc]))
+            MOVN:
+                movn(GET_Da(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {
@@ -664,11 +671,11 @@ void Thread::call_asp(int64_t id) {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if((sp+(asp->frame_init-asp->param_size)) < STACK_SIZE) {
+    if((sp+(asp->frame_init-asp->param_size)+asp->self) < STACK_SIZE) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
 
-        fp= ((sp+1)-asp->param_size);
+        fp= ((sp+1)-asp->param_size)-asp->self;
         sp = asp->frame_init == 0 ? fp : fp+(asp->frame_init-1);
         if(fp != 0) __stack[fp-pc_offset].var = pc; // reset pc to call address
         pc = 0;

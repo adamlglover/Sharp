@@ -68,6 +68,7 @@ public:
     void free();
     void createnative(int64_t size);
     void createstr(int64_t size);
+    void createclass(int64_t klass);
     void copy_object(Sh_object *pObject);
 };
 
