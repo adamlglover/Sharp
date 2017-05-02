@@ -128,7 +128,7 @@ int Process_Exe(std::string exe)
 
         env->classes =(ClassObject*)malloc(sizeof(ClassObject)*manifest.classes);
         env->__address_spaces = (sh_asp*)malloc(sizeof(sh_asp)*manifest.addresses);
-        env->strings = (String*)malloc(sizeof(String)*manifest.strings);
+        env->strings = (String*)malloc(sizeof(String)*(manifest.strings+1));
         env->global_heap = (Sh_object*)malloc(sizeof(Sh_object)*manifest.classes);
 
         if(env->classes == NULL || env->__address_spaces == NULL || env->global_heap == NULL
@@ -257,6 +257,8 @@ int Process_Exe(std::string exe)
             }
         }
 
+        env->strings[stringPtr].id = stringPtr+1;
+        env->strings[stringPtr].value.init();
         if(_fStream.at(n++) != stext)
             throw std::runtime_error("file `" + exe + "` may be corrupt");
 
