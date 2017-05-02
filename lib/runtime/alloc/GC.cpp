@@ -98,6 +98,16 @@ void GC::_insert(Sh_object *gc_obj) {
         _collect_GC_EXPLICIT();
     }
 
+    if(gc_obj->_rNode != NULL) {
+        gc_obj->_rNode->refs.remove(gc_obj);
+        gc_obj->nxt = NULL;
+        gc_obj->prev=NULL;
+        gc_obj->HEAD=NULL;
+        gc_obj->_Node=NULL;
+        gc_obj->size=0;
+        return;
+    }
+
     if(gc_obj->refs.size() > 0) {
         for(unsigned long i=0; i < gc_obj->refs.size(); i++) {
             Sh_InvRef(gc_obj->refs.at(i));
