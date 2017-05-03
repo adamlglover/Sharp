@@ -529,87 +529,87 @@ void Thread::run() {
 
             DISPATCH();
             _NOP:
-            NOP
-                    _INT:
-            _int(GET_Da(cache[pc]))
+                NOP
+            _INT:
+                _int(GET_Da(cache[pc]))
             MOVI:
-            movi(GET_Da(cache[pc]))
+                movi(GET_Da(cache[pc]))
             RET:
-            ret
-                    HLT:
-            hlt
-                    NEWi: /* Requires register value */
-            _newi(GET_Da(cache[pc]))
+                ret
+            HLT:
+                hlt
+            NEWi: /* Requires register value */
+                _newi(GET_Da(cache[pc]))
             CHECK_CAST:
-            check_cast
-                    MOV8:
-            mov8(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                check_cast
+            MOV8:
+                mov8(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV16:
-            mov16(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov16(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV32:
-            mov32(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov32(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV64:
-            mov64(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov64(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             PUSHR:
-            pushr(GET_Da(cache[pc]))
+                pushr(GET_Da(cache[pc]))
             ADD:
-            _add(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _add(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             SUB:
-            _sub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _sub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MUL:
-            _mul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _mul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             DIV:
-            _div(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _div(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOD:
-            mod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             POP:
-            _pop
-                    INC:
-            inc(GET_Da(cache[pc]))
+                _pop
+            INC:
+                inc(GET_Da(cache[pc]))
             DEC:
-            dec(GET_Da(cache[pc]))
+                dec(GET_Da(cache[pc]))
             MOVR:
-            movr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                movr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOVX: /* Requires register value */
-            movx(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                movx(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             LT:
-            lt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                lt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             BRH:
-            brh
-                    BRE:
-            bre
-                    IFE:
-            ife
-                    IFNE:
-            ifne
-                    GT:
-            gt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                brh
+            BRE:
+                bre
+            IFE:
+                ife
+            IFNE:
+                ifne
+            GT:
+                gt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             GTE:
-            gte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                gte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             LTE:
-            lte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                lte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOVL:
-            movl(GET_Da(cache[pc]))
+                movl(GET_Da(cache[pc]))
             OBJECT_NXT:
-            object_nxt
-                    OBJECT_PREV:
-            object_prev
-                    RMOV:
-            _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh
-                    MOV:
-            _nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
-                    MOVD:
-            _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
-                    MOVBI:
-            movbi(GET_Da(cache[pc]) + exponent(cache[pc+1]))
+                object_nxt
+            OBJECT_PREV:
+                object_prev
+            RMOV:
+                _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh
+            MOV:
+                _nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
+            MOVD:
+                _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
+            MOVBI:
+                movbi(GET_Da(cache[pc]) + exponent(cache[pc+1]))
             _SIZEOF:
-            _sizeof(GET_Da(cache[pc]))
+                _sizeof(GET_Da(cache[pc]))
             PUT:
-            _put(GET_Da(cache[pc]))
+                _put(GET_Da(cache[pc]))
             PUTC:
-            putc(GET_Da(cache[pc]))
+                putc(GET_Da(cache[pc]))
             CHECKLEN:
-            _checklen(GET_Da(cache[pc]))
+                _checklen(GET_Da(cache[pc]))
             GOTO:
                 _goto(GET_Da(cache[pc]))
             LOADX:
