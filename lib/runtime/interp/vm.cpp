@@ -102,7 +102,6 @@ void*
         thread_self->state = thread_running;
 
         try {
-            // TODO: setup inital stack frame
             thread_self->run();
         } catch (Exception &e) {
             thread_self->throwable = e.getThrowable();

@@ -508,6 +508,11 @@ void Thread::run() {
     thread_self = this;
     Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
+    if(id != main_threadid) {
+        __rxs[sp] = -1;
+        __rxs[fp] = 0;
+    }
+
     pc = 0;
     Environment::init(__stack, STACK_SIZE);
 
