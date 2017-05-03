@@ -216,6 +216,8 @@ int64_t get_cb(int64_t);
         &&INIT_FRAME, \
         &&CALL,         \
         &&NEW_CLASS,      \
+        &&SMOV,            \
+        &&SMOVR,            \
     };
 
 /*

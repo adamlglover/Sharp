@@ -81,6 +81,10 @@ void Asm::expect_int_or_register() {
             i2.high_bytes = bmr;
         } else if(current() == "egx") {
             i2.high_bytes = egx;
+        } else if(current() == "fp") {
+            i2.high_bytes = fp;
+        } else if(current() == "sp") {
+            i2.high_bytes = sp;
         } else {
             // error
             tk->geterrors()->newerror(GENERIC, current(), "symbol `" + current().gettoken() + "` is not a register");
@@ -93,8 +97,8 @@ void Asm::expect_int_or_register() {
             int rx = i2.high_bytes;
             expect_int();
 
-            int64_t offset = i2.high_bytes;
-            i2.high_bytes = offset + rx;
+            i2.low_bytes = i2.high_bytes;
+            i2.high_bytes = rx;
         }
 
         i2.low_bytes = -1;
@@ -468,6 +472,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                                    pAst->line, pAst->col);
     keypair<std::string, int64_t> label;
 
+    // TODO: add smov & smovr instructions
     if(tk->geterrors()->_errs())
     {
         cout << note.getNote("Assembler messages:");
@@ -756,7 +761,17 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_int_or_register();
 
                 assembler.push_i64(SET_Di(i64, op_MOVN, i2.high_bytes));
-            }  else {
+            }  else if(instruction_is("smov")) {
+                i2.low_bytes = 0;
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_SMOV, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+            } else if(instruction_is("smovr")) {
+                i2.low_bytes = 0;
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_SMOVR, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+            } else {
                 npos++;
                 tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
             }

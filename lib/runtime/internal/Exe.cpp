@@ -349,6 +349,7 @@ int Process_Exe(std::string exe)
         }
         jobIndx-=2;
     } catch(std::exception &e) {
+        cout << "err " << e.what();
         return 1;
     }
 

@@ -624,6 +624,12 @@ void Thread::run() {
             MOVN:
                 movn(GET_Da(cache[pc]))
 
+            SMOV:
+                smov(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+
+            SMOVR:
+                smovr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error

@@ -6177,15 +6177,15 @@ std::string runtime::generate_manifest() {
     stringstream manifest;
 
     manifest << (char)manif;
-    manifest << ((char)0x02); manifest << c_options.out << ((char)0x0);
-    manifest << ((char)0x4); manifest << c_options.vers << ((char)0x0);
-    manifest << ((char)0x5); manifest << c_options.debug ? ((char)0x1) : ((char)0x0);
-    manifest << ((char)0x6); manifest << mi64_tostr(main->vaddr) << ((char)0x0);
-    manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)0x0);
-    manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)0x0);
-    manifest << ((char)0x9 ); manifest << 1 << ((char)0x0);
-    manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)0x0);
-    manifest << ((char)0x0e); manifest << c_options.target << ((char)0x0);
+    manifest << ((char)0x02); manifest << c_options.out << ((char)nil);
+    manifest << ((char)0x4); manifest << c_options.vers << ((char)nil);
+    manifest << ((char)0x5); manifest << c_options.debug ? ((char)nil) : ((char)nil);
+    manifest << ((char)0x6); manifest << mi64_tostr(main->vaddr) << ((char)nil);
+    manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)nil);
+    manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)nil);
+    manifest << ((char)0x9 ); manifest << 1 << ((char)nil);
+    manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)nil);
+    manifest << ((char)0x0e); manifest << c_options.target << ((char)nil);
     manifest << '\n' << (char)eoh;
 
     return manifest.str();
@@ -6193,7 +6193,7 @@ std::string runtime::generate_manifest() {
 
 std::string runtime::generate_header() {
     stringstream header;
-    header << (char)file_sig << "SEF"; header << copychars(0, offset);
+    header << (char)file_sig << "SEF"; header << copychars(nil, offset);
     header << (char)digi_sig1 << (char)digi_sig2 << (char)digi_sig3;
 
     header << generate_manifest();
@@ -6215,12 +6215,12 @@ std::string runtime::field_to_stream(Field& field) {
     stringstream fstream;
 
     fstream << ((char)data_field);
-    fstream << field.name << ((char)0x0);
-    fstream << field.vaddr << ((char)0x0);
-    fstream << field_tovirtual_type(field) << ((char)0x0);
-    fstream << (field.modifiers.find(mStatic) ? 1 : 0) << ((char)0x0);
-    fstream << (field.array ? 1 : 0) << ((char)0x0);
-    fstream << (field.type == field_class ? field.klass->vaddr : -1) << ((char)0x0);
+    fstream << field.name << ((char)nil);
+    fstream << field.vaddr << ((char)nil);
+    fstream << field_tovirtual_type(field) << ((char)nil);
+    fstream << (field.modifiers.find(mStatic) ? 1 : 0) << ((char)nil);
+    fstream << (field.array ? 1 : 0) << ((char)nil);
+    fstream << (field.type == field_class ? field.klass->vaddr : -1) << ((char)nil);
     fstream << endl;
 
     return fstream.str();
@@ -6231,11 +6231,11 @@ std::string runtime::class_to_stream(ClassObject& klass) {
     stringstream kstream;
 
     kstream << (char)data_class;
-    kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)0x0);
+    kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)nil);
     kstream << mi64_tostr(klass.vaddr);
-    kstream << klass.getFullName() << ((char)0x0);
-    kstream << klass.fieldCount() << ((char)0x0);
-    kstream << (klass.functionCount()+klass.constructorCount()+klass.overloadCount()+klass.macrosCount()) << ((char)0x0);
+    kstream << klass.getFullName() << ((char)nil);
+    kstream << klass.fieldCount() << ((char)nil);
+    kstream << (klass.functionCount()+klass.constructorCount()+klass.overloadCount()+klass.macrosCount()) << ((char)nil);
 
     for(long long i = 0; i < klass.fieldCount(); i++) {
         kstream << field_to_stream(*klass.getField(i));
@@ -6243,25 +6243,25 @@ std::string runtime::class_to_stream(ClassObject& klass) {
 
     for(long long i = 0; i < klass.constructorCount(); i++) {
         kstream << (char)data_method;
-        kstream << mi64_tostr(klass.getConstructor(i)->vaddr) << ((char)0x0);
+        kstream << mi64_tostr(klass.getConstructor(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getConstructor(i));
     }
 
     for(long long i = 0; i < klass.functionCount(); i++) {
         kstream << (char)data_method;
-        kstream << mi64_tostr(klass.getFunction(i)->vaddr) << ((char)0x0);
+        kstream << mi64_tostr(klass.getFunction(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getFunction(i));
     }
 
     for(long long i = 0; i < klass.overloadCount(); i++) {
         kstream << (char)data_method;
-        kstream << mi64_tostr(klass.getOverload(i)->vaddr) << ((char)0x0);
+        kstream << mi64_tostr(klass.getOverload(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getOverload(i));
     }
 
     for(long long i = 0; i < klass.macrosCount(); i++) {
         kstream << (char)data_method;
-        kstream << mi64_tostr(klass.getMacros(i)->vaddr) << ((char)0x0);
+        kstream << mi64_tostr(klass.getMacros(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getMacros(i));
     }
 
@@ -6308,7 +6308,7 @@ std::string runtime::generate_string_section() {
 
     for(int64_t i = 0; i < string_map.size(); i++) {
         strings << (char)data_string;
-        strings << mi64_tostr(i) << ((char)0x0) << string_map.get(i) << ((char)0x0);
+        strings << mi64_tostr(i) << ((char)nil) << string_map.get(i) << ((char)nil);
     }
 
     strings << "\n"<< "\n" << (char)eos;
@@ -6320,8 +6320,8 @@ std::string runtime::method_to_stream(Method* method) {
     stringstream func;
 
     for(unsigned int i = 0; i < method->paramCount(); i++) {
-        func << field_tovirtual_type(method->getParam(i).field) << ((char)0x0);
-        func << method->getParam(i).field.array << ((char)0x0);
+        func << field_tovirtual_type(method->getParam(i).field) << ((char)nil);
+        func << method->getParam(i).field.array << ((char)nil);
     }
 
     for(long i = 0; i < method->code.__asm64.size(); i++) {
@@ -6338,12 +6338,12 @@ std::string runtime::generate_text_section() {
     for(long i = 0; i < allMethods.size(); i++) {
         text << (char)data_method;
         text << mi64_tostr(allMethods.get(i)->vaddr);
-        text << allMethods.get(i)->getName() << ((char)0x0);
+        text << allMethods.get(i)->getName() << ((char)nil);
         text << mi64_tostr(allMethods.get(i)->pklass->vaddr);
         text << mi64_tostr(allMethods.get(i)->paramCount());
         text << mi64_tostr(allMethods.get(i)->local_count);
         text << mi64_tostr(allMethods.get(i)->code.__asm64.size());
-        text << (allMethods.get(i)->isStatic() ? 0 : 1) << ((char)0x0);
+        text << (allMethods.get(i)->isStatic() ? 0 : 1) << ((char)nil);
     }
 
     for(long i = 0; i < allMethods.size(); i++) {
