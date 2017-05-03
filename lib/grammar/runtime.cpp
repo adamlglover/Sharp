@@ -6321,7 +6321,7 @@ std::string runtime::method_to_stream(Method* method) {
 
     for(unsigned int i = 0; i < method->paramCount(); i++) {
         func << field_tovirtual_type(method->getParam(i).field) << ((char)nil);
-        func << method->getParam(i).field.array << ((char)nil);
+        func << (method->getParam(i).field.array ? 1 : 0) << ((char)nil);
     }
 
     for(long i = 0; i < method->code.__asm64.size(); i++) {

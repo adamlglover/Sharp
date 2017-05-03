@@ -90,7 +90,7 @@ void file::read_alltext(const char *f, stream& _out)
 
         do {
             c = getc(fp);
-            if(c==EOF) {
+            if(len < 0) {
                 break;
             } else {
                 _out << c;
