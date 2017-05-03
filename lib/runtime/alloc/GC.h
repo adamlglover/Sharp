@@ -25,10 +25,12 @@ public:
     static void _insert(Sh_object*);
     static void _insert_stack(Sh_object*, unsigned long);
     static void _insert_stack(data_stack* st, unsigned long sz);
+
 private:
     Monitor mutex;
     _gc_object* gc_alloc_heap;
     unsigned long allocptr;
+
     static void _collect();
 
     static

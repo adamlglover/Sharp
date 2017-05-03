@@ -41,10 +41,6 @@ void Sh_object::free() {
     refs.free();
 }
 
-void Sh_object::copy_object(Sh_object *pObject) {
-    // TODO: implement
-}
-
 void Sh_object::createnative(int64_t size) {
     if(mark != gc_green) {
 
@@ -71,6 +67,7 @@ void Sh_object::inc_ref(Sh_object *ptr) {
     ptr->size=size;
     ptr->_Node=_Node;
     ptr->_rNode=this;
+    ptr->mark = gc_green;
 }
 
 void Sh_object::createstr(int64_t ref) {
@@ -130,4 +127,33 @@ void Sh_object::del_ref() {
         _Node=NULL;
         _rNode=NULL;
     }
+}
+
+/**
+ * Objects cannot be coppied as they can be infinatley large,
+ * they can only be mutated
+ */
+void Sh_object::mutate(Sh_object *object) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
+    if(object->_rNode != NULL) {
+        object->_rNode->refs.replace(object, this);
+    }
+
+    this->mark = object->mark;
+    this->_rNode = object->_rNode;
+    this->_Node = object->_Node;
+    this->HEAD = object->HEAD;
+    this->nxt = object->nxt;
+    this->prev = object->prev;
+    this->size = object->size;
+    this->refs.addAll(object->refs);
+    object->refs.free();
+
+    for(unsigned int i = 0; i < refs.size(); i++) {
+        refs.get(i)->_rNode = this;
+    }
+    Sh_InvRef(object)
 }

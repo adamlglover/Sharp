@@ -37,10 +37,13 @@
 #define GET_Cb(i) (i >> 36)
 
 #ifdef DEBUGGING
+#include "../internal/sh_asp.h"
 int64_t getop(int64_t);
 int64_t get_da(int64_t);
 int64_t get_ca(int64_t);
 int64_t get_cb(int64_t);
+int64_t get_reg(int64_t);
+data_stack* stack_at(int64_t pos, bool usefp = true);
 #endif
 
 #define DA_MAX 36028797018963967
@@ -93,15 +96,27 @@ int64_t get_cb(int64_t);
 
 #define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
+#define _iadd(r,x) __rxs[0x0008]=__rxs[r]+x; _brh
+
+#define _isub(r,x) __rxs[0x0008]=__rxs[r]-x; _brh
+
+#define _imul(r,x) __rxs[0x0008]=__rxs[r]*x; _brh
+
+#define _idiv(r,x) __rxs[0x0008]=__rxs[r]/x; _brh
+
+#define imod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)x; _brh
+
 #define _pop --__rxs[sp]; _brh
 
 #define inc(r) __rxs[r]++; _brh
 
 #define dec(r) __rxs[r]--; _brh
 
-#define smov(r,ofset) __rxs[r]=__stack[(int64_t)__rxs[0x0000]+ofset].var; _brh
+#define smov(r,ofset) __rxs[r]=__stack[(int64_t)(__rxs[0x0000]+ofset)].var; _brh
 
 #define smovr(r,ofset) __stack[(int64_t)__rxs[0x0000]+ofset].var=__rxs[r];  _brh
+
+#define smovobj(ofset) __stack[(int64_t)__rxs[0x0000]+ofset].object.mutate(ptr);  _brh
 
 #define movr(r,x) __rxs[r]=__rxs[x]; _brh
 
@@ -152,7 +167,7 @@ int64_t get_cb(int64_t);
 
 #define _init_frame() init_frame(); _brh
 
-#define call(x) call_asp(x); _brh
+#define call(x) call_asp(x); _brh_NOINCREMENT
 
 #define new_class(x) ptr->createclass(x); _brh
 
@@ -218,6 +233,12 @@ int64_t get_cb(int64_t);
         &&NEW_CLASS,      \
         &&SMOV,            \
         &&SMOVR,            \
+        &&SMOVOBJ,           \
+        &&IADD,               \
+        &&ISUB,                \
+        &&IMUL,                 \
+        &&IDIV,                  \
+        &&IMOD,                   \
     };
 
 /*
@@ -284,6 +305,12 @@ enum OPCODE {
     op_NEW_CLASS=0x37,
 	op_SMOV=0x38,
 	op_SMOVR=0x39,
+    op_SMOVOBJ=0x3a,
+    op_IADD=0x3b,
+    op_ISUB=0x3c,
+    op_IMUL=0x3d,
+    op_IDIV=0x3e,
+    op_IMOD=0x3f,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

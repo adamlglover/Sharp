@@ -75,6 +75,12 @@ private:
     void removeDots(List<nString>& lst);
 
     void expect_class();
+
+    int get_offset();
+
+    void check_CB();
+
+    bool hex_int(string s);
 };
 
 

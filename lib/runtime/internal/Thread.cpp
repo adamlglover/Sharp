@@ -623,12 +623,22 @@ void Thread::run() {
                 new_class(GET_Da(cache[pc]))
             MOVN:
                 movn(GET_Da(cache[pc]))
-
             SMOV:
                 smov(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
-
             SMOVR:
                 smovr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            SMOVOBJ:
+                smovobj(GET_Da(cache[pc]))
+            IADD:
+                _iadd(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            ISUB:
+                _isub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IMUL:
+                _imul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IDIV:
+                _idiv(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IMOD:
+                imod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {
@@ -655,6 +665,13 @@ int64_t get_ca(int64_t i) {
 }
 int64_t get_cb(int64_t i) {
     return (i >> 36);
+}
+
+data_stack* stack_at(int64_t pos, bool usefp) {
+    return &thread_self->__stack[(int64_t )__rxs[usefp ? fp : sp]+pos];
+}
+int64_t get_reg(int64_t i) {
+    return (int64_t )__rxs[i];
 }
 #endif
 

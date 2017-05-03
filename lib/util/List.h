@@ -75,6 +75,26 @@ public:
         }
     }
 
+    /*
+     * Programmer must be responsible
+     * for freeing that data himself
+     */
+    void replace(T _X, T repl) {
+        for(unsigned long i = 0; i < len; i++) {
+            if(_X == _Data[i]) {
+                _Data[i] = repl;
+                return;
+            }
+        }
+    }
+
+    void addAll(List<T>& list) {
+        free();
+        for(unsigned int i = 0; i < list.size(); i++) {
+            push_back(list.get(i));
+        }
+    }
+
     T at(unsigned long _X) {
         if(_X>=len){
             stringstream ss;

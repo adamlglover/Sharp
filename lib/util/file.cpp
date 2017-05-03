@@ -90,10 +90,10 @@ void file::read_alltext(const char *f, stream& _out)
 
         do {
             c = getc(fp);
-            if(len < 0) {
-                break;
-            } else {
+            if(len > 0) {
                 _out << c;
+            } else {
+                break;
             }
         }while(len--);
         fclose(fp);

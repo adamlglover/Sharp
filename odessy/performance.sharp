@@ -24,7 +24,10 @@ class Start {
         __asm(
             "movr %adx,%fp"
             "smov %ebx+1"
-            "put %ebx"
+            "imul %ebx,10"
+            "idiv %bmr,2"
+            "movr %adx,%fp"
+            "smovr %bmr-0x5"
             "ret"
         );
     }
@@ -34,18 +37,22 @@ class Start {
         Start start;
         __asm(
             "odessy/function_call.asm"
-        );
+       );
 
         __asm(
             "movl <start>"            // start = new Start();
+            "inc %sp"
             "iframe"
             "pushref"
             "movn 0"
-            "movi #5,%ebx"
             "movi #0,%adx "
+            "mov %adx,#5"
             "movx %ebx,%adx"
             "pushr %ebx"
-            "call <mult>"
+            "call <mult>"              // mult(start.x);
+            "movr %adx,%sp"
+            "smov %ebx+0"
+            "put %ebx"
         );
 
         __asm("ret");

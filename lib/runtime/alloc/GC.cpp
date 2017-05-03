@@ -19,6 +19,7 @@ void* memalloc(size_t bytes) {
             if(gc) {
                 throw Exception("out of memory");
             } else {
+                gc = true;
                 GC::_collect_GC_EXPLICIT();
                 goto alloc_bytes;
             }
@@ -116,6 +117,7 @@ void GC::_insert(Sh_object *gc_obj) {
     gc->gc_alloc_heap[gc->allocptr].HEAD=gc_obj->HEAD;
     gc->gc_alloc_heap[gc->allocptr]._Node=gc_obj->_Node;
     gc->gc_alloc_heap[gc->allocptr].size=gc_obj->size;
+
     gc->allocptr++;
     gc->mutex.unlock();
 }

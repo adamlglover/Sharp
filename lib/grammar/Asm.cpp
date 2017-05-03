@@ -91,16 +91,6 @@ void Asm::expect_int_or_register() {
         }
 
         npos++;
-        if(current() == "+") {
-            npos++;
-
-            int rx = i2.high_bytes;
-            expect_int();
-
-            i2.low_bytes = i2.high_bytes;
-            i2.high_bytes = rx;
-        }
-
         i2.low_bytes = -1;
     } else if(current() == "$") {
         npos++;
@@ -122,11 +112,39 @@ void Asm::expect_int_or_register() {
 
             int64_t offset = i2.high_bytes;
             i2.high_bytes = offset + adx;
+        }else if(current() == "-") {
+            npos++;
+
+            int64_t adx = i2.high_bytes;
+            expect_int();
+
+            int64_t offset = i2.high_bytes;
+            i2.high_bytes = adx-offset;
         }
 
         i2.low_bytes = -1;
     } else
         expect_int();
+}
+
+int Asm::get_offset() {
+    if(current() == "+") {
+        npos++;
+        expect_int();
+
+        return i2.high_bytes;
+    } else if(current() == "-") {
+        npos++;
+        expect_int();
+
+        return -i2.high_bytes;
+    } else {
+        return 0;
+    }
+}
+
+bool Asm::hex_int(string s) {
+    return s.size() > 2 && s.at(0) == '0' && s.at(1) == 'x';
 }
 
 void Asm::expect_int() {
@@ -140,8 +158,8 @@ void Asm::expect_int() {
         double x;
         string int_string = runtime::invalidate_underscores(current().gettoken());
 
-        if(runtime::all_integers(int_string)) {
-            x = std::strtod (int_string.c_str(), NULL);
+        if(runtime::all_integers(int_string) || hex_int(int_string)) {
+            x = std::strtol (int_string.c_str(), NULL, 0);
             if(x > DA_MAX || x < DA_MIN) {
                 stringstream ss;
                 ss << "integral number too large: " + int_string;
@@ -574,12 +592,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("pop")) {
-                expect_int_or_register();
-                itmp = i2;
-                expect(",");
-                expect_int_or_register();
-
-                assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+                assembler.push_i64(SET_Ei(i64, op_POP));
             } else if(instruction_is("inc")) {
                 expect_int_or_register();
 
@@ -765,12 +778,61 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 i2.low_bytes = 0;
                 expect_int_or_register();
 
-                assembler.push_i64(SET_Ci(i64, op_SMOV, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+                assembler.push_i64(SET_Ci(i64, op_SMOV, abs(i2.high_bytes), (i2.high_bytes<0), get_offset()));
             } else if(instruction_is("smovr")) {
                 i2.low_bytes = 0;
                 expect_int_or_register();
 
-                assembler.push_i64(SET_Ci(i64, op_SMOVR, abs(i2.high_bytes), (i2.high_bytes<0), i2.low_bytes));
+                assembler.push_i64(SET_Ci(i64, op_SMOVR, abs(i2.high_bytes), (i2.high_bytes<0), get_offset()));
+            } else if(instruction_is("smovobj")) {
+                expect_int();
+
+                assembler.push_i64(SET_Di(i64, op_SMOVOBJ, i2.high_bytes));
+            }else if(instruction_is("iadd")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                check_CB();
+
+                assembler.push_i64(SET_Ci(i64, op_IADD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("isub")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                check_CB();
+
+                assembler.push_i64(SET_Ci(i64, op_ISUB, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("imul")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                check_CB();
+
+                assembler.push_i64(SET_Ci(i64, op_IMUL, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("idiv")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                check_CB();
+
+                assembler.push_i64(SET_Ci(i64, op_IDIV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("imod")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int();
+
+                check_CB();
+
+                assembler.push_i64(SET_Ci(i64, op_IMOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else {
                 npos++;
                 tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
@@ -794,6 +856,14 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
     tk->free();
     this->code = "";
+}
+
+void Asm::check_CB() {
+    if(i2.high_bytes > CA_MAX || i2.high_bytes < CA_MIN) {
+                    stringstream ss;
+                    ss << "integral number too large: " + i2.high_bytes;
+                    tk->geterrors()->newerror(GENERIC, current(), ss.str());
+                }
 }
 
 token_entity Asm::current() {
