@@ -665,13 +665,13 @@ void Thread::call_asp(int64_t id) {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if((sp+(asp->frame_init-asp->param_size)+asp->self) < STACK_SIZE) {
+    if((__rxs[sp]+(asp->frame_init-asp->param_size)+asp->self) < STACK_SIZE) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
 
-        __rxs[fp]= ((sp+1)-asp->param_size)-asp->self;
-        __rxs[sp] = asp->frame_init == 0 ? fp : fp+(asp->frame_init-1);
-        if(fp != 0) __stack[fp-pc_offset].var = pc; // reset pc to call address
+        __rxs[fp]= ((__rxs[sp]+1)-asp->param_size)-asp->self;
+        __rxs[sp] = asp->frame_init == 0 ? __rxs[fp] : __rxs[fp]+(asp->frame_init-1);
+        if(__rxs[fp] != 0) __stack[(int64_t )__rxs[fp]-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
         // stack overflow err
@@ -679,14 +679,14 @@ void Thread::call_asp(int64_t id) {
 }
 
 void Thread::init_frame() {
-    int64_t old_sp = sp, frame_alloc = 4;
+    int64_t old_sp = (int64_t )__rxs[sp], frame_alloc = 4;
 
     /*
      * Do we have enough space to allocate this new frame?
      */
     if(sp+frame_alloc < STACK_SIZE) {
         __stack[(int64_t )++__rxs[sp]].var = old_sp; // store sp
-        __stack[(int64_t )++__rxs[sp]].var = fp; // store frame pointer
+        __stack[(int64_t )++__rxs[sp]].var = __rxs[fp]; // store frame pointer
         ++__rxs[sp]; // store pc
         __stack[(int64_t )++__rxs[sp]].var = curr_adsp; // store address_space id
     } else {
@@ -695,7 +695,7 @@ void Thread::init_frame() {
 }
 
 void Thread::return_asp() {
-    int64_t id = (int64_t )__stack[fp-1].var;
+    int64_t id = (int64_t )__stack[(int64_t )__rxs[fp]-1].var;
     if(id < 0 || id >= manifest.addresses) {
         stringstream ss;
         ss << "could not return from method @" << id << "; method not found.";
@@ -705,9 +705,9 @@ void Thread::return_asp() {
     sh_asp* asp = &env->__address_spaces[id];
     curr_adsp = asp->id;
     cache = asp->bytecode;
-    pc = (int64_t )__stack[fp-pc_offset].var;
-    __rxs[sp] = (int64_t )__stack[fp-sp_offset].var;
-    __rxs[fp] = (int64_t )__stack[fp-fp_offset].var;
+    pc = (int64_t )__stack[(int64_t )__rxs[fp]-pc_offset].var;
+    __rxs[sp] = (int64_t )__stack[(int64_t )__rxs[fp]-sp_offset].var;
+    __rxs[fp] = (int64_t )__stack[(int64_t )__rxs[fp]-fp_offset].var;
 }
 
 void __os_sleep(int64_t INTERVAL) {

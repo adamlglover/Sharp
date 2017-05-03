@@ -16,6 +16,8 @@
 options c_options;
 int __vinit(string e, list<string> pArgs);
 
+void init_main();
+
 void version() {
     cout << progname << " " << progvers << endl;
 }
@@ -88,8 +90,7 @@ int __vinit(string exe, list<string> pArgs) {
         goto bail;
     }
 
-    Thread::threads[main_threadid]->init_frame();
-    __rxs[sp]++;
+    init_main();
     vm->InterpreterThreadStart(Thread::threads[main_threadid]);
     result=vm->exitVal;
 
@@ -105,4 +106,11 @@ int __vinit(string exe, list<string> pArgs) {
         }
 
         return 1;
+}
+
+void init_main() {
+    __rxs[sp] = -1;
+    __rxs[fp] = 0;
+    Thread::threads[main_threadid]->init_frame();
+    __rxs[sp]++;
 }

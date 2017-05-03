@@ -32,17 +32,6 @@ class Start {
             "odessy/function_call.asm"
         );
 
-        __asm(
-            "movl <start>"            // start = new Start();
-            "iframe"
-            "pushref"
-            "movn 0"
-            "movi #5,%ebx"
-            "movi #0,%adx "
-            "movx %ebx,%adx"
-            "pushr %ebx"
-            "call <mult>"
-        );
 
         __asm("ret");
     }
