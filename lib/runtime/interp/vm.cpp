@@ -144,10 +144,34 @@ void SharpVM::interrupt(int32_t signal) {
     switch (signal) {
         case 0x9f:
             cout << env->strings[(int64_t )thread_self->__stack[(int64_t)__rxs[sp]--].var].value.str();
-            break;
+            return;
         case 0xa0:
             __rxs[bmr]= __os_time((int) __rxs[ebx]);
-            break;
+            return;
+        case 0xa1:
+            GC::_collect_GC_EXPLICIT();
+            return;
+        case 0xa2:
+            GC::_collect_GC_CONCURRENT();
+            return;
+        case 0xa3:
+            __rxs[bmr]=realTimeInUSecs();
+            return;
+        case 0xa4:
+            __rxs[cmt]=Thread::start((int32_t )__rxs[adx]);
+            return;
+        case 0xa5:
+            __rxs[cmt]=Thread::join((int32_t )__rxs[adx]);
+            return;
+        case 0xa6:
+            __rxs[cmt]=Thread::interrupt((int32_t )__rxs[adx]);
+            return;
+        case 0xa7:
+            __rxs[cmt]=Thread::destroy((int32_t )__rxs[adx]);
+            return;
+        case 0xa8:
+            __rxs[cmt]=Thread::Create((int32_t )__rxs[adx]);
+            return;
         default:
             // unsupported
             break;

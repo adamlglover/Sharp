@@ -52,9 +52,9 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 #define CA_MAX 134217727
 #define CA_MIN -134217727
 
-#define DISPATCH() goto *opcode_table[GET_OP(cache[pc])]
+#define DISPATCH() if(pc<cache_size) { goto *opcode_table[GET_OP(cache[pc])]; } else { throw Exception("invalid branch/dispatch"); }
 
-#define _brh pc++; /*for(int i = 0; i < 9895; i++){ i++; }*/ goto interp;
+#define _brh pc++; for(int i = 0; i < 9895; i++){ i++; } goto interp;
 #define _brh_NOINCREMENT goto interp;
 
 #define NOP _brh
@@ -67,9 +67,9 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define hlt state=thread_killed; _brh
 
-#define _newi(x) ptr->createnative(__rxs[x]); _brh
+#define _newi(x) CHK_NULL(ptr->createnative(__rxs[x]);) _brh
 
-#define _newstr(x) ptr->createstr(x); _brh
+#define _newstr(x) CHK_NULL(ptr->createstr(x);) _brh
 
 #define check_cast \
 { \
@@ -140,13 +140,13 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define movl(x) ptr=&__stack[(int64_t)__rxs[fp]+x].object; _brh
 
-#define object_nxt ptr=ptr->nxt; _brh // TODO: add arg(x) to pick index of the node to jump to
+#define object_nxt CHK_NULL(ptr=ptr->nxt;) _brh // TODO: add arg(x) to pick index of the node to jump to
 
-#define object_prev ptr=ptr->prev; _brh // ToDO: for future check if node is null
+#define object_prev CHK_NULL(ptr=ptr->prev;) _brh // ToDO: for future check if node is null
 
 #define movbi(x) __rxs[0x0008]=x; pc++; _brh
 
-#define _sizeof(r) __rxs[r]=ptr->size; _brh
+#define _sizeof(r) CHK_NULL(__rxs[r]=ptr->size;) _brh
 
 #define _put(r) cout << __rxs[r]; _brh
 
@@ -161,21 +161,27 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define _loadx(r) __rxs[r] = pc; _brh
 
-#define pushref(x) ptr->inc_ref(&__stack[(int64_t)++__rxs[sp]].object); _brh
+#define pushref(x) CHK_NULL(ptr->inc_ref(&__stack[(int64_t)++__rxs[sp]].object);) _brh
 
-#define delref(x) ptr->del_ref(); _brh
+#define delref(x) CHK_NULL(ptr->del_ref();) _brh
 
 #define _init_frame() init_frame(); _brh
 
 #define call(x) call_asp(x); _brh_NOINCREMENT
 
-#define new_class(x) ptr->createclass(x); _brh
+#define new_class(x) CHK_NULL(ptr->createclass(x);) _brh
 
-#define movn(x) ptr = &ptr->_Node[x]; _brh
-
-#define time(r) __rxs[r]=realTimeInUSecs();
+#define movn(x) CHK_NULL(ptr = &ptr->_Node[x];) _brh
 
 #define _sleep(r) __os_sleep((int64_t)__rxs[r]);
+
+#define test(r,x) __rxs[0x0002]=__rxs[r]==__rxs[x]; _brh
+
+#define __lock(spin) CHK_NULL(ptr->monitor.acquire(spin);) _brh
+
+#define __ulock() CHK_NULL(ptr->monitor.release();) _brh
+
+#define exp(r) __rxs[0x0008] = exponent(__rxs[r]);
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \
@@ -243,8 +249,11 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
         &&IMUL,                 \
         &&IDIV,                  \
         &&IMOD,                   \
-        &&TIME,                   \
         &&_SLEEP,                   \
+        &&TEST,                      \
+        &&LOCK,                       \
+        &&ULOCK,                       \
+        &&EXP,                          \
     };
 
 /*
@@ -317,8 +326,11 @@ enum OPCODE {
     op_IMUL=0x3d,
     op_IDIV=0x3e,
     op_IMOD=0x3f,
-	op_TIME=0x40,
-	op_SLEEP=0x41,
+	op_SLEEP=0x40,
+    op_TEST=0x41,
+    op_LOCK=0x42,
+    op_UlOCK=0x43,
+    op_EXP=0x44,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

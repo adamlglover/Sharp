@@ -69,7 +69,7 @@ void* memrealloc(void* Ptr, size_t bytes) {
 void GC::_collect_GC_CONCURRENT() {
     gc->mutex.acquire(INDEFINITE);
         _collect();
-    gc->mutex.unlock();
+    gc->mutex.release();
 }
 
 void GC::_collect_GC_EXPLICIT() {
@@ -77,7 +77,7 @@ void GC::_collect_GC_EXPLICIT() {
     Thread::suspendAllThreads();
         _collect();
     Thread::resumeAllThreads();
-    gc->mutex.unlock();
+    gc->mutex.release();
 }
 
 void GC::_collect() {
@@ -101,7 +101,7 @@ void GC::_insert(Sh_object *gc_obj) {
 
     if(gc_obj->_rNode != NULL) {
         gc_obj->del_ref();
-        gc->mutex.unlock();
+        gc->mutex.release();
         return;
     }
 
@@ -119,7 +119,7 @@ void GC::_insert(Sh_object *gc_obj) {
     gc->gc_alloc_heap[gc->allocptr].size=gc_obj->size;
 
     gc->allocptr++;
-    gc->mutex.unlock();
+    gc->mutex.release();
 }
 
 void GC::GCStartup() {
@@ -242,7 +242,7 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
         gc->allocptr++;
         ptr++;
     }
-    gc->mutex.unlock();
+    gc->mutex.release();
 }
 
 void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
@@ -278,5 +278,5 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
         }
     }
 
-    gc->mutex.unlock();
+    gc->mutex.release();
 }

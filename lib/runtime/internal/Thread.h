@@ -49,6 +49,7 @@ public:
     static void Startup();
     static void suspendSelf();
     static int start(int32_t);
+    static int destroy(int64_t);
     static int interrupt(int32_t);
     static int join(int32_t);
     static Thread* getThread(int32_t);
@@ -68,13 +69,14 @@ public:
     (*threadFunc)(void*), Thread* thread);
 
 
-    void Create(string, ClassObject*, int64_t);
+    static int32_t Create(int32_t);
     void Create(string);
     void CreateDaemon(string);
     void exit();
 
     static int32_t tid;
     static Thread** threads;
+    static Monitor threads_monitor;
     static unsigned int tp;
 
     int32_t id;
@@ -89,7 +91,8 @@ public:
     bool suspendPending;
     bool exceptionThrown;
 
-    int64_t pc, curr_adsp;
+    uint64_t pc, curr_adsp;
+    int64_t cache_size;
     data_stack* __stack;
     sharp_cache cache;
     Throwable throwable;
@@ -121,7 +124,8 @@ private:
     static void suspendThread(Thread*);
     static int interrupt(Thread*);
 
-    void push_thread(Thread *thread) const;
+    static void push_thread(Thread *thread);
+    static void pop_thread(Thread *thread);
 
 };
 

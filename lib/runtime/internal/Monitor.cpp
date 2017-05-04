@@ -5,7 +5,7 @@
 #include "Monitor.h"
 #include "Thread.h"
 
-void Monitor::unlock() {
+void Monitor::release() {
     if(status == monitor_free)
         return;
 
@@ -15,6 +15,8 @@ void Monitor::unlock() {
 
 
 bool Monitor::acquire(int32_t spins) {
+    if(thread_self == NULL) return true;
+
     if(thread_self->id == threadid)
         return true;
 

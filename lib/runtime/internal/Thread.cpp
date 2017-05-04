@@ -14,6 +14,7 @@
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
 Thread** Thread::threads = NULL;
+Monitor Thread::threads_monitor;
 unsigned int Thread::tp = 0;
 
 /*
@@ -33,23 +34,35 @@ void Thread::Startup() {
     main->Create("Main");
 }
 
-void Thread::Create(string name, ClassObject* klass, int64_t method) {
-    this->monitor = Monitor();
-    this->name.init();
+int32_t Thread::Create(int32_t method) {
+    if(method < 0 || method >= manifest.addresses)
+        return -1;
+    sh_asp* asp = &env->__address_spaces[method];
+    if(asp->param_size>0)
+        return -2;
 
-    this->main = NULL;//env->getMethodFromClass(klass, method);
-    this->name = name;
-    this->id = Thread::tid++;
-    this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
-    this->suspendPending = false;
-    this->exceptionThrown = false;
-    this->suspended = false;
-    this->exited = false;
-    this->daemon = false;
-    this->state = thread_init;
-    this->exitVal = 0;
+    Thread* thread = (Thread*)malloc(
+            sizeof(Thread)*1);
 
-    push_thread(this);
+    thread->monitor = Monitor();
+    thread->name.init();
+    thread->main = asp;
+    thread->id = Thread::tid++;
+    thread->__stack = NULL;
+    thread->suspendPending = false;
+    thread->exceptionThrown = false;
+    thread->suspended = false;
+    thread->exited = false;
+    thread->daemon = false;
+    thread->state = thread_init;
+    thread->exitVal = 0;
+
+    push_thread(thread);
+
+    stringstream ss;
+    ss << "Thread@" << thread->id;
+    thread->name = ss.str();
+    return thread->id;
 }
 
 void Thread::Create(string name) {
@@ -88,17 +101,34 @@ void Thread::CreateDaemon(string) {
     push_thread(this);
 }
 
-void Thread::push_thread(Thread *thread) const {
-    bool threadSet = false;
+void Thread::push_thread(Thread *thread) {
+    threads_monitor.acquire(INDEFINITE);
     for(unsigned int i = 0; i < tp; i++) {
         if(threads[i] == NULL) {
+            /*
+             * Recycle old thread address
+             */
             threads[i] = thread;
-            threadSet = true;
+            tid--;
+            thread->id = i;
+            threads_monitor.release();
+            return;
         }
     }
 
-    if(!threadSet)
-        threads[tp++]=thread;
+    threads[tp++]=thread;
+    threads_monitor.release();
+}
+
+void Thread::pop_thread(Thread *thread) {
+    threads_monitor.acquire(INDEFINITE);
+    for(unsigned int i = 0; i < tp; i++) {
+        if(threads[i] == thread) {
+            threads[i] = NULL;
+            return;
+        }
+    }
+    threads_monitor.release();
 }
 
 Thread *Thread::getThread(int32_t id) {
@@ -184,6 +214,32 @@ int Thread::start(int32_t id) {
     }
 #endif
 
+}
+
+int Thread::destroy(int64_t id) {
+    if(id == thread_self->id)
+        return 1; // cannot destroy thread_self
+
+    Thread* thread = getThread(id);
+    if(thread == NULL || thread->daemon)
+        return 1;
+
+    if (thread->state == thread_killed)
+    {
+        if (thread->id == main_threadid)
+        {
+            return 3; // should never happen
+        }
+        else
+        {
+            pop_thread(thread);
+            thread->term(); // terminate thread
+            std::free (thread);
+            return 0;
+        }
+    } else {
+        return 2;
+    }
 }
 
 int Thread::interrupt(int32_t id) {
@@ -301,9 +357,10 @@ void Thread::suspendThread(Thread *thread) {
 }
 
 void Thread::term() {
-    this->monitor.unlock();
+    this->monitor.release();
     if(__stack != NULL)
         GC::_insert_stack(__stack, STACK_SIZE);
+    __stack = NULL;
     this->name.free();
 }
 
@@ -404,8 +461,8 @@ void Thread::exit() {
         // TODO: handle exception
     }
 
-    this->state = thread_killed;
     this->exited = true;
+    this->state = thread_killed;
 }
 
 int Thread::startDaemon(
@@ -512,6 +569,7 @@ void Thread::run() {
     if(id != main_threadid) {
         __rxs[sp] = -1;
         __rxs[fp] = 0;
+        this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
     }
 
     pc = 0;
@@ -645,11 +703,16 @@ void Thread::run() {
                 _idiv(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             IMOD:
                 imod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
-            TIME:
-                time(GET_Da(cache[pc]))
             _SLEEP:
                 _sleep(GET_Da(cache[pc]))
-
+            TEST:
+                test(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+            LOCK:
+                __lock(GET_Da(cache[pc]))
+            ULOCK:
+                __ulock()
+            EXP:
+                exp(GET_Da(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error
@@ -701,6 +764,7 @@ void Thread::call_asp(int64_t id) {
     if((__rxs[sp]+(asp->frame_init-asp->param_size)+asp->self) < STACK_SIZE) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
+        this->cache_size=asp->cache_size;
 
         __rxs[fp]= ((__rxs[sp]+1)-asp->param_size)-asp->self;
         __rxs[sp] = asp->frame_init == 0 ? __rxs[fp] : __rxs[fp]+(asp->frame_init-1);
@@ -738,6 +802,7 @@ void Thread::return_asp() {
     sh_asp* asp = &env->__address_spaces[id];
     curr_adsp = asp->id;
     cache = asp->bytecode;
+    cache_size=asp->cache_size;
     pc = (int64_t )__stack[(int64_t )__rxs[fp]-pc_offset].var;
     __rxs[sp] = (int64_t )__stack[(int64_t )__rxs[fp]-sp_offset].var;
     __rxs[fp] = (int64_t )__stack[(int64_t )__rxs[fp]-fp_offset].var;

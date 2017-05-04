@@ -25,7 +25,7 @@ public:
 
     ~Monitor()
     {
-        unlock();
+        release();
     }
 
     CXX11_INLINE
@@ -35,7 +35,7 @@ public:
 
     void _thread_wait_for_lock(int32_t);
     bool acquire(int32_t spins = INDEFINITE);
-    void unlock();
+    void release();
 
     int32_t  threadid;
     LockStatus status;
