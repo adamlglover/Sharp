@@ -9,6 +9,7 @@
 #include "Environment.h"
 #include "../alloc/GC.h"
 #include "../interp/register.h"
+#include "../../util/time.h"
 
 int32_t Thread::tid = 0;
 thread_local Thread* thread_self = NULL;
@@ -644,6 +645,10 @@ void Thread::run() {
                 _idiv(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             IMOD:
                 imod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            TIME:
+                time(GET_Da(cache[pc]))
+            _SLEEP:
+                _sleep(GET_Da(cache[pc]))
 
         }
     } catch (std::bad_alloc &e) {

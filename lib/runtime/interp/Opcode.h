@@ -173,6 +173,10 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define movn(x) ptr = &ptr->_Node[x]; _brh
 
+#define time(r) __rxs[r]=realTimeInUSecs();
+
+#define _sleep(r) __os_sleep((int64_t)__rxs[r]);
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -239,6 +243,8 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
         &&IMUL,                 \
         &&IDIV,                  \
         &&IMOD,                   \
+        &&TIME,                   \
+        &&_SLEEP,                   \
     };
 
 /*
@@ -311,6 +317,8 @@ enum OPCODE {
     op_IMUL=0x3d,
     op_IDIV=0x3e,
     op_IMOD=0x3f,
+	op_TIME=0x40,
+	op_SLEEP=0x41,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };
