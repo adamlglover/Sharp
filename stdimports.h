@@ -12,7 +12,6 @@
 #include <list>
 #include <stdexcept>
 #include <string>
-#include "lib/util/time.h"
 
 
 using namespace std;
@@ -38,6 +37,7 @@ using namespace std;
 #ifdef POSIX_
     #include <pthread.h>
     #include <unistd.h>
+    #include <sys/time.h>
 
     #define POSIX_USEC_INTERVAL 1000
 #endif

@@ -3,10 +3,13 @@
 //
 #include <time.h>
 #include <chrono>
+#ifndef __unix__
 #include <afxres.h>
+#endif
 #include "../../stdimports.h"
 
 
+#ifdef WIN32_
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
 #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
 #else
@@ -54,6 +57,8 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 
     return 0;
 }
+
+#endif
 
 /*
 * Get the wall-clock date/time, in usec.

@@ -12,9 +12,9 @@
 #include "lib/runtime/interp/Opcode.h"
 #include "lib/runtime/interp/register.h"
 #include "lib/runtime/oo/Object.h"
+#include "lib/util/time.h"
 #endif
 
-#define WIN32_LEAN_AND_MEAN
 Sharp versions;
 
 int main(int argc, const char* argv[]) {
