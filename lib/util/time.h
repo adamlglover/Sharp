@@ -6,5 +6,6 @@
 #define SHARP_TIME_H
 
 uint64_t realTimeInUSecs();
+int __os_time(int ty);
 
 #endif //SHARP_TIME_H

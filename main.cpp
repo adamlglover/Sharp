@@ -21,13 +21,9 @@ int main(int argc, const char* argv[]) {
 
 #ifndef MAKE_COMPILER
     uint64_t past=realTimeInUSecs(),now;
-    for(long i = 0; i < 10000000; i++) {
-        realTimeInUSecs();
-    }
-
-    now=realTimeInUSecs();
-    cout << "time " << now-past << " epoch " << (realTimeInUSecs()/1000000L) << endl;
     runtimeStart( argc, argv );
+    now=realTimeInUSecs();
+    cout << endl << (now-past)/1000L << "ms";
 #else
     _bootstrap( argc, argv );
 #endif

@@ -33,7 +33,7 @@ class Start {
     }
 
     static fn __init(var[] args) {
-        var[] message = "I called foo!\n";
+        var[] message = "I called foo!\r";
         Start start;
         __asm(
             "odessy/function_call.asm"

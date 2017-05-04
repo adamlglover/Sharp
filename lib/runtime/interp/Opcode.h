@@ -150,7 +150,7 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define _put(r) cout << __rxs[r]; _brh
 
-#define putc(r) cout << (char)__rxs[r]; _brh
+#define putc(r) printf("%c", (char)__rxs[r]); _brh
 
 #define _checklen(r) if(__rxs[r]>=ptr->size) \
     { \

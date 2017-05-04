@@ -10,6 +10,7 @@
 #include "../oo/Object.h"
 #include "../alloc/GC.h"
 #include "register.h"
+#include "../../util/time.h"
 
 SharpVM* vm;
 Environment* env;
@@ -144,11 +145,8 @@ void SharpVM::interrupt(int32_t signal) {
         case 0x9f:
             cout << env->strings[(int64_t )thread_self->__stack[(int64_t)__rxs[sp]--].var].value.str();
             break;
-        case 0xa0: // TodO: convert to instructions
-            // __lock()
-            break;
-        case 0xa1:
-            // __unlock()
+        case 0xa0:
+            __rxs[bmr]= __os_time((int) __rxs[ebx]);
             break;
         default:
             // unsupported

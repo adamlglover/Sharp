@@ -12,6 +12,7 @@
 #include <list>
 #include <stdexcept>
 #include <string>
+#include <cstdio>
 
 
 using namespace std;
