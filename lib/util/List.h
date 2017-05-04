@@ -11,6 +11,10 @@
 template <class T>
 class List {
 public:
+    List(){
+        init();
+    }
+
     void init(){
         _Data=NULL;
         len=0;
@@ -21,6 +25,10 @@ public:
         _Data[len-1]=data;
     }
 
+    void add(T data) {
+        __expand();
+        _Data[len-1]=data;
+    }
 
     void addif(T _V) {
         for(unsigned int i = 0; i < len; i++) {

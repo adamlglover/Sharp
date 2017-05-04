@@ -30,12 +30,11 @@ public:
     void interrupt(int32_t i);
 
     int exitVal;
-    int64_t class_ids;
 };
 
 extern SharpVM* vm;
 extern Environment* env;
 
-int CreateSharpVM(std::string, std::list<string>&);
+int CreateSharpVM(std::string);
 
 #endif //SHARP_VM_H

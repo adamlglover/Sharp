@@ -570,10 +570,10 @@ void Thread::run() {
         __rxs[sp] = -1;
         __rxs[fp] = 0;
         this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
+        Environment::init(__stack, STACK_SIZE);
     }
 
     pc = 0;
-    Environment::init(__stack, STACK_SIZE);
 
     call_asp(main->id);
     _init_opcode_table

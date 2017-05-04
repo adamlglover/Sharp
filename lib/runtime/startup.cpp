@@ -14,9 +14,11 @@
 #include "interp/register.h"
 
 options c_options;
-int __vinit(string e, list<string> pArgs);
+int __vinit(string e, List<nString>& pArgs);
 
-void init_main();
+void init_main(List <nString>& list1);
+
+void createStringArray(Sh_object *pObject, List<nString> &list1);
 
 void version() {
     cout << progname << " " << progvers << endl;
@@ -45,7 +47,7 @@ int runtimeStart(int argc, const char* argv[])
     }
 
     string executable ="";
-    list<string> pArgs;
+    List<nString> pArgs;
     for (int i = 1; i < argc; ++i) {
         if(opt("-V")){
             version();
@@ -64,8 +66,11 @@ int runtimeStart(int argc, const char* argv[])
         else {
             // add the source files
             executable = argv[i++];
-            while(i < argc)
-                pArgs.push_back(string(argv[i++]));
+            string arg = "";
+            while(i < argc) {
+                arg = argv[i++];
+                pArgs.add(arg);
+            }
             break;
         }
     }
@@ -82,15 +87,15 @@ int runtimeStart(int argc, const char* argv[])
     return __vinit(executable, pArgs);
 }
 
-int __vinit(string exe, list<string> pArgs) {
+int __vinit(string exe, List<nString>& pArgs) {
     int result;
 
-    if(CreateSharpVM(exe, pArgs) != 0) {
+    if(CreateSharpVM(exe) != 0) {
         fprintf(stderr, "Sharp VM init failed (check log file)\n");
         goto bail;
     }
 
-    init_main();
+    init_main(pArgs);
     vm->InterpreterThreadStart(Thread::threads[main_threadid]);
     result=vm->exitVal;
 
@@ -108,9 +113,45 @@ int __vinit(string exe, list<string> pArgs) {
         return 1;
 }
 
-void init_main() {
+void init_main(List <nString>& pArgs) {
     __rxs[sp] = -1;
     __rxs[fp] = 0;
+    Environment::init(Thread::threads[main_threadid]->__stack, STACK_SIZE);
     Thread::threads[main_threadid]->init_frame();
-    __rxs[sp]++;
+    Sh_object* object = &Thread::threads[main_threadid]->__stack[(long)++__rxs[sp]].object;
+
+    createStringArray(object, pArgs);
+}
+
+void createStringArray(Sh_object *pObject, List<nString> &args) {
+    pObject->createstr(manifest.executable);
+    int16_t MIN_ARGS = 4;
+    int64_t size = MIN_ARGS+args.size();
+    int64_t iter=0;
+
+    pObject->_Node=(Sh_object*)memalloc(sizeof(Sh_object)*size);
+    pObject->size = size+1;
+
+    pObject->_Node[iter++].createstr(manifest.application);
+    pObject->_Node[iter++].createstr(manifest.version);
+
+    stringstream ss;
+    ss << manifest.target;
+    nString str(ss.str());
+    pObject->_Node[iter++].createstr(str);
+
+#ifdef WIN32_
+    str = "win";
+#endif
+#ifdef POSIX
+    str = "posix";
+#endif
+    pObject->_Node[iter++].createstr(str);
+
+    /*
+     * Assign program args to be passed to main
+     */
+    for(unsigned int i = 0; i < args.size(); i++) {
+        pObject->_Node[iter++].createstr(args.get(i));
+    }
 }

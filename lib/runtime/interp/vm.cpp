@@ -15,7 +15,7 @@
 SharpVM* vm;
 Environment* env;
 
-int CreateSharpVM(std::string exe, std::list<string>& pArgs)
+int CreateSharpVM(std::string exe)
 {
     vm = (SharpVM*)memalloc(sizeof(SharpVM)*1);
     env = (Environment*)memalloc(sizeof(Environment)*1);
@@ -23,7 +23,6 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
     if(Process_Exe(exe) != 0)
         return 1;
 
-    vm->class_ids = manifest.classes;
     Thread::Startup();
     GC::GCStartup();
 
@@ -35,7 +34,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             NULL,
-            ++vm->class_ids
+            0
     );
 
     env->RuntimeException = ClassObject(
@@ -43,7 +42,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             &env->Throwable,
-            ++vm->class_ids
+            0
     );
 
     env->StackOverflowErr = ClassObject(
@@ -51,7 +50,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             &env->RuntimeException,
-            ++vm->class_ids
+            0
     );
 
     env->ThreadStackException = ClassObject(
@@ -59,7 +58,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             &env->RuntimeException,
-            ++vm->class_ids
+            0
     );
 
     env->IndexOutOfBoundsException = ClassObject(
@@ -67,7 +66,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             &env->RuntimeException,
-            ++vm->class_ids
+            0
     );
 
     env->NullptrException = ClassObject(
@@ -75,7 +74,7 @@ int CreateSharpVM(std::string exe, std::list<string>& pArgs)
             NULL,
             0,
             &env->RuntimeException,
-            ++vm->class_ids
+            0
     );
     cout.precision(16);
     env->init(env->global_heap, manifest.classes);

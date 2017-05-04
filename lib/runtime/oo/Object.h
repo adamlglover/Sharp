@@ -70,6 +70,7 @@ public:
     void free();
     void createnative(int64_t size);
     void createstr(int64_t size);
+    void createstr(nString& str);
     void createclass(int64_t klass);
     void mutate(Sh_object *pObject);
 };

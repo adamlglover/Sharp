@@ -78,18 +78,7 @@ void Sh_object::createstr(int64_t ref) {
     nString str;
     str = env->getstring(ref);
 
-    if(str.len == 0)
-        HEAD = NULL;
-    else
-        HEAD= (double*)memalloc(sizeof(double)*str.len);
-    this->size=str.len;
-    prev = NULL, nxt=NULL;
-    _Node=NULL, _rNode=NULL;
-    mark = gc_green;
-
-    for(int64_t i=0; i<size; i++){
-        _nativewrite(i,str.chars[i])
-    }
+    createstr(str);
 }
 
 void Sh_object::createclass(int64_t k) {
@@ -156,4 +145,19 @@ void Sh_object::mutate(Sh_object *object) {
         refs.get(i)->_rNode = this;
     }
     Sh_InvRef(object)
+}
+
+void Sh_object::createstr(nString &str) {
+    if(str.len == 0)
+        HEAD = NULL;
+    else
+        HEAD= (double*)memalloc(sizeof(double)*str.len);
+    this->size=str.len;
+    prev = NULL, nxt=NULL;
+    _Node=NULL, _rNode=NULL;
+    mark = gc_green;
+
+    for(int64_t i=0; i<size; i++){
+        _nativewrite(i,str.chars[i])
+    }
 }
