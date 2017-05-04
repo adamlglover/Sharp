@@ -60,6 +60,14 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 
 #endif
 
+long sys_time() {
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[100];
+    tstruct = *localtime(&now);
+    return tstruct.tm_sec;
+}
+
 /*
 * Get the wall-clock date/time, in usec.
 */
