@@ -20,10 +20,10 @@ Sharp versions;
 int main(int argc, const char* argv[]) {
 
 #ifndef MAKE_COMPILER
-    uint64_t past=realTimeInUSecs(),now;
+    uint64_t past= realTimeInNSecs(),now;
     runtimeStart( argc, argv );
-    now=realTimeInUSecs();
-    cout << endl << (now-past)/1000L << "ms";
+    now= realTimeInNSecs();
+    cout << endl << NANO_TOMILL(now-past) << "ms";
 #else
     _bootstrap( argc, argv );
 #endif

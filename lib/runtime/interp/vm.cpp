@@ -154,7 +154,7 @@ void SharpVM::interrupt(int32_t signal) {
             GC::_collect_GC_CONCURRENT();
             return;
         case 0xa3:
-            __rxs[bmr]=realTimeInUSecs();
+            __rxs[bmr]= realTimeInNSecs();
             return;
         case 0xa4:
             __rxs[cmt]=Thread::start((int32_t )__rxs[adx]);
