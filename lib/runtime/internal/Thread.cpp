@@ -654,11 +654,11 @@ void Thread::run() {
             OBJECT_PREV:
                 object_prev
             RMOV:
-                _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh
+                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh)
             MOV:
-                _nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
+                CHK_NULL(_nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh)
             MOVD:
-                _nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh
+                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh)
             MOVBI:
                 movbi(GET_Da(cache[pc]) + exponent(cache[pc+1]))
             _SIZEOF:
