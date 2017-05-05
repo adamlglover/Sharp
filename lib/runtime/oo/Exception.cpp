@@ -16,24 +16,26 @@ void Throwable::drop() {
 
 Exception::Exception(const char *msg)
         :
-        throwable(&Environment::RuntimeException),
-        msg(msg),
+        throwable(&Environment::RuntimeException, msg),
         runtime_error(msg)
 {
 }
 
 Exception::Exception(const std::string &__arg)
         :
-        throwable(&Environment::RuntimeException),
-        msg(msg),
+        throwable(&Environment::RuntimeException, __arg),
         runtime_error(__arg)
 {
 }
 
 Exception::Exception(ClassObject* throwable, const std::string &__arg)
         :
-        throwable(throwable),
-        msg(msg),
+        throwable(throwable, __arg),
         runtime_error(__arg)
 {
+}
+
+Exception::~Exception()
+{
+    throwable.drop();
 }

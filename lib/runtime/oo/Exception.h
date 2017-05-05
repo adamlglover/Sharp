@@ -30,6 +30,11 @@ public:
         this->message=message;
     }
 
+    void operator=(Throwable& t) {
+        throwable=t.throwable;
+        message = t.message;
+    }
+
     string buildMessage(CallStack &cs);
 
     void drop();
@@ -44,10 +49,11 @@ public:
     Exception(const std::string &__arg);
     Exception(ClassObject* throwable, const std::string &__arg);
 
-    Throwable getThrowable() { return Throwable(throwable, msg); }
+    ~Exception();
 
-    string msg;
-    ClassObject* throwable;
+    Throwable& getThrowable() { return throwable; }
+
+    Throwable throwable;
 };
 
 #endif //SHARP_EXCEPTION_H
