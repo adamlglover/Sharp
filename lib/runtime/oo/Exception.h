@@ -7,7 +7,6 @@
 
 #include "../../../stdimports.h"
 #include "string.h"
-#include "ClassObject.h"
 #include <stdexcept>
 
 class ClassObject;
