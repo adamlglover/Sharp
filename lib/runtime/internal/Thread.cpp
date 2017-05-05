@@ -52,6 +52,7 @@ int32_t Thread::Create(int32_t method) {
     thread->suspendPending = false;
     thread->exceptionThrown = false;
     thread->suspended = false;
+    thread->throwable.init();
     thread->exited = false;
     thread->daemon = false;
     thread->state = thread_init;
@@ -76,6 +77,7 @@ void Thread::Create(string name) {
     this->exceptionThrown = false;
     this->suspended = false;
     this->exited = false;
+    this->throwable.init();
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
@@ -95,6 +97,7 @@ void Thread::CreateDaemon(string) {
     this->suspended = false;
     this->exited = false;
     this->daemon = true;
+    this->throwable.init();
     this->state = thread_init;
     this->exitVal = 0;
 

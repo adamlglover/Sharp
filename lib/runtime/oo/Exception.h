@@ -7,6 +7,7 @@
 
 #include "../../../stdimports.h"
 #include "string.h"
+#include "ClassObject.h"
 #include <stdexcept>
 
 class ClassObject;
@@ -20,6 +21,11 @@ public:
             throwable(NULL),
             message()
     {
+    }
+
+    void init() {
+        throwable =NULL;
+        message.init();
     }
 
     Throwable(ClassObject* throwable, string message)
