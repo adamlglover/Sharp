@@ -888,7 +888,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 void Asm::check_CB() {
     if(i2.high_bytes > CA_MAX || i2.high_bytes < CA_MIN) {
                     stringstream ss;
-                    ss << "integral number too large: " + i2.high_bytes;
+                    ss << "integral number too large: " << i2.high_bytes;
                     tk->geterrors()->newerror(GENERIC, current(), ss.str());
                 }
 }
