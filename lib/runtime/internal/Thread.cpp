@@ -876,7 +876,6 @@ void Thread::init_frame() {
 void Thread::return_asp() {
     if(call_count == 1) { call_count = 0; return; }
 
-    cout << "return call_count " << call_count << endl;
     int64_t id = (int64_t )__stack[(int64_t )__rxs[fp]-1].var;
     if(id < 0 || id >= manifest.addresses) {
         stringstream ss;

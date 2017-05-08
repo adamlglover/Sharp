@@ -15,7 +15,8 @@ void ClassObject::free() {
         std::free(flds); flds = NULL;
     }
 
-    std::free(this->methods);
+    if(methods != NULL)
+        std::free(this->methods);
     name.free();
 }
 
