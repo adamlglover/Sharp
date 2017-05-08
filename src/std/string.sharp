@@ -9,9 +9,9 @@ class string {
         }
 
         fn replace( var pos, var replaceChar ) : string {
-            if(pos >= __sizeof(data)) {
-                throw new RuntimeErr("Index out of bounds exception");
-            }
+//            if(pos >= __sizeof(data)) {
+//                throw new RuntimeErr("Index out of bounds exception");
+//            }
 
             data[pos] = replaceChar;
             return self;
@@ -22,21 +22,21 @@ class string {
            // data = new var[__sizeof(oldStr) + __sizeof(immstr)];
 
             var iter;
-            for(var i = 0; i < __sizeof(oldStr); i++) {
-                data[iter++] = oldStr[i];
-            }
-
-            for(var i = 0; i < __sizeof(immstr); i++) {
-                data[iter++] = immstr[i];
-            }
+//            for(var i = 0; i < __sizeof(oldStr); i++) {
+//                data[iter++] = oldStr[i];
+//            }
+//
+//            for(var i = 0; i < __sizeof(immstr); i++) {
+//                data[iter++] = immstr[i];
+//            }
 
             return self;
         }
 
         fn at( var pos ) : __int8 {
-            if(pos >= __sizeof(data)) {
-                throw new RuntimeErr("Index out of bounds");
-            }
+//            if(pos >= __sizeof(data)) {
+//                throw new RuntimeErr("Index out of bounds");
+//            }
 
             return data[pos];
         }

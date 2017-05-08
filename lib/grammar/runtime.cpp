@@ -5147,8 +5147,7 @@ void runtime::cleanup() {
 
     __freeList(macros);
 
-    scope_map->free();
-    delete (scope_map); scope_map = NULL;
+    scope_map.free();
 }
 
 void rt_error(string message) {
@@ -6039,13 +6038,13 @@ void runtime::mov_field(Expression &expression, ast* pAst) {
 }
 
 Scope *runtime::current_scope() {
-    if(scope_map->size() == 0)
+    if(scope_map.size() == 0)
         return NULL;
-    return &scope_map->get(scope_map->size()-1);
+    return &scope_map.get(scope_map.size()-1);
 }
 
 Scope* runtime::add_scope(Scope scope) {
-    scope_map->push_back(scope);
+    scope_map.push_back(scope);
     return current_scope();
 }
 
@@ -6053,7 +6052,7 @@ void runtime::remove_scope() {
     Scope* scope = current_scope();
     scope->locals.free();
 
-    scope_map->pop_back();
+    scope_map.pop_back();
 }
 
 _operator string_toop(string op) {

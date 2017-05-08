@@ -64,6 +64,8 @@ public:
     static void free(Sh_object*, int64_t);
     static void freesticky(_gc_object*, int64_t);
     static void gcinsert_stack(Sh_object *, int64_t);
+
+    nString getstringfield(string name, Sh_object *pObject);
 };
 
 extern Environment* env;

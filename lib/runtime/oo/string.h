@@ -59,6 +59,19 @@ public:
         return true;
     }
 
+    bool operator==(const nString &str) {
+        if(str.len != len) return false;
+        for(int64_t i = 0; i < len; i++) {
+            if(str.chars[i] != chars[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const string &str) {
+        return !operator==(str);
+    }
+
     void operator=(const nString &_str) {
         free();
 

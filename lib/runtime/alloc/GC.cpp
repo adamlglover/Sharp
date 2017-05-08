@@ -88,6 +88,8 @@ void GC::_collect() {
 void GC::_init_GC() {
     gc=(GC*)malloc(sizeof(GC)*1);
     gc->mutex = Monitor();
+    gc->sigMutex = Monitor();
+    gc->signal = 0;
     gc->gc_alloc_heap=(_gc_object*)malloc(sizeof(_gc_object)*gc_max_heap_size);
     Environment::init(gc->gc_alloc_heap, gc_max_heap_size);
     gc->allocptr=0;
@@ -187,6 +189,17 @@ void GC::_GC_run() {
             GC::_collect_GC_CONCURRENT();
             return;
         }
+        if(signal != 0) {
+            switch(signal) {
+                case gc_COLLECT_CONCURRENT:
+                    GC::_collect_GC_CONCURRENT();
+                    break;
+                default:
+                    break;
+            }
+            signal = 0;
+            sigMutex.release();
+        }
 
         if (retryCount++ == sMaxRetries)
         {
@@ -279,4 +292,9 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
     }
 
     gc->mutex.release();
+}
+
+void GC::notify(int sig) {
+    gc->sigMutex.acquire(INDEFINITE);
+    gc->signal = sig;
 }

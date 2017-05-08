@@ -12,12 +12,6 @@
 class ClassObject;
 class Field;
 
-struct ExceptionTable {
-    int64_t startpc;
-    int64_t endpc;
-    ClassObject* klass;
-};
-
 typedef keypair<int64_t, int64_t> line_pc;
 
 /**

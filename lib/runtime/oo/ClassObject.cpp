@@ -19,13 +19,10 @@ void ClassObject::free() {
     name.free();
 }
 
-ClassObject *ClassObject::newdup() {
-    ClassObject* klass = NULL;//new ClassObject(name.str(), flds, fieldCount,
-                              //           methods, methodCount, NULL,
-                              //           id);
-
-    if(super != NULL) {
-        klass->super = super->newdup();
+Field *ClassObject::getfield(string name) {
+    for(unsigned int i = 0; i < fieldCount; i++) {
+        if(flds[i].name == name)
+            return &flds[i];
     }
-    return klass;
+    return NULL;
 }

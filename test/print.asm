@@ -1,9 +1,9 @@
-_sizeof %ecf               // get size of message
-movi #0, %cx
-test %ecf,%ecx
-movi $$+4,%adx
-bre
-ret
+    _sizeof %ecf               // get size of message
+    movi #0, %cx
+    test %ecf,%cx
+    movi $$+4,%adx
+    bre
+    ret
 
 ._print:
     movi $_print+2,%adx    // store address of label <_print> omit store instr

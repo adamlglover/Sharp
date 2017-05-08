@@ -91,7 +91,7 @@ public:
     bool suspendPending;
     bool exceptionThrown;
 
-    uint64_t pc, curr_adsp;
+    uint64_t pc, curr_adsp, call_count;
     int64_t cache_size;
     data_stack* __stack;
     sharp_cache cache;
@@ -127,7 +127,10 @@ private:
     static void push_thread(Thread *thread);
     static void pop_thread(Thread *thread);
 
-    void TryThrow(Exception &err);
+    bool TryThrow(sh_asp* asp, Sh_object* exceptionObject);
+    void Throw(Sh_object *exceptionObject);
+
+    void fillStackTrace(Sh_object *exceptionObject);
 };
 
 extern thread_local Thread* thread_self;

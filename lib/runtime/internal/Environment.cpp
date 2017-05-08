@@ -7,6 +7,7 @@
 #include "../oo/Exception.h"
 #include "../oo/Object.h"
 #include "../alloc/GC.h"
+#include "../oo/Field.h"
 
 ClassObject Environment::Throwable;
 ClassObject Environment::StackOverflowErr;
@@ -188,4 +189,27 @@ nString& Environment::getstring(int64_t ref) {
     }
 
     return strings[0].value;
+}
+
+nString Environment::getstringfield(string name, Sh_object *pObject) {
+    if(pObject != NULL && pObject->klass == NULL) {
+        ClassObject* klass = pObject->klass;
+        Field* field = NULL;
+        if((field = klass->getfield(name)) == NULL) {
+            if(klass->super != NULL) {
+                for(;;) {
+                    klass = klass->super;
+
+                    if(klass == NULL)
+                        break;
+
+                    if((field = klass->getfield(name)) != NULL) {
+                        return nString(field->name);
+                    }
+                }
+            }
+        } else
+            return nString(field->name);
+    }
+    return nString();
 }

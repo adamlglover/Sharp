@@ -61,4 +61,10 @@ public:
     Throwable throwable;
 };
 
+struct ExceptionTable{
+    int64_t start_pc, end_pc;
+    int64_t local;
+    nString klass;
+};
+
 #endif //SHARP_EXCEPTION_H

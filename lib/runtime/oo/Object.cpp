@@ -11,6 +11,7 @@ Sh_object::Sh_object() {
     this->mark = gc_orange;
     this->monitor = Monitor();
     this->HEAD = NULL;
+    this->klass=NULL;
     nxt = NULL, prev=NULL;
     _Node = NULL;
     refs.init();
@@ -18,6 +19,7 @@ Sh_object::Sh_object() {
 
 Sh_object::Sh_object(int64_t type) {
     this->mark = gc_orange;
+    this->klass=NULL;
     this->monitor = Monitor();
     this->HEAD = NULL;
     nxt = NULL, prev=NULL;
@@ -39,6 +41,7 @@ void Sh_object::free() {
 
     size=0;
     refs.free();
+    klass=NULL;
 }
 
 void Sh_object::createnative(int64_t size) {
@@ -49,6 +52,7 @@ void Sh_object::createnative(int64_t size) {
         else
             HEAD= (double*)memalloc(sizeof(double)*size);
         this->size=size;
+        klass=NULL;
         prev = NULL, nxt=NULL;
         _Node=NULL, _rNode=NULL;
         mark = gc_green;
@@ -62,7 +66,8 @@ void Sh_object::createnative(int64_t size) {
 void Sh_object::inc_ref(Sh_object *ptr) {
     this->refs.addif(ptr);
     ptr->HEAD=HEAD;
-    ptr->nxt==nxt;
+    ptr->nxt=nxt;
+    ptr->klass=klass;
     ptr->prev=prev;
     ptr->size=size;
     ptr->_Node=_Node;
@@ -87,6 +92,7 @@ void Sh_object::createclass(int64_t k) {
     }
 
     ClassObject* klass = env->findClass(k);
+    this->klass=klass;
     HEAD = NULL;
     _rNode=NULL;
 
@@ -112,6 +118,7 @@ void Sh_object::del_ref() {
         HEAD=NULL;
         nxt==NULL;
         prev=NULL;
+        klass=NULL;
         size=0;
         _Node=NULL;
         _rNode=NULL;
@@ -136,6 +143,7 @@ void Sh_object::mutate(Sh_object *object) {
     this->_Node = object->_Node;
     this->HEAD = object->HEAD;
     this->nxt = object->nxt;
+    this->klass=object->klass;
     this->prev = object->prev;
     this->size = object->size;
     this->refs.addAll(object->refs);
@@ -153,6 +161,7 @@ void Sh_object::createstr(nString &str) {
     else
         HEAD= (double*)memalloc(sizeof(double)*str.len);
     this->size=str.len;
+    klass=NULL;
     prev = NULL, nxt=NULL;
     _Node=NULL, _rNode=NULL;
     mark = gc_green;

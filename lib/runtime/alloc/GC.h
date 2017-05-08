@@ -11,6 +11,10 @@
 #include "../internal/sh_asp.h"
 
 
+enum gc_sig{
+    gc_COLLECT_CONCURRENT=1
+};
+
 struct _gc_object;
 
 class GC {
@@ -25,11 +29,13 @@ public:
     static void _insert(Sh_object*);
     static void _insert_stack(Sh_object*, unsigned long);
     static void _insert_stack(data_stack* st, unsigned long sz);
+    static void notify(int sig);
 
 private:
-    Monitor mutex;
+    Monitor mutex, sigMutex;
     _gc_object* gc_alloc_heap;
     unsigned long allocptr;
+    int signal;
 
     static void _collect();
 

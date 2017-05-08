@@ -45,6 +45,7 @@ x->prev=NULL;  \
 x->size=0;  \
 x->_Node=NULL;  \
 x->_rNode=NULL;  \
+x->klass=NULL;  \
 }
 
 #define CHK_NULL(x) if(ptr==NULL) { throw Exception("null"); } else { x }
@@ -60,6 +61,7 @@ public:
 
     gc_mark mark;
     int64_t size;
+    ClassObject* klass;
     Sh_object *_Node, *prev, *nxt;
     Monitor monitor;
     List<Sh_object*> refs;

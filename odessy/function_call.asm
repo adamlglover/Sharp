@@ -6,7 +6,7 @@
 
 .function_call:
     movi #0,%egx
-    movi #1000000 ,%edf
+    movi #1 ,%edf
     ._run:
         movi $_run,%adx
         movl <message>

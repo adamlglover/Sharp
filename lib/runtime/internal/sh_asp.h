@@ -32,10 +32,12 @@ struct sh_asp {
     bool* arrayFlag; // array flag for each parameter
     int param_size;
     int64_t cache_size;
+    List<ExceptionTable> exceptions;
 
     void free() {
         name.free();
         sourceFile.free();
+        exceptions.free();
 
         if(param_size != 0) {
             if(arrayFlag != NULL)
@@ -53,6 +55,7 @@ struct sh_asp {
     void init() {
         name.init();
         sourceFile.init();
+        exceptions.init();
         params = NULL;
         arrayFlag = NULL;
         param_size = 0;

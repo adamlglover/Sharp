@@ -360,10 +360,9 @@ public:
         import_map.init();
         string_map.init();
 
-        scope_map = new List<Scope>();
         parse_map.key.init();
         parse_map.value.init();
-        scope_map->init();
+        scope_map.init();
         interpret();
     }
 
@@ -406,7 +405,7 @@ private:
     List<ClassObject> classes;
     List<keypair<string, List<string>>>  import_map;
     List<string> string_map;
-    List<Scope>* scope_map;
+    List<Scope> scope_map;
     Method* main;
     bool resolvedFields;
     int64_t ctp;

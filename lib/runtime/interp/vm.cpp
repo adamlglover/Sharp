@@ -151,7 +151,7 @@ void SharpVM::interrupt(int32_t signal) {
             GC::_collect_GC_EXPLICIT();
             return;
         case 0xa2:
-            GC::_collect_GC_CONCURRENT();
+            GC::notify(gc_COLLECT_CONCURRENT);
             return;
         case 0xa3:
             __rxs[bmr]= realTimeInNSecs();

@@ -6,7 +6,7 @@ class Start {
 
     static fn foo(var[] message) {
         __asm(
-            "movl <message>"
+            "movl 0"
         );
         try {
         __asm(
@@ -30,7 +30,6 @@ class Start {
             "smov %ebx+1"
             "imul %ebx,10"
             "idiv %bmr,2"
-            "movr %adx,%fp"
             "smovr %bmr-0x5"
             "ret"
         );

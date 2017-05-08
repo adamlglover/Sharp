@@ -47,7 +47,7 @@ public:
 
     void free();
 
-    ClassObject *newdup();
+    Field* getfield(string name);
 };
 
 

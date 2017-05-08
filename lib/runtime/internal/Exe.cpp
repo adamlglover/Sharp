@@ -39,7 +39,7 @@ int Process_Exe(std::string exe)
 
     jobIndx++;
     if(!file::exists(exe.c_str())){
-        error("file `" + exe + "` doesnt exist!");
+        std::runtime_error("file `" + exe + "` doesnt exist!");
     }
 
     manifest.executable.init();
@@ -50,7 +50,7 @@ int Process_Exe(std::string exe)
 
     try {
         if(!checkFile(buffer)) {
-            error("file `" + exe + "` could not be ran");
+            std::runtime_error("file `" + exe + "` could not be ran");
         }
 
         jobIndx++;
@@ -349,7 +349,7 @@ int Process_Exe(std::string exe)
         }
         jobIndx-=2;
     } catch(std::exception &e) {
-        cout << "err " << e.what();
+        cout << "error " << e.what();
         return 1;
     }
 
