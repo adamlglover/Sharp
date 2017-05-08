@@ -26,7 +26,8 @@ public:
             base(NULL),
             super(NULL),
             head(NULL),
-            note()
+            note(),
+            fullName("")
     {
     }
     ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note)
@@ -38,7 +39,8 @@ public:
             base(NULL),
             super(NULL),
             head(NULL),
-            note(note)
+            note(note),
+            fullName("")
     {
         functions = new list<Method>();
         constructors = new list<Method>();
@@ -58,7 +60,8 @@ public:
             base(NULL),
             head(NULL),
             super(parent),
-            note(note)
+            note(note),
+            fullName("")
     {
         functions = new list<Method>();
         constructors = new list<Method>();

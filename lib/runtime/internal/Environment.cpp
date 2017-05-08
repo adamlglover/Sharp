@@ -10,7 +10,7 @@
 
 ClassObject Environment::Throwable;
 ClassObject Environment::StackOverflowErr;
-ClassObject Environment::RuntimeException;
+ClassObject Environment::RuntimeErr;
 ClassObject Environment::ThreadStackException;
 ClassObject Environment::IndexOutOfBoundsException;
 ClassObject Environment::NullptrException;
@@ -64,7 +64,7 @@ void Environment::shutdown() {
 
     this->IndexOutOfBoundsException.free();
     this->NullptrException.free();
-    this->RuntimeException.free();
+    this->RuntimeErr.free();
     this->StackOverflowErr.free();
     this->ThreadStackException.free();
     this->Throwable.free();

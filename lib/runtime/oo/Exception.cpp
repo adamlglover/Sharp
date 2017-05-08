@@ -16,14 +16,14 @@ void Throwable::drop() {
 
 Exception::Exception(const char *msg)
         :
-        throwable(&Environment::RuntimeException, msg),
+        throwable(&Environment::RuntimeErr, msg),
         runtime_error(msg)
 {
 }
 
 Exception::Exception(const std::string &__arg)
         :
-        throwable(&Environment::RuntimeException, __arg),
+        throwable(&Environment::RuntimeErr, __arg),
         runtime_error(__arg)
 {
 }

@@ -41,7 +41,7 @@ public:
     // Alloce'd by new()
     static ClassObject Throwable;
     static ClassObject StackOverflowErr;
-    static ClassObject RuntimeException; // TODO: compare exceptions by name not id
+    static ClassObject RuntimeErr; // TODO: compare exceptions by name not id
     static ClassObject ThreadStackException;
     static ClassObject IndexOutOfBoundsException;
     static ClassObject NullptrException;

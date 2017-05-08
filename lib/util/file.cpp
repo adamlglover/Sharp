@@ -21,7 +21,7 @@ bool is_whitespace(char c)
 
 bool file::empty(const char *file)
 {
-    stream data;
+    buffer data;
     read_alltext(file, data);
     for(long i = 0; i < data.size(); i++)
     {
@@ -32,7 +32,7 @@ bool file::empty(const char *file)
     return true;
 }
 
-int file::write(const char *f, stream& data)
+int file::write(const char *f, buffer& data)
 {
     try {
         FILE* fp=NULL;
@@ -69,7 +69,7 @@ int64_t file_size(FILE *fp)
     return ( len );
 }
 
-void file::read_alltext(const char *f, stream& _out)
+void file::read_alltext(const char *f, buffer& _out)
 {
     if(!exists(f))
         return;
@@ -117,7 +117,7 @@ bool file::endswith(string ext, string file) {
     return extension.str() == ext;
 }
 
-void file::stream::_push_back(char _C) {
+void file::buffer::_push_back(char _C) {
     if(_Data == NULL)
         begin();
 
@@ -133,16 +133,16 @@ void file::stream::_push_back(char _C) {
     _Data[sp++]=_C;
 }
 
-char file::stream::at(stream_t _X) {
+char file::buffer::at(stream_t _X) {
     if(_X>=sp ||_X<0) {
         stringstream _s;
-        _s << "stream::at() _X: " << _X << " >= size: " << sp;
+        _s << "buffer::at() _X: " << _X << " >= size: " << sp;
         throw std::out_of_range(_s.str());
     }
     return _Data[_X];
 }
 
-string file::stream::to_str() {
+string file::buffer::to_str() {
     string s ="";
     for(unsigned long i=0; i < size(); i++) {
         s+=_Data[i];

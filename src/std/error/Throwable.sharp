@@ -1,0 +1,24 @@
+mod std.err;
+
+/**
+ * Created by BraxtonN on 5/5/2017.
+ */
+class Throwable {
+    string message;
+
+    Throwable(var[] message) {
+        self->message = message;
+    }
+
+    Throwable(string message) {
+        self->message = message;
+    }
+
+    fn getStackTrace() : string {
+        if(message == null) {
+            message = ""; // TodO: fill stack trace
+        }
+
+        return message;
+    }
+}

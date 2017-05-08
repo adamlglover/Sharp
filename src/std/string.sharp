@@ -1,4 +1,4 @@
-mod sharp.lang;
+mod std;
 
 class string {
     /*this will hold our string */
@@ -19,7 +19,7 @@ class string {
 
         fn append(var[] immstr) : string {
             var[] oldStr = data;
-            data = new var[__sizeof(oldStr) + __sizeof(immstr)];
+           // data = new var[__sizeof(oldStr) + __sizeof(immstr)];
 
             var iter;
             for(var i = 0; i < __sizeof(oldStr); i++) {
@@ -35,7 +35,7 @@ class string {
 
         fn at( var pos ) : __int8 {
             if(pos >= __sizeof(data)) {
-                throw RuntimeErr("Index out of bounds");
+                throw new RuntimeErr("Index out of bounds");
             }
 
             return data[pos];
@@ -52,8 +52,9 @@ class string {
         fn operator==( string str ) : var {
             var iter;
             foreach(var char : data) {
-                if(char != str.at(iter++))
+                if(char != str.at(iter++)) {
                     return false;
+                }
             }
 
             return true;
@@ -62,11 +63,16 @@ class string {
         fn operator==( var[] str ) : var {
             var iter;
             foreach( var char : data ) {
-                if(char != str[iter++])
+                if(char != str[iter++]) {
                     return false;
+                }
             }
 
             return true;
+        }
+
+        fn operator=( var[] immstr ) {
+            data = immstr;
         }
 
         fn operator+( var char ) : string {

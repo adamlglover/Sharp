@@ -6,11 +6,15 @@ class Start {
 
     static fn foo(var[] message) {
         __asm(
-            "movl 0"
+            "movl <message>"
         );
+        try {
         __asm(
             "test/print.asm"
         );
+        }catch(RuntimeErr re) {
+            re.getStackTrace();
+        }
     }
 
     Start() {

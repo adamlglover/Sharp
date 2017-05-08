@@ -32,6 +32,9 @@ Method *ClassObject::getConstructor(List<Param>& params) {
             return &function;
     }
 
+    if(base != NULL)
+        return base->getConstructor(params);
+
     return NULL;
 }
 

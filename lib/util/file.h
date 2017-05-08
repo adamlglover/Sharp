@@ -15,9 +15,9 @@ class file
 {
 public:
 
-    class stream {
+    class buffer {
     public:
-        stream()
+        buffer()
         :
                 _Data(NULL),
                 _ds(0),
@@ -26,7 +26,7 @@ public:
             begin();
         }
 
-        stream(std::string _S)
+        buffer(std::string _S)
                 :
                 sp(0)
         {
@@ -40,12 +40,12 @@ public:
             sp=0;
         }
 
-        ~stream()
+        ~buffer()
         {
             end();
         }
 
-        void operator=(stream _D)
+        void operator=(buffer _D)
         {
             if(_Data == NULL)
                 begin();
@@ -57,13 +57,13 @@ public:
             }
         }
 
-        stream& operator<<(const char& _X)
+        buffer& operator<<(const char& _X)
         {
             _push_back(_X);
             return *this;
         }
 
-        stream& operator<<(const std::string& _X)
+        buffer& operator<<(const std::string& _X)
         {
             for(stream_t i=0; i < _X.size(); i++) {
                 _push_back(_X.at(i));
@@ -71,19 +71,19 @@ public:
             return *this;
         }
 
-        stream& operator<<(const long long& _X)
+        buffer& operator<<(const long long& _X)
         {
             operator<<((char)_X);
             return *this;
         }
 
-        stream& operator<<(const int& _X)
+        buffer& operator<<(const int& _X)
         {
             operator<<((char)_X);
             return *this;
         }
 
-        stream& operator<<(const long& _X)
+        buffer& operator<<(const long& _X)
         {
             operator<<((char)_X);
             return *this;
@@ -111,9 +111,9 @@ public:
         stream_t sp;
     };
 
-    static void read_alltext(const char *file, stream& out);
+    static void read_alltext(const char *file, buffer& out);
 
-    static int write(const char *file, stream& data);
+    static int write(const char *file, buffer& data);
 
     static bool empty(const char *file);
 

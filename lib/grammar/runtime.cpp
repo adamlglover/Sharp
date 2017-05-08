@@ -57,6 +57,8 @@ void runtime::interpret() {
             _current = p;
             iter++;
 
+            current_module = "";
+
             ast* trunk;
             add_scope(Scope(scope_global, NULL));
             for(size_t i = 0; i < p->treesize(); i++) {
@@ -64,6 +66,7 @@ void runtime::interpret() {
 
                 switch(trunk->gettype()) {
                     case ast_module_decl:
+                        current_module = parse_modulename(trunk);
                         break;
                     case ast_import_decl:
                         parse_import_decl(trunk);
@@ -264,7 +267,7 @@ void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
 
     if(pAst->getentitycount() == 1) {
         if(file::exists(pAst->getentity(0).gettoken().c_str())) {
-            file::stream __ostream;
+            file::buffer __ostream;
             file::read_alltext(pAst->getentity(0).gettoken().c_str(), __ostream);
 
             assembly = __ostream.to_str();
@@ -448,8 +451,46 @@ void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
 }
 
 void runtime::parseCachClause(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
 
     keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
+
+    int64_t i64;
+    string name =  catcher.key;
+    keypair<int, Field>* field;
+    List<AccessModifier> modCompat;
+    modCompat.add(mPublic);
+
+    RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
+                                   pAst->line, pAst->col);
+    Field f = Field(NULL, uid++, name, scope->klass, modCompat, note);
+
+    f.vaddr = scope->function->local_count;
+    scope->function->local_count++;
+    if(catcher.value.type == ResolvedReference::CLASS) {
+        f.klass = catcher.value.klass;
+        f.type = field_class;
+    } else if(catcher.value.type == ResolvedReference::NATIVE) {
+        f.nf = catcher.value.nf;
+        f.type = field_native;
+    } else {
+        f.type = field_unresolved;
+    }
+
+    f.array = catcher.value.array;
+
+    if(validateLocalField(name, pAst)) {
+        if(catcher.value.type == ResolvedReference::FIELD) {
+            errors->newerror(COULD_NOT_RESOLVE, pAst, " `" + catcher.value.field->name + "`");
+        }
+
+        scope->locals.add(keypair<int, Field>(scope->blocks, f));
+        field = scope->getLocalField(name);
+
+        if(!(f.nativeInt() && !f.array))
+            block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
+    }
+
     // TODO: add catcher to asm
     parseBlock(pAst->getsubast(ast_block), block);
 }
@@ -1200,7 +1241,7 @@ ClassObject* runtime::getClassGlobal(string module, string class_name) {
 
                 List<string>& lst = import_map.get(i).value;
                 for(unsigned int x = 0; x < lst.size(); x++) {
-                    if((klass = getClass(lst.get(i), class_name)) != NULL)
+                    if((klass = getClass(lst.get(x), class_name)) != NULL)
                         return klass;
                 }
             }
@@ -4148,6 +4189,17 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
                         errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Class `" + right.typeToString() + "` must be lvalue" + msg);
                         return false;
                     }
+                } else if(right.type == expression_field && right.utype.field->type == field_class) {
+                    if(right.utype.field->klass->match(left.utype.field->klass)) {
+                        return true;
+                    }
+                } else {
+                    List<Param> params;
+                    List<Expression> exprs;
+                    exprs.push_back(right);
+
+                    expressionListToParams(params, exprs);
+                    return left.utype.field->klass->getOverload(oper_EQUALS, params) != NULL;
                 }
             } else {
                 // do nothing field unresolved
@@ -5262,7 +5314,7 @@ void _srt_start(list<string> files)
     std::list<parser*> parsers;
     parser* p = NULL;
     tokenizer* t;
-    file::stream source;
+    file::buffer source;
     size_t errors=0, uo_errors=0;
     int succeeded=0, failed=0, panic=0;
 
@@ -6355,7 +6407,7 @@ std::string runtime::generate_text_section() {
 }
 
 void runtime::generate() {
-    file::stream _ostream;
+    file::buffer _ostream;
     _ostream.begin();
 
     _ostream << generate_header() ;

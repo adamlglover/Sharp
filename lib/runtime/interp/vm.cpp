@@ -30,15 +30,15 @@ int CreateSharpVM(std::string exe)
      * Aux classes
      */
     env->Throwable = ClassObject(
-            "sharp.lang#Throwable",
+            "std.err#Throwable",
             NULL,
             0,
             NULL,
             0
     );
 
-    env->RuntimeException = ClassObject(
-            "sharp.lang#RuntimeException",
+    env->RuntimeErr = ClassObject(
+            "std.err#RuntimeErr",
             NULL,
             0,
             &env->Throwable,
@@ -46,34 +46,34 @@ int CreateSharpVM(std::string exe)
     );
 
     env->StackOverflowErr = ClassObject(
-            "sharp.lang#StackOverflowErr",
+            "std.err#StackOverflowErr",
             NULL,
             0,
-            &env->RuntimeException,
+            &env->RuntimeErr,
             0
     );
 
     env->ThreadStackException = ClassObject(
-            "sharp.lang#ThreadStackException",
+            "std.err#ThreadStackException",
             NULL,
             0,
-            &env->RuntimeException,
+            &env->RuntimeErr,
             0
     );
 
     env->IndexOutOfBoundsException = ClassObject(
-            "sharp.lang#IndexOutOfBoundsException",
+            "std.err#IndexOutOfBoundsException",
             NULL,
             0,
-            &env->RuntimeException,
+            &env->RuntimeErr,
             0
     );
 
     env->NullptrException = ClassObject(
-            "sharp.lang#NullptrException",
+            "std.err#NullptrException",
             NULL,
             0,
-            &env->RuntimeException,
+            &env->RuntimeErr,
             0
     );
     cout.precision(16);

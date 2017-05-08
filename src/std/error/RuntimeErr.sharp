@@ -1,0 +1,8 @@
+mod std.err;
+
+/**
+ * Created by BraxtonN on 5/5/2017.
+ */
+class RuntimeErr base Throwable {
+    
+}
