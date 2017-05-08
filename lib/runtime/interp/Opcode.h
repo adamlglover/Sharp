@@ -177,7 +177,7 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define test(r,x) __rxs[0x0002]=__rxs[r]==__rxs[x]; _brh
 
-#define __lock(spin) CHK_NULL(ptr->monitor.acquire(spin);) _brh
+#define __lock(r) CHK_NULL(ptr->monitor.acquire((int64_t)__rxs[r]);) _brh
 
 #define __ulock() CHK_NULL(ptr->monitor.release();) _brh
 

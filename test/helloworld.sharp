@@ -1,11 +1,13 @@
 mod application;
 
-class Start {
+class Main {
 
-    static fn __init(var[] args) {
-        var[] message = "Hello, World!\n";
-        __asm(
-            "test/print.asm"
-        );
+    static fn main(string[] args) {
+        var x;
+        for(var i = 0; i < 1_000_000; i++) {
+            x++;
+        }
+
+        print("x = " + x);
     }
 }

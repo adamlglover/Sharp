@@ -722,12 +722,13 @@ void Thread::run() {
     } catch (Exception &e) {
         throwable = e.getThrowable();
         exceptionThrown = true;
-
-        // TODO: handle exception
+        TryThrow(e);
     }
 }
 
-
+void Thread::TryThrow(Exception& err) {
+    // TODO: handle exception
+}
 
 #ifdef  DEBUGGING
 int64_t getop(int64_t i) {

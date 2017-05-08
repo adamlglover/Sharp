@@ -26,7 +26,7 @@ struct sh_asp {
     int64_t* bytecode;
     int frame_init; // inital stack space required for frame
     ClassObject* owner;
-    nString name;
+    nString name, sourceFile;
     int64_t* params;
     int self;      // allocate 1 stack frame for self?
     bool* arrayFlag; // array flag for each parameter
@@ -34,6 +34,9 @@ struct sh_asp {
     int64_t cache_size;
 
     void free() {
+        name.free();
+        sourceFile.free();
+
         if(param_size != 0) {
             if(arrayFlag != NULL)
                 std::free(arrayFlag);
@@ -49,6 +52,7 @@ struct sh_asp {
 
     void init() {
         name.init();
+        sourceFile.init();
         params = NULL;
         arrayFlag = NULL;
         param_size = 0;

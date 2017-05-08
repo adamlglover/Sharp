@@ -127,6 +127,7 @@ private:
     static void push_thread(Thread *thread);
     static void pop_thread(Thread *thread);
 
+    void TryThrow(Exception &err);
 };
 
 extern thread_local Thread* thread_self;

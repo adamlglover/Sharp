@@ -6,9 +6,19 @@
 #define SHARP_META_H
 
 #include "../../stdimports.h"
+#include "../util/List.h"
+#include "../util/keypair.h"
 
 class ClassObject;
 class Field;
+
+struct ExceptionTable {
+    int64_t startpc;
+    int64_t endpc;
+    ClassObject* klass;
+};
+
+typedef keypair<int64_t, int64_t> line_pc;
 
 /**
  * File and debugging info, line
@@ -16,6 +26,9 @@ class Field;
  */
 class Meta {
 
+private:
+    ExceptionTable* etable;
+    List<line_pc> lineTable;
 };
 
 class MetaClass {

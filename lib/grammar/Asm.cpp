@@ -95,14 +95,20 @@ void Asm::expect_int_or_register() {
     } else if(current() == "$") {
         npos++;
 
-        string name = expect_identifier();
-        if(label_exists(name)) {
-            i2.high_bytes = get_label(name);
-        } else {
-            npos--;
-            tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
+        if(current() == "$") {
             npos++;
+            i2.high_bytes = assembler->__asm64.size()-1;
+        } else {
+            string name = expect_identifier();
+            if(label_exists(name)) {
+                i2.high_bytes = get_label(name);
+            } else {
+                npos--;
+                tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
+                npos++;
+            }
         }
+
 
         if(current() == "+") {
             npos++;
@@ -833,6 +839,27 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 check_CB();
 
                 assembler.push_i64(SET_Ci(i64, op_IMOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("slp")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_SLEEP, i2.high_bytes));
+            } else if(instruction_is("test")) {
+                expect_int_or_register();
+                itmp = i2;
+                expect(",");
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Ci(i64, op_TEST, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+            } else if(instruction_is("_lck")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_LOCK, i2.high_bytes));
+            } else if(instruction_is("ulck")) {
+                assembler.push_i64(SET_Ei(i64, op_UlOCK));
+            } else if(instruction_is("exp")) {
+                expect_int_or_register();
+
+                assembler.push_i64(SET_Di(i64, op_EXP, i2.high_bytes));
             } else {
                 npos++;
                 tk->geterrors()->newerror(GENERIC, current(), "expected instruction");
