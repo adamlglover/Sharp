@@ -96,6 +96,7 @@ void Environment::init(Sh_object* objects, int64_t size) {
         for(int64_t i = 0; i < size; i++) {
             ptr->HEAD=NULL;
             ptr->_Node = NULL, ptr->prev=NULL,ptr->nxt=NULL;
+            ptr->_rNode = NULL;
             ptr->mark = gc_orange;
             ptr->size = 0;
             ptr->monitor = Monitor();
