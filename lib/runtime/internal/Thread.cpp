@@ -55,7 +55,6 @@ int32_t Thread::Create(int32_t method) {
     thread->throwable.init();
     thread->exited = false;
     thread->daemon = false;
-    thread->call_count=0;
     thread->state = thread_init;
     thread->exitVal = 0;
 
@@ -80,7 +79,6 @@ void Thread::Create(string name) {
     this->exited = false;
     this->throwable.init();
     this->daemon = false;
-    this->call_count=0;
     this->state = thread_init;
     this->exitVal = 0;
 
@@ -99,7 +97,6 @@ void Thread::CreateDaemon(string) {
     this->suspended = false;
     this->exited = false;
     this->daemon = true;
-    this->call_count=0;
     this->throwable.init();
     this->state = thread_init;
     this->exitVal = 0;
@@ -778,7 +775,7 @@ void Thread::Throw(Sh_object* exceptionObject) {
     if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject))
         return;
     for(;;) {
-        if(call_count == 0) {
+        if(curr_adsp == main->id) {
             break;
         } else {
             return_asp();
@@ -838,7 +835,6 @@ void Thread::call_asp(int64_t id) {
     }
 
     sh_asp* asp = env->__address_spaces+id;
-    call_count++;
 
     /*
      * Do we have enough space to allocate this new frame?
@@ -874,7 +870,6 @@ void Thread::init_frame() {
 }
 
 void Thread::return_asp() {
-    if(call_count == 1) { call_count = 0; return; }
 
     int64_t id = (int64_t )__stack[(int64_t )__rxs[fp]-1].var;
     if(id < 0 || id >= manifest.addresses) {
@@ -884,7 +879,6 @@ void Thread::return_asp() {
     }
 
     sh_asp* asp = &env->__address_spaces[id];
-    call_count--;
     curr_adsp = asp->id;
     cache = asp->bytecode;
     cache_size=asp->cache_size;

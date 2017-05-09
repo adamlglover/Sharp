@@ -91,7 +91,7 @@ public:
     bool suspendPending;
     bool exceptionThrown;
 
-    uint64_t pc, curr_adsp, call_count;
+    uint64_t pc, curr_adsp;
     int64_t cache_size;
     data_stack* __stack;
     sharp_cache cache;
