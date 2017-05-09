@@ -791,8 +791,8 @@ void Thread::fillStackTrace(nString& stack_trace) {
             break;
 
         ss << "\tSource ";
-        if(calls.get(i)->sourceFile != "") {
-            ss << "\""; ss << calls.get(i)->sourceFile.str() << "\"";
+        if(calls.get(i)->sourceFile != -1 && calls.get(i)->sourceFile < manifest.sourceFiles) {
+            ss << "\""; ss << env->sourceFiles[calls.get(i)->sourceFile].str() << "\"";
         }
         else
             ss << "\"unknown file\"";
@@ -857,27 +857,11 @@ void Thread::Throw(Sh_object* exceptionObject) {
     }
 
     stringstream ss;
-    ss << "Unhandled exception (most recent call last): "; ss << throwable.throwable->name.str() << ": "
+    ss << "Unhandled exception (most recent call last):\n  "; ss << throwable.throwable->name.str() << ": "
                                       << throwable.message.str() << "\n";
     ss << throwable.stackTrace.str();
     throw Exception(ss.str());
 }
-
-/*
- *  else {
-        if(curr_adsp == main->id) {
-            throw err;
-        } else { return_asp(); }
-    }
-
-
-    int64_t _sp = (int64_t)__rxs[sp];
-
-    if(err.throwable.message == "") {
-        Sh_object* object = &__stack[_sp].object;
-        err.throwable.message = env->getstringfield("message", object);
-    }
- */
 
 #ifdef  DEBUGGING
 int64_t getop(int64_t i) {

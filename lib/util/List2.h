@@ -192,6 +192,15 @@ public:
         return false;
     }
 
+    long long indexof(T data) {
+        for(unsigned int i = 0; i < len; i++) {
+            if(data == _Data[i]){
+                return i;
+            }
+        }
+        return -1;
+    }
+
 private:
     CXX11_INLINE
     void __expand() {

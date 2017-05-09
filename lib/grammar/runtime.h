@@ -360,6 +360,7 @@ public:
         import_map.init();
         string_map.init();
 
+        sourceFiles.init();
         parse_map.key.init();
         parse_map.value.init();
         scope_map.init();
@@ -400,6 +401,7 @@ private:
     list<parser*> parsers;
     string out;
     List<string> modules;
+    List<string> sourceFiles;
     List<Method> macros;
     string current_module;
     List<ClassObject> classes;

@@ -28,18 +28,19 @@ struct sh_asp {
     int64_t* bytecode;
     int frame_init; // inital stack space required for frame
     ClassObject* owner;
-    nString name, sourceFile;
+    nString name;
     int64_t* params;
     int self;      // allocate 1 stack frame for self?
     bool* arrayFlag; // array flag for each parameter
     int param_size;
+    long sourceFile;
     int64_t cache_size;
     List<ExceptionTable> exceptions;
     List<line_table> lineNumbers;
 
     void free() {
         name.free();
-        sourceFile.free();
+        sourceFile=0;
         exceptions.free();
         lineNumbers.free();
 
@@ -58,7 +59,7 @@ struct sh_asp {
 
     void init() {
         name.init();
-        sourceFile.init();
+        sourceFile=0;
         exceptions.init();
         lineNumbers.init();
         params = NULL;

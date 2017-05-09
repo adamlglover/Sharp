@@ -33,12 +33,13 @@ public:
             note(),
             array(false),
             code(),
+            sourceFile(0),
             local_count(0)
     {
     }
 
     Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
-           ClassObject* rtype, RuntimeNote note)
+           ClassObject* rtype, RuntimeNote note, long long sourceFile)
     :
             name(name),
             pklass(klass),
@@ -48,6 +49,7 @@ public:
             note(note),
             array(false),
             code(),
+            sourceFile(sourceFile),
             local_count(0)
     {
         this->modifiers.init();
@@ -57,7 +59,7 @@ public:
     }
 
     Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
-           NativeField rtype, RuntimeNote note)
+           NativeField rtype, RuntimeNote note, long long sourceFile)
             :
             name(name),
             pklass(klass),
@@ -67,6 +69,7 @@ public:
             note(note),
             array(false),
             code(),
+            sourceFile(sourceFile),
             local_count(0)
     {
         this->modifiers.init();
@@ -98,6 +101,7 @@ public:
     NativeField nobj;
     m64Assembler code;
     ClassObject* pklass;
+    long long sourceFile;
     bool array;
     int64_t local_count;
 private:

@@ -25,13 +25,14 @@ struct mi64_t {
 #define manif 0x1
 #define eoh 0x03
 #define nil 0x0
-#define hsz 0x09
+#define hsz 0x0a
 #define eos 0x1d
 #define sdata 0x05
 #define sstring 0x02
 #define stext 0x0e
 #define smeta 0x06
 #define data_class 0x2f
+#define data_file 0x2c
 #define data_method 0x4c
 #define data_field 0x22
 #define data_string 0x1e

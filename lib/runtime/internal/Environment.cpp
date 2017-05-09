@@ -58,6 +58,10 @@ void Environment::shutdown() {
         this->classes[i].free();
     std::free (this->classes);
 
+    for(int64_t i = 0; i < manifest.sourceFiles; i++)
+        this->sourceFiles[i].free();
+    std::free (this->sourceFiles);
+
     // TODO: free objects and aux classes
     for(int64_t i = 0; i < manifest.classes-AUX_CLASSES; i++)
         this->global_heap[i].free();

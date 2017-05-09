@@ -22,6 +22,7 @@ struct Manifest {
     int64_t addresses, classes;
     int fvers;
     int target;
+    long sourceFiles;
     int64_t strings;
 };
 

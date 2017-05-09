@@ -4649,7 +4649,7 @@ void runtime::resolveMethodDecl(ast* pAst) {
                                    pAst->line, pAst->col);
 
     Expression utype;
-    Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+    Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
     if(pAst->hassubast(ast_method_return_type)) {
         utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
         parseMethodReturnType(utype, method);
@@ -4708,7 +4708,7 @@ void runtime::resolveMacrosDecl(ast* pAst) {
 
     // TODO: parse return type
     Expression utype;
-    Method macro = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+    Method macro = Method(name, current_module, scope->klass, params, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
     if(pAst->hassubast(ast_method_return_type)) {
         utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
         parseMethodReturnType(utype, macro);
@@ -4746,7 +4746,7 @@ void runtime::resolveOperatorDecl(ast* pAst) {
                                    pAst->line, pAst->col);
 
     Expression utype;
-    OperatorOverload operatorOverload = OperatorOverload(note, scope->klass, params, modCompat, NULL, string_toop(op));
+    OperatorOverload operatorOverload = OperatorOverload(note, scope->klass, params, modCompat, NULL, string_toop(op), sourceFiles.indexof(_current->sourcefile));
     if(pAst->hassubast(ast_method_return_type)) {
         utype = parseUtype(pAst->getsubast(ast_method_return_type)->getsubast(ast_utype));
         parseMethodReturnType(utype, operatorOverload);
@@ -4787,7 +4787,7 @@ void runtime::resolveConstructorDecl(ast* pAst) {
         RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                        pAst->line, pAst->col);
 
-        Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note);
+        Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
         method.type = lvoid;
 
         method.vaddr = address_spaces++;
@@ -4813,7 +4813,7 @@ void runtime::addDefaultConstructor(ClassObject* klass, ast* pAst) {
                                    pAst->line, pAst->col);
 
     if(klass->getConstructor(emptyParams) == NULL) {
-        Method method = Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note);
+        Method method = Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
 
         method.vaddr = address_spaces++;
         klass->addConstructor(method);
@@ -4941,6 +4941,7 @@ bool runtime::partial_parse() {
     for(parser* p : parsers) {
         errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
         _current = p;
+        sourceFiles.addif(p->sourcefile);
 
         current_module = "$invisible";
         keypair<string, List<string>> resolve_map;
@@ -5148,6 +5149,7 @@ void runtime::cleanup() {
     __freeList(macros);
 
     scope_map.free();
+    sourceFiles.free();
 }
 
 void rt_error(string message) {
@@ -6237,6 +6239,7 @@ std::string runtime::generate_manifest() {
     manifest << ((char)0x9 ); manifest << 1 << ((char)nil);
     manifest << ((char)0x0c); manifest << mi64_tostr(string_map.size()) << ((char)nil);
     manifest << ((char)0x0e); manifest << c_options.target << ((char)nil);
+    manifest << ((char)0x0f); manifest << sourceFiles.size() << ((char)nil);
     manifest << '\n' << (char)eoh;
 
     return manifest.str();
@@ -6329,6 +6332,11 @@ std::string runtime::generate_data_section() {
         data_sec << class_to_stream(classes.get(i)) << endl;
     }
 
+    for(int64_t i = 0; i < sourceFiles.size(); i++) {
+        data_sec << (char)data_file;
+        data_sec << sourceFiles.get(i) << ((char)nil);
+    }
+
     data_sec << "\n"<< "\n" << (char)eos;
 
     for(int64_t i = 0; i < macros.size(); i++) {
@@ -6390,6 +6398,7 @@ std::string runtime::generate_text_section() {
         text << (char)data_method;
         text << mi64_tostr(allMethods.get(i)->vaddr);
         text << allMethods.get(i)->getName() << ((char)nil);
+        text << allMethods.get(i)->sourceFile << ((char)nil);
         text << mi64_tostr(allMethods.get(i)->pklass->vaddr);
         text << mi64_tostr(allMethods.get(i)->paramCount());
         text << mi64_tostr(allMethods.get(i)->local_count);

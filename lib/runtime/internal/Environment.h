@@ -50,6 +50,7 @@ public:
 
     ClassObject* classes;
 
+    nString* sourceFiles;
     String* strings;
     sh_asp* __address_spaces;
 

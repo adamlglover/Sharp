@@ -101,6 +101,9 @@ int Process_Exe(std::string exe)
                 case 0x0e:
                     manifest.target =getlong(buffer);
                     break;
+                case 0x0f:
+                    manifest.sourceFiles =getlong(buffer);
+                    break;
                 default:
                     throw std::runtime_error("file `" + exe + "` may be corrupt");
             }
@@ -124,12 +127,13 @@ int Process_Exe(std::string exe)
         /* Data section */
         list<MetaClass> mClasses;
         list<MetaField> mFields;
-        int64_t classRefptr=0, macroRefptr=0;
+        int64_t classRefptr=0, macroRefptr=0, fileRefptr=0;
 
         env->classes =(ClassObject*)malloc(sizeof(ClassObject)*(manifest.classes + AUX_CLASSES));
         env->__address_spaces = (sh_asp*)malloc(sizeof(sh_asp)*manifest.addresses);
         env->strings = (String*)malloc(sizeof(String)*(manifest.strings+1));
         env->global_heap = (Sh_object*)malloc(sizeof(Sh_object)*manifest.classes);
+        env->sourceFiles = (nString*)malloc(sizeof(nString)*manifest.sourceFiles);
 
         if(env->classes == NULL || env->__address_spaces == NULL || env->global_heap == NULL
                 || env->strings == NULL) {
@@ -201,6 +205,12 @@ int Process_Exe(std::string exe)
                     }
                     break;
                 }
+                case data_file:
+                    env->sourceFiles[fileRefptr].init();
+                    env->sourceFiles[fileRefptr] = getstring(buffer);
+
+                    fileRefptr++;
+                    break;
                 case eos:
                     break;
                 default:
@@ -283,6 +293,7 @@ int Process_Exe(std::string exe)
 
                     adsp->id = getmi64(buffer);
                     adsp->name = getstring(buffer);
+                    adsp->sourceFile = getlong(buffer);
                     adsp->owner = findClass(getmi64(buffer));
                     adsp->param_size = getmi64(buffer);
                     adsp->frame_init = getmi64(buffer);
