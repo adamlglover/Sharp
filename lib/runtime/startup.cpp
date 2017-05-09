@@ -66,9 +66,9 @@ int runtimeStart(int argc, const char* argv[])
         else {
             // add the source files
             executable = argv[i++];
-            string arg = "";
+            nString arg;
             while(i < argc) {
-                arg = argv[i++];
+                arg = string(argv[i++]);
                 pArgs.add(arg);
             }
             break;

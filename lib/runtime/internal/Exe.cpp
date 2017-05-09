@@ -50,7 +50,7 @@ int Process_Exe(std::string exe)
 
     try {
         if(!checkFile(buffer)) {
-            std::runtime_error("file `" + exe + "` could not be ran");
+            throw std::runtime_error("file `" + exe + "` could not be ran");
         }
 
         jobIndx++;
