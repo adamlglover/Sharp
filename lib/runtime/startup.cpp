@@ -130,6 +130,7 @@ void createStringArray(Sh_object *pObject, List<nString> &args) {
     int64_t iter=0;
 
     pObject->_Node=(Sh_object*)memalloc(sizeof(Sh_object)*size);
+    Environment::init(pObject->_Node, size);
     pObject->size = size+1;
 
     pObject->_Node[iter++].createstr(manifest.application);
