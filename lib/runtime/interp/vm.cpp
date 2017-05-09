@@ -29,55 +29,74 @@ int CreateSharpVM(std::string exe)
     /**
      * Aux classes
      */
+    Field* fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
+
     env->Throwable = ClassObject(
             "std.err#Throwable",
+            fields,
+            2,
             NULL,
-            0,
-            NULL,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->Throwable;
+
 
     env->RuntimeErr = ClassObject(
             "std.err#RuntimeErr",
             NULL,
             0,
             &env->Throwable,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->RuntimeErr;
 
     env->StackOverflowErr = ClassObject(
             "std.err#StackOverflowErr",
             NULL,
             0,
             &env->RuntimeErr,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->StackOverflowErr;
 
+    env->classes[manifest.classes].init();
     env->ThreadStackException = ClassObject(
             "std.err#ThreadStackException",
             NULL,
             0,
             &env->RuntimeErr,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->ThreadStackException;
 
     env->IndexOutOfBoundsException = ClassObject(
             "std.err#IndexOutOfBoundsException",
             NULL,
             0,
             &env->RuntimeErr,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->IndexOutOfBoundsException;
 
     env->NullptrException = ClassObject(
             "std.err#NullptrException",
             NULL,
             0,
             &env->RuntimeErr,
-            0
+            manifest.classes
     );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->NullptrException;
+
     cout.precision(16);
-    env->init(env->global_heap, manifest.classes);
+    env->init(env->global_heap, manifest.classes - AUX_CLASSES);
 
     return 0;
 }
@@ -106,6 +125,7 @@ void*
         } catch (Exception &e) {
             thread_self->throwable = e.getThrowable();
             thread_self->exceptionThrown = true;
+            cout << e.throwable.message.str();
         }
 
         /*

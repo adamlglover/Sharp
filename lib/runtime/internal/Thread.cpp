@@ -722,7 +722,7 @@ void Thread::run() {
     } catch (Exception &e) {
         throwable = e.getThrowable();
         exceptionThrown = true;
-        Throw(&__stack[(int64_t)__rxs[sp]].object);
+        Throw(&__stack[SP64].object);
     }
 }
 
@@ -760,8 +760,78 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
     return false;
 }
 
-void Thread::fillStackTrace(Sh_object* exceptionObject) {
+void Thread::fillStackTrace(nString& stack_trace) {
     // fill message
+    stringstream ss;
+    sh_asp* m = env->__address_spaces+id;
+    int64_t pc = this->pc, _fp=FP64, _sp=SP64;
+    List<sh_asp*> calls;
+
+    while(m != NULL)
+    {
+        calls.add(m);
+        if(m->id == main->id) {
+            break;
+        } else {
+            int64_t id = (int64_t )__stack[_fp-1].var;
+            if(id < 0 || id >= manifest.addresses)
+                break;
+
+            m= env->__address_spaces+id;
+            pc = (int64_t )__stack[_fp-pc_offset].var;
+            _sp = (int64_t )__stack[_fp-sp_offset].var;
+            _fp = (int64_t )__stack[_fp-fp_offset].var;
+        }
+    }
+
+    unsigned int len = calls.size() > EXCEPTION_PRINT_MAX ? EXCEPTION_PRINT_MAX : calls.size(), iter=0;
+    for(long i = calls.size()-1; i >= 0; i--)
+    {
+        if(iter++ > len)
+            break;
+
+        ss << "\tSource ";
+        if(calls.get(i)->sourceFile != "") {
+            ss << "\""; ss << calls.get(i)->sourceFile.str() << "\"";
+        }
+        else
+            ss << "\"unknown file\"";
+
+        unsigned int x;
+        for(x = 0; x < calls.get(i)->lineNumbers.size(); x++)
+        {
+            if(calls.get(i)->lineNumbers.get(x).pc > pc)
+                break;
+        }
+        if(x > 0) {
+            ss << ", line" << calls.get(i)->lineNumbers.get(x - 1).line_number;
+        } else
+            ss << ", line ?";
+
+        ss << ", in "; ss << calls.get(i)->name.str() << "() [0x" << std::hex << calls.get(i)->id << "]";
+
+
+
+        ss << "\n";
+    }
+
+    stack_trace = ss.str();
+}
+
+string Thread::fillStackTrace(Sh_object* exceptionObject) {
+    nString str;
+    fillStackTrace(str);
+    throwable.stackTrace = str;
+
+    if(exceptionObject->klass != NULL) {
+        Sh_object* stackTrace = env->findfield("stackTrace", exceptionObject);
+
+        if(stackTrace != NULL) {
+            stackTrace->createstr(str);
+        }
+    }
+
+    return str.str();
 }
 
 void Thread::Throw(Sh_object* exceptionObject) {
@@ -770,7 +840,8 @@ void Thread::Throw(Sh_object* exceptionObject) {
         return;
     }
 
-    fillStackTrace(exceptionObject);
+    throwable.throwable = exceptionObject->klass;
+    nString st(fillStackTrace(exceptionObject));
 
     if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject))
         return;
@@ -785,7 +856,11 @@ void Thread::Throw(Sh_object* exceptionObject) {
         }
     }
 
-    throw Exception("unhandled exception: ");
+    stringstream ss;
+    ss << "Unhandled exception (most recent call last): "; ss << throwable.throwable->name.str() << ": "
+                                      << throwable.message.str() << "\n";
+    ss << throwable.stackTrace.str();
+    throw Exception(ss.str());
 }
 
 /*
@@ -844,9 +919,9 @@ void Thread::call_asp(int64_t id) {
         this->cache = asp->bytecode;
         this->cache_size=asp->cache_size;
 
-        __rxs[fp]= ((__rxs[sp]+1)-asp->param_size)-asp->self;
-        __rxs[sp] = asp->frame_init == 0 ? __rxs[fp] : __rxs[fp]+(asp->frame_init-1);
-        if(__rxs[fp] != 0) __stack[(int64_t )__rxs[fp]-pc_offset].var = pc; // reset pc to call address
+        _FP= ((_SP+1)-asp->param_size)-asp->self;
+        _SP = asp->frame_init == 0 ? _FP : _FP+(asp->frame_init-1);
+        if(_FP != 0) __stack[FP64-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
         // stack overflow err
@@ -860,10 +935,10 @@ void Thread::init_frame() {
      * Do we have enough space to allocate this new frame?
      */
     if(sp+frame_alloc < STACK_SIZE) {
-        __stack[(int64_t )++__rxs[sp]].var = old_sp; // store sp
-        __stack[(int64_t )++__rxs[sp]].var = __rxs[fp]; // store frame pointer
-        ++__rxs[sp]; // store pc
-        __stack[(int64_t )++__rxs[sp]].var = curr_adsp; // store address_space id
+        __stack[(int64_t )++_SP].var = old_sp; // store sp
+        __stack[(int64_t )++_SP].var = _FP; // store frame pointer
+        ++_SP; // store pc
+        __stack[(int64_t )++_SP].var = curr_adsp; // store address_space id
     } else {
         // stack overflow err
     }
@@ -883,9 +958,9 @@ void Thread::return_asp() {
     cache = asp->bytecode;
     cache_size=asp->cache_size;
 
-    pc = (int64_t )__stack[(int64_t )__rxs[fp]-pc_offset].var;
-    __rxs[sp] = (int64_t )__stack[(int64_t )__rxs[fp]-sp_offset].var;
-    __rxs[fp] = (int64_t )__stack[(int64_t )__rxs[fp]-fp_offset].var;
+    pc = (int64_t )__stack[FP64-pc_offset].var;
+    _SP = __stack[FP64-sp_offset].var;
+    _FP = __stack[FP64-fp_offset].var;
 }
 
 void __os_sleep(int64_t INTERVAL) {

@@ -27,3 +27,21 @@ Field *ClassObject::getfield(string name) {
     }
     return NULL;
 }
+
+int64_t ClassObject::fieldindex(string name) {
+    for(unsigned int i = 0; i < fieldCount; i++) {
+        if(flds[i].name == name)
+            return i;
+    }
+    return -1;
+}
+
+void ClassObject::init() {
+    this->name.init();
+    flds = NULL;
+    methods = NULL;
+    super = NULL;
+    id = 0;
+    fieldCount = 0;
+    methodCount = 0;
+}

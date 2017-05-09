@@ -66,11 +66,14 @@ public:
     static void gcinsert_stack(Sh_object *, int64_t);
 
     nString getstringfield(string name, Sh_object *pObject);
+
+    Sh_object *findfield(std::string name, Sh_object *object);
 };
 
 extern Environment* env;
 
 #define mvers versions.BASE
 
+#define AUX_CLASSES 6
 
 #endif //SHARP_ENVIRONMENT_H

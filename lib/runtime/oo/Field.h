@@ -18,6 +18,17 @@ public:
     {
     }
 
+    void init(string name, int64_t id, int type, bool _static, bool arry,
+              ClassObject* owner)
+    {
+        this->name.init();
+        this->name = name;
+        this->id = id;
+        this->type=type;
+        this->isstatic=_static;
+        this->array=arry;
+    }
+
     void operator=(Field& field) {
 
         this->id = field.id;

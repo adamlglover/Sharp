@@ -51,15 +51,15 @@ void Environment::shutdown() {
     }
     std::free (this->__address_spaces);
     for(int64_t i = 0; i < manifest.strings; i++)
-        this->strings->value.free();
+        this->strings[i].value.free();
     std::free (this->strings);
 
-    for(int64_t i = 0; i < manifest.classes; i++)
-        this->classes->free();
+    for(int64_t i = 0; i < manifest.classes-AUX_CLASSES; i++)
+        this->classes[i].free();
     std::free (this->classes);
 
     // TODO: free objects and aux classes
-    for(int64_t i = 0; i < manifest.classes; i++)
+    for(int64_t i = 0; i < manifest.classes-AUX_CLASSES; i++)
         this->global_heap[i].free();
     std::free (this->global_heap);
 
@@ -212,4 +212,23 @@ nString Environment::getstringfield(string name, Sh_object *pObject) {
             return nString(field->name);
     }
     return nString();
+}
+
+Sh_object *Environment::findfield(std::string name, Sh_object *object) {
+    if(object == NULL || object->klass == NULL)
+        return NULL;
+
+    int64_t index;
+    ClassObject* klass = object->klass;
+    for(;;) {
+        if(klass == NULL)
+            return NULL;
+
+        if((index = klass->fieldindex(name)) != -1) {
+            return &object->_Node[index];
+        }
+
+        klass = klass->super;
+        object = object->prev;
+    }
 }

@@ -8,6 +8,8 @@
 #include "../../../stdimports.h"
 #include "../oo/Object.h"
 
+struct line_table;
+
 /*
  * Contained address space for code to be executed
  *
@@ -33,11 +35,13 @@ struct sh_asp {
     int param_size;
     int64_t cache_size;
     List<ExceptionTable> exceptions;
+    List<line_table> lineNumbers;
 
     void free() {
         name.free();
         sourceFile.free();
         exceptions.free();
+        lineNumbers.free();
 
         if(param_size != 0) {
             if(arrayFlag != NULL)
@@ -56,6 +60,7 @@ struct sh_asp {
         name.init();
         sourceFile.init();
         exceptions.init();
+        lineNumbers.init();
         params = NULL;
         arrayFlag = NULL;
         param_size = 0;
@@ -65,6 +70,11 @@ struct sh_asp {
         self = 0;
         id = 0;
     }
+};
+
+struct line_table {
+    int64_t pc;
+    int64_t line_number;
 };
 
 struct data_stack {

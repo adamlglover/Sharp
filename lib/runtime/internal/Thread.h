@@ -130,11 +130,19 @@ private:
     bool TryThrow(sh_asp* asp, Sh_object* exceptionObject);
     void Throw(Sh_object *exceptionObject);
 
-    void fillStackTrace(Sh_object *exceptionObject);
+    string fillStackTrace(Sh_object *exceptionObject);
+
+    void fillStackTrace(nString &str);
 };
 
 extern thread_local Thread* thread_self;
 extern thread_local double __rxs[12];
+
+#define SP64 (int64_t)__rxs[sp]
+#define FP64 (int64_t)__rxs[fp]
+
+#define _SP __rxs[sp]
+#define _FP __rxs[fp]
 
 #define main_threadid 0x0
 

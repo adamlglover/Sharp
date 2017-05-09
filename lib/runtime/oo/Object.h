@@ -75,6 +75,8 @@ public:
     void createstr(nString& str);
     void createclass(int64_t klass);
     void mutate(Sh_object *pObject);
+
+    void createclass(ClassObject *klass);
 };
 
 #endif //SHARP_OBJECT_H

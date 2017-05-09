@@ -126,7 +126,7 @@ int Process_Exe(std::string exe)
         list<MetaField> mFields;
         int64_t classRefptr=0, macroRefptr=0;
 
-        env->classes =(ClassObject*)malloc(sizeof(ClassObject)*manifest.classes);
+        env->classes =(ClassObject*)malloc(sizeof(ClassObject)*(manifest.classes + AUX_CLASSES));
         env->__address_spaces = (sh_asp*)malloc(sizeof(sh_asp)*manifest.addresses);
         env->strings = (String*)malloc(sizeof(String)*(manifest.strings+1));
         env->global_heap = (Sh_object*)malloc(sizeof(Sh_object)*manifest.classes);

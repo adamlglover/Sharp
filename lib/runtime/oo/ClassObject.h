@@ -39,6 +39,16 @@ public:
     {
     }
 
+    void operator=(const ClassObject& klass) {
+        name = klass.name;
+        flds = klass.flds;
+        methods = klass.methods;
+        super = klass.super;
+        id = klass.id;
+        fieldCount = klass.fieldCount;
+        methodCount = klass.methodCount;
+    }
+
     nString name;
     Field* flds;
     int64_t *methods;
@@ -48,6 +58,9 @@ public:
     void free();
 
     Field* getfield(string name);
+    int64_t fieldindex(string name);
+
+    void init();
 };
 
 

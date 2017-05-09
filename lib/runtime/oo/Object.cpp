@@ -76,10 +76,6 @@ void Sh_object::inc_ref(Sh_object *ptr) {
 }
 
 void Sh_object::createstr(int64_t ref) {
-    if(mark == gc_green) {
-        GC::_insert(this);
-    }
-
     nString str;
     str = env->getstring(ref);
 
@@ -87,25 +83,35 @@ void Sh_object::createstr(int64_t ref) {
 }
 
 void Sh_object::createclass(int64_t k) {
+    ClassObject* klass = env->findClass(k);
+    createclass(klass);
+
+}
+
+void Sh_object::createclass(ClassObject *klass) {
     if(mark == gc_green) {
         GC::_insert(this);
     }
 
-    ClassObject* klass = env->findClass(k);
-    this->klass=klass;
+    this->klass =klass;
     HEAD = NULL;
-    _rNode=NULL;
+    _rNode =NULL;
 
     mark = gc_green;
-    this->size=klass->fieldCount;
-    _Node=(Sh_object*)memalloc(sizeof(Sh_object)*size);
+    size =klass->fieldCount;
+    if(size > 0)
+        _Node =(Sh_object*)memalloc(sizeof(Sh_object) * size);
+    else
+        _Node = NULL;
     Environment::init(_Node, size);
 
-    nxt=NULL;
+    nxt =NULL;
     prev = NULL;
 
     if(klass->super != NULL) {
         prev = (Sh_object*)memalloc(sizeof(Sh_object));
+        Environment::init(prev, 1);
+
         prev->createclass(klass->super->id);
         prev->nxt = this;
     }
@@ -145,6 +151,7 @@ void Sh_object::mutate(Sh_object *object) {
     this->nxt = object->nxt;
     this->klass=object->klass;
     this->prev = object->prev;
+    if(prev != NULL) prev->nxt = this;
     this->size = object->size;
     this->refs.addAll(object->refs);
     object->refs.free();
@@ -156,6 +163,10 @@ void Sh_object::mutate(Sh_object *object) {
 }
 
 void Sh_object::createstr(nString &str) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
     if(str.len == 0)
         HEAD = NULL;
     else

@@ -114,7 +114,7 @@ int __vinit(string exe, List<nString>& pArgs) {
 }
 
 void init_main(List <nString>& pArgs) {
-    __rxs[sp] = -1;
+    __rxs[sp] = 0;
     __rxs[fp] = 0;
     Environment::init(Thread::threads[main_threadid]->__stack, STACK_SIZE);
     Thread::threads[main_threadid]->init_frame();

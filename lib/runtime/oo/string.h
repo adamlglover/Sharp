@@ -50,6 +50,16 @@ public:
         }
     }
 
+    void operator+=(const string &str) {
+
+        if(str != "") {
+            len += str.size();
+            for(char c : str) {
+                operator+=(c);
+            }
+        }
+    }
+
     bool operator==(const string &str) {
         if(str.size() != len) return false;
         for(int64_t i = 0; i < len; i++) {
