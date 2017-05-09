@@ -69,7 +69,10 @@ int runtimeStart(int argc, const char* argv[])
             nString arg;
             while(i < argc) {
                 arg = string(argv[i++]);
-                pArgs.add(arg);
+                pArgs.push_back();
+
+                pArgs.get(pArgs.size()-1).init();
+                pArgs.push_back(arg);
             }
             break;
         }

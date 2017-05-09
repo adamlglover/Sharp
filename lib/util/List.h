@@ -20,6 +20,10 @@ public:
         len=0;
     }
 
+    void push_back() {
+        __expand();
+    }
+
     void push_back(T& data) {
         __expand();
         _Data[len-1]=data;
