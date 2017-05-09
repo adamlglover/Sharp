@@ -241,8 +241,8 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
         }
 
         if(ptr->refs.size() > 0) {
-            for(unsigned long i=0; i < ptr->refs.size(); i++) {
-                Sh_InvRef(ptr->refs.at(i));
+            for(unsigned long x=0; i < ptr->refs.size(); x++) {
+                Sh_InvRef(ptr->refs.at(x));
             }
             ptr->refs.free();
         }
@@ -278,6 +278,7 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
             gc->gc_alloc_heap[gc->allocptr].prev=st[i].object.prev;
             gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
             gc->gc_alloc_heap[gc->allocptr]._Node=st[i].object._Node;
+            gc->gc_alloc_heap[gc->allocptr]._rNode=NULL;
             gc->gc_alloc_heap[gc->allocptr].size=st[i].object.size;
 
             gc->allocptr++;
