@@ -169,6 +169,7 @@ void Environment::init(data_stack *st, int64_t stack_size) {
         for(int64_t i = 0; i < stack_size; i++) {
             st[i].object.HEAD=NULL;
             st[i].object._Node = NULL, st[i].object.prev=NULL,st[i].object.nxt=NULL;
+            st[i].object._rNode = NULL;
             st[i].object.mark = gc_orange;
             st[i].object.size = 0;
             st[i].object.monitor = Monitor();
