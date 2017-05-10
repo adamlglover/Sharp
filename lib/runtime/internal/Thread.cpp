@@ -797,6 +797,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
         if(m->id == main->id) {
             break;
         } else {
+            if(_fp == 0) break;
             int64_t id = (int64_t )__stack[_fp-1].var;
             if(id < 0 || id >= manifest.addresses)
                 break;
@@ -845,7 +846,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
     stack_trace = ss.str();
 }
 
-string Thread::fillStackTrace(Sh_object* exceptionObject) {
+void Thread::fillStackTrace(Sh_object* exceptionObject) {
     nString str;
     fillStackTrace(str);
     throwable.stackTrace = str;
@@ -857,8 +858,6 @@ string Thread::fillStackTrace(Sh_object* exceptionObject) {
             stackTrace->createstr(str);
         }
     }
-
-    return str.str();
 }
 
 void Thread::Throw(Sh_object* exceptionObject) {
@@ -868,7 +867,7 @@ void Thread::Throw(Sh_object* exceptionObject) {
     }
 
     throwable.throwable = exceptionObject->klass;
-    nString st(fillStackTrace(exceptionObject));
+    fillStackTrace(exceptionObject);
 
     if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject))
         return;
@@ -910,6 +909,10 @@ data_stack* stack_at(int64_t pos, bool usefp) {
 int64_t get_reg(int64_t i) {
     return (int64_t )__rxs[i];
 }
+
+sh_asp* curr_func() {
+    return env->__address_spaces+thread_self->curr_adsp;
+}
 #endif
 
 
@@ -925,7 +928,7 @@ void Thread::call_asp(int64_t id) {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if((__rxs[sp]+(asp->frame_init-asp->param_size)+asp->self) < STACK_SIZE) {
+    if((__rxs[sp]+(asp->frame_init+asp->self)) < STACK_SIZE) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
         this->cache_size=asp->cache_size;
@@ -935,7 +938,7 @@ void Thread::call_asp(int64_t id) {
         if(_FP != 0) __stack[FP64-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
-        // stack overflow err
+        throw Exception(&Environment::StackOverflowErr, "");
     }
 }
 
@@ -951,7 +954,7 @@ void Thread::init_frame() {
         ++_SP; // store pc
         __stack[(int64_t )++_SP].var = curr_adsp; // store address_space id
     } else {
-        // stack overflow err
+        throw Exception(&Environment::StackOverflowErr, "");
     }
 }
 

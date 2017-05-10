@@ -4,14 +4,14 @@ class Long {
     private var value;
 
     public Long(var value) {
-        self->value = value;
+        self->value = (__int64)value;
     }
 
-    private function toString(long value) : String{
+    private fn toString(long value) : string {
         return "";
     }
 
-    public function toString() : String {
+    public fn toString() : string {
         return i2str(value);
     }
 }

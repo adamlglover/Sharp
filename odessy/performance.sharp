@@ -5,12 +5,9 @@ class Start {
     var x;
 
     static fn foo(var[] message) {
-        __asm(
-            "movl 0"
-        );
         try {
         __asm(
-            "test/print.asm"
+            "odessy/x64/print.asm"
         );
         }catch(RuntimeErr re) {
             re.getStackTrace();
@@ -18,9 +15,7 @@ class Start {
     }
 
     Start() {
-        __asm(
-            "odessy/constructor_call.asm"
-        );
+        __asm("odessy/x64/constructor_call.asm");
     }
 
     fn mult(var x) : var {
@@ -38,9 +33,7 @@ class Start {
     static fn __init(var[] args) {
         var[] message = "";
         Start start;
-        __asm(
-            "odessy/function_call.asm"
-       );
+        __asm("odessy/x64/function_call.asm");
 
         __asm(
             "movl <start>"            // start = new Start();

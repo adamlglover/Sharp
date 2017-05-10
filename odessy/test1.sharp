@@ -1,0 +1,10 @@
+mod application;
+
+class Main {
+
+    static fn main(string[] args) : var {
+        var[] message = "Hello, World!\n";
+        // print(message);
+        __asm("odessy/x64/print.asm");
+    }
+}

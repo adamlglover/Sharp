@@ -665,6 +665,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                     if((i2.high_bytes = instance->current_scope()->getLocalFieldIndex(local)) == -1)  {
                         tk->geterrors()->newerror(COULD_NOT_RESOLVE, current(), " `" + local + "`");
                     }
+
+                    if(!instance->current_scope()->function->isStatic()) {
+                        i2.high_bytes++; // increment by 1 for self
+                    }
                     expect(">");
                 } else {
                     expect_int();

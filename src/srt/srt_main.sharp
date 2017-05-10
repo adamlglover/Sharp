@@ -11,15 +11,16 @@ class Start {
     *   Convert var[][] to string array
     */
         __asm("transpose_args.asm");
-    }
+    };
 
-    public static function __init(var[] args) : var {
+    public static fn __init(var[] args) : var {
         /* Initialize singleton libraries and GC */
 
         // under the hood this comes in as a var[][] with string values
         transposeArray(args);
         string[] pArgs = null;
-        int retVal = application#Main.main(args);
+        var retVal = application#Main.main(pArgs);
+        __asm("odessy/x64/bootstrap_main.asm");
 
         /* Shutdown threads and do other stuff before exit */
         return retVal;

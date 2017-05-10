@@ -130,7 +130,7 @@ private:
     bool TryThrow(sh_asp* asp, Sh_object* exceptionObject);
     void Throw(Sh_object *exceptionObject);
 
-    string fillStackTrace(Sh_object *exceptionObject);
+    void fillStackTrace(Sh_object *exceptionObject);
 
     void fillStackTrace(nString &str);
 

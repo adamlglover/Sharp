@@ -44,6 +44,7 @@ int64_t get_ca(int64_t);
 int64_t get_cb(int64_t);
 int64_t get_reg(int64_t);
 data_stack* stack_at(int64_t pos, bool usefp = true);
+sh_asp* curr_func();
 #endif
 
 #define DA_MAX 36028797018963967
@@ -52,9 +53,9 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 #define CA_MAX 134217727
 #define CA_MIN -134217727
 
-#define DISPATCH() if(pc<cache_size) { goto *opcode_table[GET_OP(cache[pc])]; } else { throw Exception("invalid branch/dispatch"); }
+#define DISPATCH() if(pc<cache_size) { goto *opcode_table[GET_OP(cache[pc])]; } else { throw Exception("invalid branch/dispatch; check your assembly code?"); }
 
-#define _brh pc++; for(int i = 0; i < 9895; i++){ i++; } goto interp;
+#define _brh pc++; /*for(int i = 0; i < 9895; i++){ i++; }*/ goto interp;
 #define _brh_NOINCREMENT goto interp;
 
 #define NOP _brh
@@ -128,9 +129,9 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define bre if(__rxs[0x0002])pc=__rxs[0x0000]; else _brh
 
-#define ife if((__rxs[0x0002]) == false)pc=__rxs[0x0000]; else  _brh
+#define ife if(__rxs[0x0002])pc=__rxs[0x0000]; else  _brh
 
-#define ifne if((!__rxs[0x0002]) == false)pc=(int64_t)__rxs[0x0000]; else _brh
+#define ifne if(__rxs[0x0002]==0)pc=(int64_t)__rxs[0x0000]; else _brh
 
 #define gt(r,x) __rxs[0x0002]=__rxs[r]>__rxs[x]; _brh
 
@@ -154,7 +155,9 @@ data_stack* stack_at(int64_t pos, bool usefp = true);
 
 #define _checklen(r) if(__rxs[r]>=ptr->size) \
     { \
-        throw Exception("in"); \
+        stringstream ss; \
+        ss << "access to object at: " << __rxs[r] << " size is " << ptr->size; \
+        throw Exception(&Environment::IndexOutOfBoundsException, ss.str()); \
     }else { _brh }
 
 #define _goto(x) pc = x; _brh_NOINCREMENT

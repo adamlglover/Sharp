@@ -30,13 +30,13 @@ enum Type {
 
 
 #define _nativewrite2(ix,data) \
-     if(ptr->HEAD==NULL) { throw Exception("null"); } else { ptr->HEAD[ix]=data; }
+     if(ptr->HEAD==NULL) { throw Exception(&Environment::NullptrException, ""); } else { ptr->HEAD[ix]=data; }
 
 #define _nativewrite3(ix,data) \
-     if(ptr->HEAD==NULL) { throw Exception("null"); } else { ptr->HEAD[ix]+=data; }
+     if(ptr->HEAD==NULL) { throw Exception(&Environment::NullptrException, ""); } else { ptr->HEAD[ix]+=data; }
 
 #define _nativeread(r,rx) \
-    if(ptr->HEAD==NULL) { throw Exception("null"); } else { __rxs[r]=ptr->HEAD[(int64_t)__rxs[rx]]; }
+    if(ptr->HEAD==NULL) { throw Exception(&Environment::NullptrException, ""); } else { __rxs[r]=ptr->HEAD[(int64_t)__rxs[rx]]; }
 
 #define Sh_InvRef(x) { \
 x->HEAD=NULL; \
@@ -48,7 +48,7 @@ x->_rNode=NULL;  \
 x->klass=NULL;  \
 }
 
-#define CHK_NULL(x) if(ptr==NULL) { throw Exception("null"); } else { x }
+#define CHK_NULL(x) if(ptr==NULL) { throw Exception(&Environment::NullptrException, ""); } else { x }
 
 /* Objects stored in memory */
 class Sh_object {

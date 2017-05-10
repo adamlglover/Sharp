@@ -1,0 +1,38 @@
+mod application;
+
+class Main {
+
+    static fn print(var[] message) {
+        __asm("odessy/x64/print.asm");
+    }
+
+    static fn fact(var x) : var {
+        return (x == 1 ? x : x * fact(x - 1));
+        __asm(
+            "movr %adx,%fp"
+            "smov %ebx"
+            "movi 1,%ecx"
+            "test %ecx,%ebx"
+            "movi $$+0x8,%adx"
+            "ife"
+            "movr %adx,%fp"
+            "smovr %ebx-0x5"
+            "ret"
+            "dec %ebx"
+            "inc %sp"
+            "iframe"
+            "pushr %ebx"
+            "call <fact>"
+            "movr %adx,%sp"
+            "smov %ebx"
+            "smovr %ebx-0x5"
+            "ret"
+        );
+    }
+
+    static fn main(string[] args) : var {
+        var[] str = "factorial of 7 is ";
+        // fact(x);
+        __asm("odessy/x64/compute_factorial.asm");
+    }
+}

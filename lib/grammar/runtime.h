@@ -224,7 +224,7 @@ struct Scope {
     }
 
     int getLocalFieldIndex(string field_name) {
-        for(long long i = locals.size()-1; i > 0; i--) {
+        for(long long i = locals.size()-1; i >= 0; i--) {
             if(locals.at(i).value.name == field_name) {
                 return i;
             }
