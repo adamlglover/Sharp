@@ -741,16 +741,19 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
 
         if(tbl != NULL) {
             Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
-            ClassObject* klass = object->klass;
+            Sh_object* eObject = exceptionObject;
 
-            if(klass != NULL) {
+            if(object->klass != NULL) {
                 for(;;) {
-                    if(klass->name == exceptionObject->klass->name) {
-                        __stack[(int64_t)++__rxs[sp]].object.mutate(exceptionObject);
+                    if(eObject == NULL || eObject->klass == NULL)
+                        return false;
+
+                    if(object->klass->name == eObject->klass->name) {
+                        object->mutate(eObject);
                         return true;
                     }
 
-                    klass = klass->super;
+                    eObject = eObject->prev;
                 }
             }
 
@@ -788,7 +791,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
     // fill message
     stringstream ss;
     sh_asp* m = env->__address_spaces+id;
-    int64_t pc = this->pc, _fp=FP64, _sp=SP64;
+    int64_t pc = this->pc, _fp=FP64;
     List<sh_asp*> calls;
 
     while(m != NULL)
@@ -804,7 +807,6 @@ void Thread::fillStackTrace(nString& stack_trace) {
 
             m= env->__address_spaces+id;
             pc = (int64_t )__stack[_fp-pc_offset].var;
-            _sp = (int64_t )__stack[_fp-sp_offset].var;
             _fp = (int64_t )__stack[_fp-fp_offset].var;
         }
     }
@@ -844,6 +846,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
     }
 
     stack_trace = ss.str();
+    calls.free();
 }
 
 void Thread::fillStackTrace(Sh_object* exceptionObject) {
@@ -853,9 +856,13 @@ void Thread::fillStackTrace(Sh_object* exceptionObject) {
 
     if(exceptionObject->klass != NULL) {
         Sh_object* stackTrace = env->findfield("stackTrace", exceptionObject);
+        Sh_object* message = env->findfield("message", exceptionObject);
 
         if(stackTrace != NULL) {
             stackTrace->createstr(str);
+        }
+        if(message != NULL) {
+            message->createstr(throwable.message);
         }
     }
 }
@@ -869,22 +876,29 @@ void Thread::Throw(Sh_object* exceptionObject) {
     throwable.throwable = exceptionObject->klass;
     fillStackTrace(exceptionObject);
 
-    if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject))
+    if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject)) {
+        exceptionThrown = false;
+        throwable.drop();
         return;
+    }
     for(;;) {
         if(curr_adsp == main->id) {
             break;
         } else {
             return_asp();
 
-            if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject))
+            if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject)) {
+                exceptionThrown = false;
+                throwable.drop();
                 return;
+            }
         }
     }
 
     stringstream ss;
     ss << "Unhandled exception (most recent call last):\n  "; ss << throwable.throwable->name.str() << ": "
                                       << throwable.message.str() << "\n";
+
     ss << throwable.stackTrace.str();
     throw Exception(ss.str());
 }

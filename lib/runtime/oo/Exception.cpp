@@ -44,7 +44,7 @@ Exception::~Exception()
 
 void Exception::setupFrame() {
     if(thread_self != NULL && throwable.native) {
-        thread_self->__stack[0].object.createclass(&Environment::RuntimeErr);
+        thread_self->__stack[0].object.createclass(throwable.throwable);
         thread_self->__stack[(int64_t)++_SP]
                 .object.mutate(&thread_self->__stack[0].object);
     }
