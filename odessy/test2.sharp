@@ -13,8 +13,8 @@ class Main {
             "smov %ebx"
             "movi 1,%ecx"
             "test %ecx,%ebx"
-            "movi $$+0x8,%adx"
-            "ife"
+            "movi $$+7,%adx"
+            "ifne"
             "movr %adx,%fp"
             "smovr %ebx-0x5"
             "ret"
@@ -25,7 +25,10 @@ class Main {
             "call <fact>"
             "movr %adx,%sp"
             "smov %ebx"
-            "smovr %ebx-0x5"
+            "movr %adx,%fp"
+            "smov %ecx"
+            "mul %ecx,%ebx"
+            "smovr %bmr-0x5"
             "ret"
         );
     }

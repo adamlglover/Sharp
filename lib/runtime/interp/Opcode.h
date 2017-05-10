@@ -127,11 +127,11 @@ sh_asp* curr_func();
 
 #define brh pc=__rxs[0x0000]; _brh_NOINCREMENT
 
-#define bre if(__rxs[0x0002])pc=__rxs[0x0000]; else _brh
+#define bre if(__rxs[0x0002]){ pc=__rxs[0x0000]; _brh_NOINCREMENT }else _brh
 
-#define ife if(__rxs[0x0002])pc=__rxs[0x0000]; else  _brh
+#define ife if(__rxs[0x0002]){ pc=__rxs[0x0000]; _brh_NOINCREMENT }else  _brh
 
-#define ifne if(__rxs[0x0002]==0)pc=(int64_t)__rxs[0x0000]; else _brh
+#define ifne if(__rxs[0x0002]==0){ pc=(int64_t)__rxs[0x0000]; _brh_NOINCREMENT }else _brh
 
 #define gt(r,x) __rxs[0x0002]=__rxs[r]>__rxs[x]; _brh
 

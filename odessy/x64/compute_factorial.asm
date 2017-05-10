@@ -5,18 +5,18 @@
 ********************************************/
 
 .compute_factorial:
-    inc %sp
-    iframe
-    movi #7,%ebx
-    pushr %ebx
-    call <fact>
-
     iframe
     movl <str>
     pushref
     call <print>
 
-    movr %adx,%fp
-    smov %ebx-0x5
+    inc %sp
+    iframe
+    movi #2,%ebx
+    pushr %ebx
+    call <fact>
+
+    movr %adx,%sp
+    smov %ebx
     put %ebx
     ret
