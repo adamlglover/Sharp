@@ -133,6 +133,8 @@ private:
     string fillStackTrace(Sh_object *exceptionObject);
 
     void fillStackTrace(nString &str);
+
+    string getPrettyErrorLine(long line, long sourceFile);
 };
 
 extern thread_local Thread* thread_self;

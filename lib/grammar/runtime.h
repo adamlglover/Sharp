@@ -764,6 +764,10 @@ private:
     string method_to_stream(Method *method);
 
     void parseConstructorDecl(ast *pAst);
+
+    string generate_meta_section();
+
+    void addLine(Block& block, ast *pAst);
 };
 
 #define progname "bootstrap"

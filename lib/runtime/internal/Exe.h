@@ -11,6 +11,7 @@
 
 extern uint64_t jobIndx;
 extern Manifest manifest;
+extern Meta metaData;
 
 struct mi64_t {
     int32_t A;

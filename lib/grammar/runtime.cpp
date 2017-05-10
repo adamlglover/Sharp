@@ -645,12 +645,14 @@ void runtime::partial_breakStatement(Block& block, ast* pAst) {
     block.code.addinjector_unsafe("break");
     m64Assembler& vasm = block.code.injectors.value.last();
     vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
+    block.code.__asm64.add(0); // put temp filler for proper addressing
 }
 
 void runtime::partial_parseGotoStatement(Block& block, ast* pAst) {
     block.code.addinjector_unsafe("goto");
     m64Assembler& vasm = block.code.injectors.value.last();
     vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
+    block.code.__asm64.add(0); // put temp filler for proper addressing
 }
 
 void runtime::parseLabelDecl(Block& block,ast* pAst) {
@@ -774,7 +776,21 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
 
 }
 
+void runtime::addLine(Block& block, ast *pAst) {
+    Scope* scope = current_scope();
+
+    for(unsigned int i = 0; i < scope->function->line_table.size(); i++) {
+        if(scope->function->line_table.get(i).value == pAst->line) {
+            return;
+        }
+    }
+
+    scope->function->line_table.add(keypair<int64_t, long>(block.code.__asm64.size(), pAst->line));
+}
+
 void runtime::parseStatement(Block& block, ast* pAst) {
+    addLine(block, pAst);
+
     switch(pAst->gettype()) {
         case ast_return_stmnt:
             parseReturnStatement(block, pAst);
@@ -858,6 +874,7 @@ void runtime::partial_parseTryCatch(Block& block, ast* pAst) {
 
 void runtime::partial_parseStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
+    addLine(block, pAst);
 
     switch(pAst->gettype()) {
         case ast_return_stmnt:
@@ -6395,6 +6412,7 @@ std::string runtime::generate_text_section() {
     text << (char)stext;
 
     for(long i = 0; i < allMethods.size(); i++) {
+        Method* f = allMethods.get(i);
         text << (char)data_method;
         text << mi64_tostr(allMethods.get(i)->vaddr);
         text << allMethods.get(i)->getName() << ((char)nil);
@@ -6404,6 +6422,12 @@ std::string runtime::generate_text_section() {
         text << mi64_tostr(allMethods.get(i)->local_count);
         text << mi64_tostr(allMethods.get(i)->code.__asm64.size());
         text << (allMethods.get(i)->isStatic() ? 0 : 1) << ((char)nil);
+
+        text << allMethods.get(i)->line_table.size() << ((char)nil);
+        for(unsigned int x = 0; x < allMethods.get(i)->line_table.size(); x++) {
+            text << mi64_tostr(allMethods.get(i)->line_table.get(x).key);
+            text << mi64_tostr(allMethods.get(i)->line_table.get(x).value);
+        }
     }
 
     for(long i = 0; i < allMethods.size(); i++) {
@@ -6412,6 +6436,21 @@ std::string runtime::generate_text_section() {
     }
     text << "\n" << (char)eos;
     return text.str();
+}
+
+std::string runtime::generate_meta_section() {
+    stringstream meta;
+
+    meta << (char)smeta;
+
+    for(parser* p : parsers) {
+        meta << (char)data_file;
+        meta << p->getData() << (char)0x0;
+        meta << endl;
+    }
+
+    meta << "\n" << (char)eos;
+    return meta.str();
 }
 
 void runtime::generate() {
@@ -6424,6 +6463,10 @@ void runtime::generate() {
     _ostream << generate_string_section();
 
     _ostream << generate_text_section();
+
+    if(c_options.debug && !c_options.strip) {
+        _ostream << generate_meta_section();
+    }
 
     // ToDo: create line tabel and meta data
 

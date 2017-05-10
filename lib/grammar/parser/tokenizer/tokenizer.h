@@ -70,6 +70,10 @@ private:
     Errors* errors;
     list<string> *lines;
     string toks;
+public:
+    const string &getData() const;
+
+private:
     uint64_t cursor;
 
     int line;

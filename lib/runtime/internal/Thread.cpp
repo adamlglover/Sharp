@@ -760,6 +760,30 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
     return false;
 }
 
+std::string Thread::getPrettyErrorLine(long line, long sourceFile) {
+    stringstream ss;
+    line -=2;
+
+    if(line >= 0)
+        ss << endl << "\t   " << line << ":    "; ss << metaData.getLine(line, sourceFile);
+    line++;
+
+    if(line >= 0)
+        ss << endl << "\t   " << line << ":    "; ss << metaData.getLine(line, sourceFile);
+    line++;
+
+    ss << endl << "\t>  " << line << ":    "; ss << metaData.getLine(line, sourceFile);
+    line++;
+
+    if(metaData.hasLine(line, sourceFile))
+        ss << endl << "\t   " << line << ":    "; ss << metaData.getLine(line, sourceFile);
+    line++;
+
+    if(metaData.hasLine(line, sourceFile))
+        ss << endl << "\t   " << line << ":    "; ss << metaData.getLine(line, sourceFile);
+    return ss.str();
+}
+
 void Thread::fillStackTrace(nString& stack_trace) {
     // fill message
     stringstream ss;
@@ -797,20 +821,23 @@ void Thread::fillStackTrace(nString& stack_trace) {
         else
             ss << "\"unknown file\"";
 
-        unsigned int x;
+        long long x, line=-1;
         for(x = 0; x < calls.get(i)->lineNumbers.size(); x++)
         {
             if(calls.get(i)->lineNumbers.get(x).pc > pc)
                 break;
         }
+
         if(x > 0) {
-            ss << ", line" << calls.get(i)->lineNumbers.get(x - 1).line_number;
+            ss << ", line " << (line = calls.get(i)->lineNumbers.get(x - 1).line_number);
         } else
             ss << ", line ?";
 
-        ss << ", in "; ss << calls.get(i)->name.str() << "() [0x" << std::hex << calls.get(i)->id << "]";
+        ss << ", in "; ss << calls.get(i)->name.str() << "() [0x" << std::hex << calls.get(i)->id  << std::dec << "]";
 
-
+        if(line != -1 && metaData.sourceFiles.size() > 0) {
+            ss << getPrettyErrorLine(line, calls.get(i)->sourceFile);
+        }
 
         ss << "\n";
     }

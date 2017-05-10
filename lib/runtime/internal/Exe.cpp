@@ -12,7 +12,7 @@
 #include "../interp/Opcode.h"
 
 Manifest manifest;
-Meta meta;
+Meta metaData;
 
 uint64_t n = 0, jobIndx=0;
 
@@ -31,6 +31,8 @@ ClassObject *findClass(int64_t superClass);
 bool overflowOp(int op) ;
 
 int64_t getmi64(file::buffer& exe) ;
+
+void parse_source_file(List<nString> &list, nString str);
 
 int Process_Exe(std::string exe)
 {
@@ -81,7 +83,7 @@ int Process_Exe(std::string exe)
                     manifest.version =getstring(buffer);
                     break;
                 case 0x5:
-                    manifest.debug = buffer.at(n++) != nil;
+                    manifest.debug = buffer.at(n++) == nil ? false : true;
                     break;
                 case 0x6:
                     manifest.entry =getmi64(buffer);
@@ -299,6 +301,14 @@ int Process_Exe(std::string exe)
                     adsp->frame_init = getmi64(buffer);
                     adsp->cache_size = getmi64(buffer);
                     adsp->self = getlong(buffer);
+
+                    long len = getlong(buffer);
+                    line_table lt;
+                    for(long i = 0; i < len; i++) {
+                        lt.pc = getmi64(buffer);
+                        lt.line_number = getmi64(buffer);
+                        adsp->lineNumbers.add(lt);
+                    }
                     break;
                 }
 
@@ -358,6 +368,41 @@ int Process_Exe(std::string exe)
                 break;
             }
         }
+
+        if(manifest.debug) {
+            if(buffer.at(n++) != smeta)
+                throw std::runtime_error("file `" + exe + "` may be corrupt");
+
+            long sourceid=0;
+            for(;;) {
+                __bitFlag = buffer.at(n++);
+                switch (__bitFlag) {
+                    case 0x0:
+                    case 0x0a:
+                    case 0x0d:
+                        break;
+
+                    case data_file: {
+                        metaData.sourceFiles.push_back();
+                        source_file &sf = metaData.sourceFiles.get(
+                                metaData.sourceFiles.size()-1);
+
+                        sf.id = sourceid++;
+                        parse_source_file(sf.source_line, getstring(buffer));
+                        break;
+                    }
+
+                    case eos:
+                        break;
+                    default:
+                        throw std::runtime_error("file `" + exe + "` may be corrupt");
+                }
+
+                if(__bitFlag == eos) {
+                    break;
+                }
+            }
+        }
         jobIndx-=2;
     } catch(std::exception &e) {
         cout << "error " << e.what();
@@ -365,6 +410,30 @@ int Process_Exe(std::string exe)
     }
 
     return 0;
+}
+
+void parse_source_file(List<nString> &list, nString str) {
+    list.init();
+
+    nString line;
+    for(unsigned int i = 0; i < str.len; i++) {
+        if(str.chars[i] == '\n')
+        {
+            list.push_back();
+            list.get(list.size()-1).init();
+            list.get(list.size()-1) = line;
+
+            line.free();
+        } else {
+            line += str.chars[i];
+        }
+    }
+
+    list.push_back();
+    list.get(list.size()-1).init();
+    list.get(list.size()-1) = line;
+
+    line.free();
 }
 
 int64_t getmi64(file::buffer& exe) {

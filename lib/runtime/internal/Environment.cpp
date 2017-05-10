@@ -77,6 +77,8 @@ void Environment::shutdown() {
     manifest.application.free();
     manifest.executable.free();
     manifest.version.free();
+
+    metaData.free();
 }
 
 void Environment::newClass(int64_t object, int64_t klass) {

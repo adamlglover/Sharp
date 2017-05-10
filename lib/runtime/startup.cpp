@@ -72,7 +72,8 @@ int runtimeStart(int argc, const char* argv[])
                 pArgs.push_back();
 
                 pArgs.get(pArgs.size()-1).init();
-                pArgs.push_back(arg);
+                pArgs.get(pArgs.size()-1) = arg;
+                arg.free();
             }
             break;
         }
@@ -124,6 +125,10 @@ void init_main(List <nString>& pArgs) {
     Sh_object* object = &Thread::threads[main_threadid]->__stack[(long)++__rxs[sp]].object;
 
     createStringArray(object, pArgs);
+    for(unsigned int i = 0; i < pArgs.size(); i++) {
+        pArgs.get(i).free();
+    }
+    pArgs.free();
 }
 
 void createStringArray(Sh_object *pObject, List<nString> &args) {

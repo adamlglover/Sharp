@@ -12,7 +12,16 @@
 class ClassObject;
 class Field;
 
-typedef keypair<int64_t, int64_t> line_pc;
+struct source_file{
+    long id;
+    List<nString> source_line;
+
+    void free() {
+        for(unsigned int i = 0; i < source_line.size(); i++)
+            source_line.get(i).free();
+        source_line.free();
+    }
+};
 
 /**
  * File and debugging info, line
@@ -20,9 +29,18 @@ typedef keypair<int64_t, int64_t> line_pc;
  */
 class Meta {
 
-private:
-    ExceptionTable* etable;
-    List<line_pc> lineTable;
+public:
+    Meta()
+    :
+            sourceFiles()
+    {
+    }
+
+    List<source_file> sourceFiles;
+
+    std::string getLine(long line, long sourceFile);
+    bool hasLine(long line, long sourceFile);
+    void free();
 };
 
 class MetaClass {

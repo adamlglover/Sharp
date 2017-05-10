@@ -727,3 +727,7 @@ bool tokenizer::ishexnum(char c) {
             (c >= 97 && c <= 104);
 }
 
+const string &tokenizer::getData() const {
+    return toks;
+}
+

@@ -22,11 +22,13 @@ public:
             rStateCursor(-1),
             parsed(false),
             tree(NULL),
+            data(""),
             panic(false)
     {
         if(tokenizer != NULL && tokenizer->geterrors() != NULL &&
                 !tokenizer->geterrors()->_errs())
         {
+            data = tokenizer->getData();
             access_types = new list<token_entity>();
             tree = new list<ast>();
             rState = new list<parser_state>();
@@ -69,6 +71,14 @@ private:
     token_entity* _current;
     int64_t  ast_cursor;
     tokenizer *toks;
+    std::string data;
+public:
+    const string &getData() const;
+
+public:
+    tokenizer *getTokenizer() const;
+
+private:
     list<token_entity> *access_types;
     Errors *errors;
 

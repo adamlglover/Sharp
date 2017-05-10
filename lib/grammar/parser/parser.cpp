@@ -1881,3 +1881,11 @@ ast* parser::rollback() {
 bool parser::isexprkeyword(string token) {
     return (token == "class");
 }
+
+tokenizer *parser::getTokenizer() const {
+    return toks;
+}
+
+const string &parser::getData() const {
+    return data;
+}

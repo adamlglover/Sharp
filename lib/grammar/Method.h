@@ -36,6 +36,9 @@ public:
             sourceFile(0),
             local_count(0)
     {
+        this->line_table.init();
+        this->modifiers.init();
+        this->params.init();
     }
 
     Method(string name, string module, ClassObject* klass, List<Param>& params, List<AccessModifier>& modifiers,
@@ -52,6 +55,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->line_table.init();
         this->modifiers.init();
         this->params.init();
         this->params.addAll(params);
@@ -72,6 +76,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->line_table.init();
         this->modifiers.init();
         this->params.init();
         this->params.addAll(params);
@@ -104,6 +109,7 @@ public:
     long long sourceFile;
     bool array;
     int64_t local_count;
+    List<keypair<int64_t, long>> line_table;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
     string name;
