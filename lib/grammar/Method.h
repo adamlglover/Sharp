@@ -20,6 +20,14 @@ enum return_type {
     lundefined,
 };
 
+
+struct ExceptionTable{
+    int64_t start_pc, end_pc;
+    int64_t handler_pc;
+    int64_t local;
+    nString klass;
+};
+
 class Method {
 
 public:
@@ -36,6 +44,7 @@ public:
             sourceFile(0),
             local_count(0)
     {
+        this->exceptions.init();
         this->line_table.init();
         this->modifiers.init();
         this->params.init();
@@ -55,6 +64,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->exceptions.init();
         this->line_table.init();
         this->modifiers.init();
         this->params.init();
@@ -76,6 +86,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->exceptions.init();
         this->line_table.init();
         this->modifiers.init();
         this->params.init();
@@ -110,6 +121,7 @@ public:
     bool array;
     int64_t local_count;
     List<keypair<int64_t, long>> line_table;
+    List<ExceptionTable> exceptions;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers
     string name;

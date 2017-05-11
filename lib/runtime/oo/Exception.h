@@ -71,7 +71,8 @@ private:
 };
 
 struct ExceptionTable{
-    int64_t start_pc, end_pc;
+    uint64_t start_pc, end_pc;
+    uint64_t handler_pc;
     int64_t local;
     nString klass;
 };

@@ -6,6 +6,8 @@
 #include "../internal/Environment.h"
 #include "ClassObject.h"
 #include "../alloc/GC.h"
+#include <stdio.h>
+#include <cstring>
 
 Sh_object::Sh_object() {
     this->mark = gc_orange;
@@ -140,20 +142,11 @@ void Sh_object::mutate(Sh_object *object) {
         GC::_insert(this);
     }
 
+    std::memcpy(this, object, sizeof(Sh_object));
+
     if(object->_rNode != NULL) {
         object->_rNode->refs.replace(object, this);
     }
-
-    this->mark = object->mark;
-    this->_rNode = object->_rNode;
-    this->_Node = object->_Node;
-    this->HEAD = object->HEAD;
-    this->nxt = object->nxt;
-    this->klass=object->klass;
-    this->prev = object->prev;
-    if(prev != NULL) prev->nxt = this;
-    this->size = object->size;
-    this->refs.addAll(object->refs);
     object->refs.free();
 
     for(unsigned int i = 0; i < refs.size(); i++) {

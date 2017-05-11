@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <cstdio>
+#include <cstring>
 
 
 using namespace std;

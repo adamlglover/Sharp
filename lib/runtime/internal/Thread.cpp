@@ -734,29 +734,26 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
 
             if (et->start_pc <= pc && et->end_pc >= pc)
             {
-                if (tbl == NULL || et->start_pc > tbl->start_pc)
-                    tbl = et;
-            }
-        }
+                tbl = et;
 
-        if(tbl != NULL) {
-            Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
-            Sh_object* eObject = exceptionObject;
+                Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
+                Sh_object* eObject = exceptionObject;
 
-            if(object->klass != NULL) {
-                for(;;) {
-                    if(eObject == NULL || eObject->klass == NULL)
-                        return false;
+                if(object->klass != NULL) {
+                    for(;;) {
+                        if(eObject == NULL || eObject->klass == NULL)
+                            break;
 
-                    if(object->klass->name == eObject->klass->name) {
-                        object->mutate(eObject);
-                        return true;
+                        if(object->klass->name == eObject->klass->name) {
+                            object->mutate(eObject);
+                            pc = tbl->handler_pc;
+                            return true;
+                        }
+
+                        eObject = eObject->prev;
                     }
-
-                    eObject = eObject->prev;
                 }
             }
-
         }
     }
 
@@ -812,7 +809,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
     }
 
     unsigned int len = calls.size() > EXCEPTION_PRINT_MAX ? EXCEPTION_PRINT_MAX : calls.size(), iter=0;
-    for(long i = calls.size()-1; i >= 0; i--)
+    for(long i = 0; i < calls.size(); i++)
     {
         if(iter++ > len)
             break;
@@ -855,8 +852,9 @@ void Thread::fillStackTrace(Sh_object* exceptionObject) {
     throwable.stackTrace = str;
 
     if(exceptionObject->klass != NULL) {
+
         Sh_object* stackTrace = env->findfield("stackTrace", exceptionObject);
-        Sh_object* message = env->findfield("message", exceptionObject);
+        Sh_object* message = throwable.native ? NULL : env->findfield("message", exceptionObject);
 
         if(stackTrace != NULL) {
             stackTrace->createstr(str);
