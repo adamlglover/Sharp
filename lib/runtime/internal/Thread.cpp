@@ -788,7 +788,7 @@ std::string Thread::getPrettyErrorLine(long line, long sourceFile) {
 void Thread::fillStackTrace(nString& stack_trace) {
     // fill message
     stringstream ss;
-    sh_asp* m = env->__address_spaces+id;
+    sh_asp* m = env->__address_spaces+curr_adsp;
     int64_t pc = this->pc, _fp=FP64;
     List<sh_asp*> calls;
 
@@ -895,10 +895,9 @@ void Thread::Throw(Sh_object* exceptionObject) {
     }
 
     stringstream ss;
-    ss << "Unhandled exception (most recent call last):\n  "; ss << throwable.throwable->name.str() << ": "
-                                      << throwable.message.str() << "\n";
-
-    ss << throwable.stackTrace.str();
+    ss << "Unhandled exception (most recent call last):\n"; ss << throwable.stackTrace.str();
+    ss << endl << throwable.throwable->name.str() << " ("
+       << throwable.message.str() << ")\n";
     throw Exception(ss.str());
 }
 
