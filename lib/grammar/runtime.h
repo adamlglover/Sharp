@@ -303,6 +303,11 @@ struct Scope {
     int blocks;
     int loops;
     bool self, base;
+
+    void free() {
+        locals.free();
+        label_map.free();
+    }
 };
 
 class ref_ptr {

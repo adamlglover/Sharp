@@ -6092,7 +6092,7 @@ Scope* runtime::add_scope(Scope scope) {
 
 void runtime::remove_scope() {
     Scope* scope = current_scope();
-    scope->locals.free();
+    scope->free();
 
     scope_map.pop_back();
 }
