@@ -3,7 +3,7 @@
     movi #0, %cx
     .check_null:
         test %cx,%ecf
-        movi $$+5,%adx
+        movi $_print+1,%adx
         ifne
         ret
 

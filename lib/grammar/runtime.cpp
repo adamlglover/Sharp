@@ -181,13 +181,11 @@ void runtime::parse_class_decl(ast *pAst) {
     if(scope->type == scope_global) {
         klass = getClass(current_module, className);
 
-        klass->setFullName(current_module + "#" + className);
         setHeadClass(klass);
     }
     else {
         klass = scope->klass->getChildClass(className);
 
-        klass->setFullName(scope->klass->getFullName() + "." + className);
         klass->setSuperClass(scope->klass);
         setHeadClass(klass);
     }
@@ -450,7 +448,7 @@ void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
     Expression cond = parseExpression(pAst);
 }
 
-void runtime::parseCachClause(Block& block, ast* pAst) {
+void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
     Scope* scope = current_scope();
 
     keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
@@ -471,6 +469,7 @@ void runtime::parseCachClause(Block& block, ast* pAst) {
         f.klass = catcher.value.klass;
         f.type = field_class;
     } else if(catcher.value.type == ResolvedReference::NATIVE) {
+        errors->newerror(GENERIC, pAst, " field `" + catcher.value.field->name + "` is not a class");
         f.nf = catcher.value.nf;
         f.type = field_native;
     } else {
@@ -486,12 +485,17 @@ void runtime::parseCachClause(Block& block, ast* pAst) {
 
         scope->locals.add(keypair<int, Field>(scope->blocks, f));
         field = scope->getLocalField(name);
+        et.local = scope->getLocalFieldIndex(name);
+        et.klass = f.klass == NULL ? "" : f.klass->getFullName();
+        et.handler_pc = block.code.__asm64.size();
+        scope->function->exceptions.push_back(et);
 
         if(!(f.nativeInt() && !f.array))
             block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
     }
 
     // TODO: add catcher to asm
+    // TODO: add goto to finally block
     parseBlock(pAst->getsubast(ast_block), block);
 }
 
@@ -500,7 +504,12 @@ void runtime::parseFinallyBlock(Block& block, ast* pAst) {
 }
 
 void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    ExceptionTable et;
+
+    et.start_pc = block.code.__asm64.size();
     parseBlock(pAst->getsubast(ast_block), block);
+    et.end_pc = block.code.__asm64.size();
 
     ast* sub;
     for(unsigned int i = 1; i < pAst->getsubastcount(); i++) {
@@ -508,7 +517,7 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
 
         switch(sub->gettype()) {
             case ast_catch_clause:
-                parseCachClause(block, sub);
+                parseCachClause(block, sub, et);
                 break;
             case ast_finally_block:
                 parseFinallyBlock(block, sub);
@@ -521,7 +530,7 @@ void runtime::parseThrowStatement(Block& block, ast* pAst) {
     Expression clause = parseExpression(pAst->getsubast(ast_expression));
 
     if(clause.type == expression_lclass) {
-        ClassObject* throwable = getClass("<create-std-lib-first>", "RuntimeErr");
+        ClassObject* throwable = getClass("std.err", "Throwable");
         // TODO: do some further checking in here
         // check if class maybe is child of class RuntimeErr
     } else {
@@ -599,22 +608,6 @@ void runtime::parseBreakStatement(Block& block, ast* pAst) {
         // error not in loop
         errors->newerror(GENERIC, pAst, "break statement outside of loop");
     }
-}
-
-void runtime::handleAnonymousGoto(m64Assembler& assembler, string name) {
-    Scope* scope = current_scope();
-    int64_t labelid = scope->undeclared_labels.size();
-
-    if(!scope->hasUndeclaredLabel(name)) {
-        scope->addUndeclaredLabel(name, labelid);
-    }
-    assembler.addinjector_unsafe("goto");
-    m64Assembler &builder = assembler.injectors.value.last();
-    int64_t i64;
-
-    /* the offset address will get resolved later */
-    builder.push_i64(assembler.__asm64.size()-1); // address to inject instruction
-    builder.push_i64(SET_Di(i64, op_GOTO, labelid));
 }
 
 void runtime::parseGotoStatement(Block& block, ast* pAst) {
@@ -1003,6 +996,30 @@ void runtime::parseConstructorDecl(ast* pAst) {
     }
 }
 
+void runtime::resolveAllBranches(Block& block) {
+    Scope *scope = current_scope();
+
+    int64_t address, i64;
+    BranchTable* bt;
+    for(unsigned int i = 0; i < scope->branches.size(); i++)
+    {
+        bt = &scope->branches.get(i);
+
+        if((address = scope->getLabel(bt->label.str())) != -1) {
+
+            if(bt->store) {
+                block.code.__asm64.replace(bt->branch_pc, SET_Di(i64, op_MOVI, (bt->__offset+address)));
+                block.code.__asm64.replace(bt->branch_pc+1, bt->_register);
+            } else {
+                block.code.__asm64.replace(bt->branch_pc, SET_Di(i64, op_GOTO, (bt->__offset+address)));
+            }
+        } else
+            errors->newerror(COULD_NOT_RESOLVE, bt->line, bt->col, " `" + bt->label.str() + "`");
+    }
+
+    __freeList(scope->branches);
+}
+
 void runtime::parseMethodDecl(ast* pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
@@ -1035,6 +1052,7 @@ void runtime::parseMethodDecl(ast* pAst) {
         parseBlock(pAst->getsubast(ast_block), fblock);
         resolveBlockBranches(pAst->getsubast(ast_block), fblock);
 
+        resolveAllBranches(fblock);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
@@ -4847,10 +4865,15 @@ void runtime::resolveClassDecl(ast* pAst) {
     parse_access_decl(pAst, modifiers, startpos);
     string name =  pAst->getentity(startpos).gettoken();
 
-    if(scope->type == scope_global)
+    if(scope->type == scope_global) {
+
         klass = getClass(current_module, name);
-    else
+        klass->setFullName(current_module + "#" + name);
+    }
+    else {
         klass = scope->klass->getChildClass(name);
+        klass->setFullName(scope->klass->getFullName() + "." + name);
+    }
 
     if(resolvedFields)
         klass->vaddr = class_size++;
@@ -6427,6 +6450,16 @@ std::string runtime::generate_text_section() {
         for(unsigned int x = 0; x < allMethods.get(i)->line_table.size(); x++) {
             text << mi64_tostr(allMethods.get(i)->line_table.get(x).key);
             text << mi64_tostr(allMethods.get(i)->line_table.get(x).value);
+        }
+
+        text << allMethods.get(i)->exceptions.size() << ((char)nil);
+        for(unsigned int x = 0; x < allMethods.get(i)->exceptions.size(); x++) {
+            ExceptionTable &et=allMethods.get(i)->exceptions.get(x);
+            text << mi64_tostr(allMethods.get(i)->exceptions.get(x).handler_pc);
+            text << mi64_tostr(allMethods.get(i)->exceptions.get(x).end_pc);
+            text << allMethods.get(i)->exceptions.get(x).klass.str() << ((char)nil);
+            text << mi64_tostr(allMethods.get(i)->exceptions.get(x).local);
+            text << mi64_tostr(allMethods.get(i)->exceptions.get(x).start_pc);
         }
     }
 

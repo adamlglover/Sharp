@@ -169,6 +169,20 @@ public:
         }
     }
 
+    /*
+     * Programmer must be responsible
+     * for freeing that data himself
+     */
+    void replace(unsigned long _X, T repl) {
+        if(_X>=len || _X < 0){
+            stringstream ss;
+            ss << "index out of bounds list::replaceat() _X: " << _X
+               << " length: " << len << endl;
+            throw std::runtime_error(ss.str());
+        }
+        _Data[_X] = repl;
+    }
+
     void addAll(List<T>& list) {
         free();
         for(unsigned int i = 0; i < list.size(); i++) {

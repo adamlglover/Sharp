@@ -723,6 +723,9 @@ void Thread::run() {
         throwable = e.getThrowable();
         exceptionThrown = true;
         Throw(&__stack[SP64].object);
+
+
+        DISPATCH();
     }
 }
 
@@ -739,19 +742,17 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
                 Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
                 Sh_object* eObject = exceptionObject;
 
-                if(object->klass != NULL) {
-                    for(;;) {
-                        if(eObject == NULL || eObject->klass == NULL)
-                            break;
+                for(;;) {
+                    if(eObject == NULL || eObject->klass == NULL)
+                        break;
 
-                        if(object->klass->name == eObject->klass->name) {
-                            object->mutate(eObject);
-                            pc = tbl->handler_pc;
-                            return true;
-                        }
-
-                        eObject = eObject->prev;
+                    if(tbl->klass == eObject->klass->name) {
+                        object->mutate(eObject);
+                        pc = tbl->handler_pc;
+                        return true;
                     }
+
+                    eObject = eObject->prev;
                 }
             }
         }
@@ -854,7 +855,7 @@ void Thread::fillStackTrace(Sh_object* exceptionObject) {
     if(exceptionObject->klass != NULL) {
 
         Sh_object* stackTrace = env->findfield("stackTrace", exceptionObject);
-        Sh_object* message = throwable.native ? NULL : env->findfield("message", exceptionObject);
+        Sh_object* message = throwable.native ? env->findfield("message", exceptionObject) : NULL;
 
         if(stackTrace != NULL) {
             stackTrace->createstr(str);

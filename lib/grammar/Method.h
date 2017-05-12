@@ -20,14 +20,6 @@ enum return_type {
     lundefined,
 };
 
-
-struct ExceptionTable{
-    int64_t start_pc, end_pc;
-    int64_t handler_pc;
-    int64_t local;
-    nString klass;
-};
-
 class Method {
 
 public:

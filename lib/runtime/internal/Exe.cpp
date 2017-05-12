@@ -28,8 +28,6 @@ void getMethod(file::buffer& exe, ClassObject *parent, Method* method);
 
 ClassObject *findClass(int64_t superClass);
 
-bool overflowOp(int op) ;
-
 int64_t getmi64(file::buffer& exe) ;
 
 void parse_source_file(List<nString> &list, nString str);
@@ -309,6 +307,18 @@ int Process_Exe(std::string exe)
                         lt.line_number = getmi64(buffer);
                         adsp->lineNumbers.add(lt);
                     }
+
+                    len = getlong(buffer);
+                    ExceptionTable et;
+
+                    for(long i = 0; i < len; i++) {
+                        et.handler_pc=getmi64(buffer);
+                        et.end_pc=getmi64(buffer);
+                        et.klass=getstring(buffer);
+                        et.local=getmi64(buffer);
+                        et.start_pc=getmi64(buffer);
+                        adsp->exceptions.add(et);
+                    }
                     break;
                 }
 
@@ -446,11 +456,6 @@ int64_t getmi64(file::buffer& exe) {
     ); n+=MI_BYTES;
 
     return i64;
-}
-
-bool overflowOp(int op) {
-    return op == op_MOVI ||
-           op == op_MOVBI;
 }
 
 ClassObject *findClass(int64_t superClass) {

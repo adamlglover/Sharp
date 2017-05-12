@@ -57,80 +57,41 @@ int64_t Asm::get_label(string label) {
     return 0;
 }
 
-void Asm::expect_int_or_register() {
-    if(current() == "%") {
-        // register
-        npos++;
-        if(current() == "adx") {
-            i2.high_bytes = adx;
-        } else if(current() == "cx") {
-            i2.high_bytes = cx;
-        } else if(current() == "cmt") {
-            i2.high_bytes = cmt;
-        } else if(current() == "ebx") {
-            i2.high_bytes = ebx;
-        } else if(current() == "ecx") {
-            i2.high_bytes = ecx;
-        } else if(current() == "ecf") {
-            i2.high_bytes = ecf;
-        } else if(current() == "edf") {
-            i2.high_bytes = edf;
-        } else if(current() == "ehf") {
-            i2.high_bytes = ehf;
-        } else if(current() == "bmr") {
-            i2.high_bytes = bmr;
-        } else if(current() == "egx") {
-            i2.high_bytes = egx;
-        } else if(current() == "fp") {
-            i2.high_bytes = fp;
-        } else if(current() == "sp") {
-            i2.high_bytes = sp;
-        } else {
-            // error
-            tk->geterrors()->newerror(GENERIC, current(), "symbol `" + current().gettoken() + "` is not a register");
-        }
-
-        npos++;
-        i2.low_bytes = -1;
-    } else if(current() == "$") {
+void Asm::expect_register() {
+    if(current() == "%")
         npos++;
 
-        if(current() == "$") {
-            npos++;
-            i2.high_bytes = assembler->__asm64.size()-1;
-        } else {
-            string name = expect_identifier();
-            if(label_exists(name)) {
-                i2.high_bytes = get_label(name);
-            } else {
-                npos--;
-                tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
-                npos++;
-            }
-        }
+    if(current() == "adx") {
+        i2.high_bytes = adx;
+    } else if(current() == "cx") {
+        i2.high_bytes = cx;
+    } else if(current() == "cmt") {
+        i2.high_bytes = cmt;
+    } else if(current() == "ebx") {
+        i2.high_bytes = ebx;
+    } else if(current() == "ecx") {
+        i2.high_bytes = ecx;
+    } else if(current() == "ecf") {
+        i2.high_bytes = ecf;
+    } else if(current() == "edf") {
+        i2.high_bytes = edf;
+    } else if(current() == "ehf") {
+        i2.high_bytes = ehf;
+    } else if(current() == "bmr") {
+        i2.high_bytes = bmr;
+    } else if(current() == "egx") {
+        i2.high_bytes = egx;
+    } else if(current() == "fp") {
+        i2.high_bytes = fp;
+    } else if(current() == "sp") {
+        i2.high_bytes = sp;
+    } else {
+        // error
+        tk->geterrors()->newerror(GENERIC, current(), "symbol `" + current().gettoken() + "` is not a register");
+    }
 
-
-        if(current() == "+") {
-            npos++;
-
-            int64_t adx = i2.high_bytes;
-            expect_int();
-
-            int64_t offset = i2.high_bytes;
-            i2.high_bytes = offset + adx;
-        }else if(current() == "-") {
-            npos++;
-
-            int64_t adx = i2.high_bytes;
-            expect_int();
-
-            int64_t offset = i2.high_bytes;
-            i2.high_bytes = adx-offset;
-        }
-
-        i2.low_bytes = -1;
-    } else
-        expect_int();
+    npos++;
+    i2.low_bytes = -1;
 }
 
 int Asm::get_offset() {
@@ -516,116 +477,147 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_int();
                 assembler.push_i64(SET_Di(i64, op_INT, i2.high_bytes));
             } else if(instruction_is("movi")) {
-                expect_int_or_register();
-                itmp = i2;
-                expect(",");
-                expect_int_or_register();
-                assembler.push_i64(SET_Di(i64, op_MOVI, itmp.high_bytes), i2.high_bytes);
+                if(current() == "$") {
+                    int64_t _offset=0, _register=0, address=-1;
+                    string name;
+                    expect("$");
+
+                    if(current() == "$") {
+                        npos++;
+                        address = assembler.__asm64.size() == 0 ? 0 : assembler.__asm64.size()-1;
+                    } else {
+                        name = expect_identifier();
+                    }
+
+
+                    if(current() == "+") {
+                        npos++;
+                        expect_int();
+                        _offset = i2.high_bytes;
+                    }
+
+                    expect(",");
+                    expect_register();
+                    _register=i2.high_bytes;
+
+                    if(address!=-1) {
+                        assembler.push_i64(SET_Di(i64, op_MOVI, (address+_offset)), _register);
+                    } else {
+                        instance->current_scope()->addStore(name, _register, _offset,
+                                                            assembler, pAst->line, pAst->col);
+                    }
+                } else {
+                    expect_int();
+                    itmp = i2;
+                    expect(",");
+                    expect_register();
+                    assembler.push_i64(SET_Di(i64, op_MOVI, itmp.high_bytes), i2.high_bytes);
+                }
             } else if(instruction_is("ret")) {
                 assembler.push_i64(SET_Ei(i64, op_RET));
             } else if(instruction_is("hlt")) {
                 assembler.push_i64(SET_Ei(i64, op_HLT));
             } else if(instruction_is("new_i")) {
-                expect_int_or_register();
+                expect_int();
                 assembler.push_i64(SET_Di(i64, op_NEWi, i2.high_bytes));
             } else if(instruction_is("check_cast")) {
                 assembler.push_i64(SET_Ei(i64, op_CHECK_CAST));
             } else if(instruction_is("mov8")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOV8, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mov16")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOV16, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mov32")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOV32, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mov64")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOV64, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("pushr")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_PUSHR, i2.high_bytes));
             } else if(instruction_is("add")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_ADD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("sub")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_SUB, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mul")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MUL, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("div")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_DIV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mod")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("pop")) {
                 assembler.push_i64(SET_Ei(i64, op_POP));
             } else if(instruction_is("inc")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_INC, i2.high_bytes));
             } else if(instruction_is("dec")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_DEC, i2.high_bytes));
             } else if(instruction_is("movr")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOVR, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("movx")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOVX, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("lt")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_LT, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("brh")) {
@@ -637,24 +629,24 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("ifne")) {
                 assembler.push_i64(SET_Ei(i64, op_IFNE));
             } else if(instruction_is("gt")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_GT, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("ge")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_GTE, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("le")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_LTE, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("movl")) {
@@ -680,21 +672,21 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("obj_prev")) {
                 assembler.push_i64(SET_Ei(i64, op_OBJECT_PREV));
             } else if(instruction_is("rmov")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_RMOV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("mov")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
 
                 assembler.push_i64(SET_Ci(i64, op_MOV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("movd")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -714,19 +706,19 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 }
 
             } else if(instruction_is("_sizeof")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_SIZEOF, i2.high_bytes));
             } else if(instruction_is("put")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_PUT, i2.high_bytes));
             } else if(instruction_is("_putc")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_PUTC, i2.high_bytes));
             } else if(instruction_is("chklen")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_CHECKLEN, i2.high_bytes));
             } else if(current() == ".") {
@@ -747,22 +739,22 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("goto")) {
                 expect("$");
                 string name = expect_identifier();
+                int64_t _offset=0;
+
                 if(current() == "+") {
                     npos++;
 
                     int64_t adx = get_label(name);
                     expect_int();
 
-                    int64_t offset = i2.high_bytes;
-                    i2.high_bytes = offset + adx;
+                    _offset = i2.high_bytes;
+                    i2.high_bytes=adx;
                 }
 
                 if(label_exists(name)) {
-                    assembler.push_i64(SET_Di(i64, op_GOTO, i2.high_bytes));
+                    assembler.push_i64(SET_Di(i64, op_GOTO, (i2.high_bytes+_offset)));
                 } else {
-                    npos--;
-                    tk->geterrors()->newerror(GENERIC, current(), "unidentified label after mnemonic '$'");
-                    npos++;
+                    instance->current_scope()->addBranch(name, _offset, assembler, pAst->line, pAst->col);
                 }
             } else if(instruction_is("pushref")) {
                 assembler.push_i64(SET_Ei(i64, op_PUSHREF));
@@ -781,17 +773,17 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect(">");
                 assembler.push_i64(SET_Di(i64, op_NEW_CLASS, i2.high_bytes));
             } else if(instruction_is("movn")) {
-                expect_int_or_register();
+                expect_int();
 
                 assembler.push_i64(SET_Di(i64, op_MOVN, i2.high_bytes));
             }  else if(instruction_is("smov")) {
                 i2.low_bytes = 0;
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_SMOV, abs(i2.high_bytes), (i2.high_bytes<0), get_offset()));
             } else if(instruction_is("smovr")) {
                 i2.low_bytes = 0;
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_SMOVR, abs(i2.high_bytes), (i2.high_bytes<0), get_offset()));
             } else if(instruction_is("smovobj")) {
@@ -799,7 +791,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Di(i64, op_SMOVOBJ, i2.high_bytes));
             }else if(instruction_is("iadd")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -808,7 +800,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_IADD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("isub")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -817,7 +809,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_ISUB, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("imul")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -826,7 +818,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_IMUL, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("idiv")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -835,7 +827,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_IDIV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("imod")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
                 expect_int();
@@ -844,24 +836,24 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Ci(i64, op_IMOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("slp")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_SLEEP, i2.high_bytes));
             } else if(instruction_is("test")) {
-                expect_int_or_register();
+                expect_register();
                 itmp = i2;
                 expect(",");
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_TEST, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
             } else if(instruction_is("_lck")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_LOCK, i2.high_bytes));
             } else if(instruction_is("ulck")) {
                 assembler.push_i64(SET_Ei(i64, op_UlOCK));
             } else if(instruction_is("exp")) {
-                expect_int_or_register();
+                expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_EXP, i2.high_bytes));
             } else {

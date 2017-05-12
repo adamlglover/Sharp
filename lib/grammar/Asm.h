@@ -52,8 +52,6 @@ private:
 
     void expect_int();
 
-    void expect_int_or_register();
-
     void expect(string token);
 
     string expect_identifier();
@@ -81,6 +79,8 @@ private:
     void check_CB();
 
     bool hex_int(string s);
+
+    void expect_register();
 };
 
 

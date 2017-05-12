@@ -162,6 +162,32 @@ struct Block {
     }
 };
 
+struct BranchTable {
+    BranchTable()
+    :
+            branch_pc(0),
+            label(),
+            line(0),
+            col(0),
+            store(false),
+            _register(0),
+            __offset(0)
+    {
+    }
+
+    int64_t branch_pc; // where was the branch initated in the code
+    nString label;     // the label we were trying to access
+    int line, col;
+
+    bool store;        // is this a store instruction/
+    int _register;      // if this is a store instruction tell me what register to put the data in
+    long __offset;        // any offset to the address label
+
+    void free() {
+        label.free();
+    }
+};
+
 enum scope_type {
     scope_global,
     scope_class,
@@ -182,6 +208,7 @@ struct Scope {
     {
         locals.init();
         label_map.init();
+        branches.init();
     }
 
     Scope(scope_type type, ClassObject* klass)
@@ -196,6 +223,7 @@ struct Scope {
     {
         locals.init();
         label_map.init();
+        branches.init();
     }
 
     Scope(scope_type type, ClassObject* klass, Method* func)
@@ -210,6 +238,7 @@ struct Scope {
     {
         locals.init();
         label_map.init();
+        branches.init();
     }
 
     keypair<int, Field>* getLocalField(string field_name) {
@@ -240,27 +269,40 @@ struct Scope {
         return -1;
     }
 
+    void addBranch(string& label, long offset, m64Assembler& assembler, int line, int col) {
+        BranchTable bt;
+        assembler.__asm64.add(0); // add empty instruction for branch later
+        bt.branch_pc = assembler.__asm64.size()-1;
+        bt.line=line;
+        bt.col=col;
+        bt.label = label;
+        bt.__offset=offset;
+        branches.add(bt);
+    }
+
+    void addStore(string& label, int _register, long offset, m64Assembler& assembler, int line, int col) {
+        BranchTable bt;
+        assembler.__asm64.add(0); // add empty instruction for storeing later
+        assembler.__asm64.add(0);
+        bt.branch_pc = assembler.__asm64.size()-2;
+        bt.line=line;
+        bt.col=col;
+        bt.label = label;
+        bt.store=true;
+        bt.__offset = offset;
+        bt._register=_register;
+        branches.add(bt);
+    }
+
     scope_type type;
     ClassObject* klass;
     Method* function;
     List<keypair<int, Field>> locals;
     List<keypair<std::string, int64_t>> label_map;
-    List<keypair<std::string, int64_t>> undeclared_labels; // name: label ; id: 9
+    List<BranchTable> branches;
     int blocks;
     int loops;
     bool self, base;
-
-    void addUndeclaredLabel(string name, int64_t id) {
-        undeclared_labels.add(keypair<std::string, int64_t>(name, id));
-    }
-
-    bool hasUndeclaredLabel(string name) {
-        for(unsigned int i = 0; i < undeclared_labels.size(); i++) {
-            if(undeclared_labels.get(i).key == name)
-                return true;
-        }
-        return false;
-    }
 };
 
 class ref_ptr {
@@ -580,6 +622,12 @@ private:
 
     void parseMethodReturnType(Expression &expression, Method &method);
 
+    /**
+     * Elements using this function must have a free() function
+     * declared inside the object.
+     * @tparam T
+     * @param lst
+     */
     template<class T>
     void __freeList(List<T> &lst);
 
@@ -705,7 +753,7 @@ private:
 
     void parseTryCatchStatement(Block &block, ast *pAst);
 
-    void parseCachClause(Block &block, ast *pAst);
+    void parseCachClause(Block &block, ast *pAst, ExceptionTable table);
 
     void parseFinallyBlock(Block &block, ast *pAst);
 
@@ -722,8 +770,6 @@ private:
     void parseBreakStatement(Block &block, ast *pAst);
 
     void parseGotoStatement(Block &block, ast *pAst);
-
-    void handleAnonymousGoto(m64Assembler &assembler, string name);
 
     void resolveBlockBranches(ast *pAst, Block &block);
 
@@ -768,10 +814,12 @@ private:
     string generate_meta_section();
 
     void addLine(Block& block, ast *pAst);
+
+    void resolveAllBranches(Block& block);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.58"
+#define progvers "0.1.59"
 
 struct options {
     ~options()
