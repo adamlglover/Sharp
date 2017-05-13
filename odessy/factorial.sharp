@@ -1,0 +1,8 @@
+mod application;
+
+class Main {
+
+    fn main(string[] args) {
+
+    }
+}

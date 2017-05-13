@@ -8,6 +8,7 @@ class Main {
             x++;
         }
 
+        dynamic_object o;
         print("x = " + x);
     }
 }

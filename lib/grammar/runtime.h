@@ -175,6 +175,16 @@ struct BranchTable {
     {
     }
 
+    void operator=(BranchTable& bt) {
+        branch_pc=bt.branch_pc;
+        label=bt.label;
+        line=bt.line;
+        col=bt.col;
+        store=bt.store;
+        _register=bt._register;
+        __offset=bt.__offset;
+    }
+
     int64_t branch_pc; // where was the branch initated in the code
     nString label;     // the label we were trying to access
     int line, col;

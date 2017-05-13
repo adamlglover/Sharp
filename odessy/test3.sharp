@@ -1,0 +1,19 @@
+mod application;
+
+class Main {
+    var value;
+
+    fn operator+(var x)  : var {
+        value  = value + x;
+        return value; 
+    }
+
+    fn main(string[] args) {
+
+        Main m;
+
+        if(m + 8 > 9) {
+
+        }
+    }
+}
