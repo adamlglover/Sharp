@@ -166,23 +166,13 @@ struct BranchTable {
     BranchTable()
     :
             branch_pc(0),
-            label(),
             line(0),
             col(0),
             store(false),
             _register(0),
             __offset(0)
     {
-    }
-
-    void operator=(BranchTable& bt) {
-        branch_pc=bt.branch_pc;
-        label=bt.label;
-        line=bt.line;
-        col=bt.col;
-        store=bt.store;
-        _register=bt._register;
-        __offset=bt.__offset;
+        label.init();
     }
 
     int64_t branch_pc; // where was the branch initated in the code
@@ -287,7 +277,7 @@ struct Scope {
         bt.col=col;
         bt.label = label;
         bt.__offset=offset;
-        branches.add(bt);
+        branches.push_back(bt);
     }
 
     void addStore(string& label, int _register, long offset, m64Assembler& assembler, int line, int col) {
@@ -301,7 +291,7 @@ struct Scope {
         bt.store=true;
         bt.__offset = offset;
         bt._register=_register;
-        branches.add(bt);
+        branches.push_back(bt);
     }
 
     scope_type type;
