@@ -305,7 +305,7 @@ int Process_Exe(std::string exe)
                     for(long i = 0; i < len; i++) {
                         lt.pc = getmi64(buffer);
                         lt.line_number = getmi64(buffer);
-                        adsp->lineNumbers.add(lt);
+                        adsp->lineNumbers.push_back(lt);
                     }
 
                     len = getlong(buffer);
@@ -317,7 +317,7 @@ int Process_Exe(std::string exe)
                         et.klass=getstring(buffer);
                         et.local=getmi64(buffer);
                         et.start_pc=getmi64(buffer);
-                        adsp->exceptions.add(et);
+                        adsp->exceptions.push_back(et);
                     }
                     break;
                 }
