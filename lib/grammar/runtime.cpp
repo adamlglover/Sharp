@@ -360,13 +360,10 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
 
     parseBlock(pAst->getsubast(ast_block), block);
-    // TODO: add real address
 
-    // TODO: fix branch addresses for 'break;'
-
-    stringstream ss2;
-    ss2 << for_label_end_id << scope->loops;
-    scope->label_map.add(keypair<std::string, int64_t>(ss2.str(),0));
+    ss.str("");
+    ss << for_label_end_id << scope->loops;
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
     scope->blocks--;
     scope->loops--;
 }
@@ -487,14 +484,13 @@ void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
         field = scope->getLocalField(name);
         et.local = scope->getLocalFieldIndex(name);
         et.klass = f.klass == NULL ? "" : f.klass->getFullName();
-        et.handler_pc = block.code.__asm64.size();
+        et.handler_pc = __init_label_address;
         scope->function->exceptions.push_back(et);
 
         if(!(f.nativeInt() && !f.array))
             block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
     }
 
-    // TODO: add catcher to asm
     // TODO: add goto to finally block
     parseBlock(pAst->getsubast(ast_block), block);
 }
@@ -506,6 +502,7 @@ void runtime::parseFinallyBlock(Block& block, ast* pAst) {
 void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     ExceptionTable et;
+    scope->trys++;
 
     et.start_pc = block.code.__asm64.size();
     parseBlock(pAst->getsubast(ast_block), block);
@@ -520,10 +517,18 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
                 parseCachClause(block, sub, et);
                 break;
             case ast_finally_block:
-                parseFinallyBlock(block, sub);
                 break;
         }
     }
+
+    stringstream ss;
+    ss << try_label_end_id << scope->trys;
+    scope->label_map.add(keypair<string,int64_t>(ss.str(), __init_label_address));
+
+    if(pAst->hassubast(ast_finally_block)) {
+        parseFinallyBlock(block, pAst->getsubast(ast_finally_block));
+    }
+    scope->trys--;
 }
 
 void runtime::parseThrowStatement(Block& block, ast* pAst) {
@@ -552,10 +557,11 @@ int64_t runtime::getLastLoopBeginAddress() {
 
 void runtime::parseContinueStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    int64_t start_addr;
 
-    if((start_addr = getLastLoopBeginAddress()) != -1) {
-        // TODO: jump to label address
+    if(scope->loops > 0) {
+        stringstream name;
+        name << for_label_begin_id << scope->loops;
+        scope->addBranch(name.str(), 0, block.code, pAst->line, pAst->col);
     } else {
         // error not in loop
         errors->newerror(GENERIC, pAst, "continue statement outside of loop");
@@ -582,28 +588,11 @@ int64_t runtime::get_label(string label) {
 
 void runtime::parseBreakStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    int64_t start_addr;
 
-    if((start_addr = getLastLoopBeginAddress()) != -1) {
-        // TODO: jump to label address
+    if(scope->loops > 0) {
         stringstream name;
         name << for_label_end_id << scope->loops;
-
-        if(label_exists(name.str())) {
-            m64Assembler injector;
-
-            for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
-                if(block.code.injectors.key.get(i) == "break") {
-                    injector = block.code.injectors.value.at(i);
-
-                    block.code.injectors.value.remove(i);
-                    block.code.injectors.key.remove(i);
-                    break;
-                }
-            }
-
-            block.code.__asm64.insert(injector.__asm64.get(0), SET_Di(start_addr, op_GOTO, get_label(name.str())));
-        }
+        scope->addBranch(name.str(), 0, block.code, pAst->line, pAst->col);
     } else {
         // error not in loop
         errors->newerror(GENERIC, pAst, "break statement outside of loop");
@@ -613,39 +602,8 @@ void runtime::parseBreakStatement(Block& block, ast* pAst) {
 void runtime::parseGotoStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     string label = pAst->getentity(1).gettoken();
-    int64_t i64;
 
-    if(scope->getLabel(label) != -1) {
-        m64Assembler injector;
-
-        for(unsigned int i = 0; i < block.code.injectors.value.size(); i++) {
-            if(block.code.injectors.key.get(i) == "goto") {
-                injector = block.code.injectors.value.at(i);
-
-                block.code.injectors.value.remove(i);
-                block.code.injectors.key.remove(i);
-                break;
-            }
-        }
-
-        block.code.__asm64.insert(injector.__asm64.get(0), SET_Di(i64, op_GOTO, scope->getLabel(label)));
-    } else {
-        errors->newerror(COULD_NOT_RESOLVE, pAst, " `" + label + "`");
-    }
-}
-
-void runtime::partial_breakStatement(Block& block, ast* pAst) {
-    block.code.addinjector_unsafe("break");
-    m64Assembler& vasm = block.code.injectors.value.last();
-    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
-    block.code.__asm64.add(0); // put temp filler for proper addressing
-}
-
-void runtime::partial_parseGotoStatement(Block& block, ast* pAst) {
-    block.code.addinjector_unsafe("goto");
-    m64Assembler& vasm = block.code.injectors.value.last();
-    vasm.push_i64(block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1); // score current address to asm insert
-    block.code.__asm64.add(0); // put temp filler for proper addressing
+    scope->addBranch(label, 0, block.code, pAst->line, pAst->col);
 }
 
 void runtime::parseLabelDecl(Block& block,ast* pAst) {
@@ -655,7 +613,7 @@ void runtime::parseLabelDecl(Block& block,ast* pAst) {
     if(label_exists(label)) {
         errors->newerror(GENERIC, pAst->getentity(0), "redefinition of label `" + label + "`");
     } else {
-        scope->label_map.add(keypair<string, int64_t>(label, block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1));
+        scope->label_map.add(keypair<string, int64_t>(label, __init_label_address));
     }
 
     parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
@@ -819,10 +777,10 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseContinueStatement(block, pAst);
             break;
         case ast_break_statement:
-            partial_breakStatement(block, pAst);
+            parseBreakStatement(block, pAst);
             break;
         case ast_goto_statement:
-            partial_parseGotoStatement(block, pAst);
+            parseGotoStatement(block, pAst);
             break;
         case ast_label_decl:
             parseLabelDecl(block, pAst);
@@ -837,111 +795,6 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             break;
         }
     }
-}
-
-void runtime::partial_parseCatchSClause(Block& block, ast* pAst) {
-    resolveBlockBranches(pAst->getsubast(ast_block), block);
-}
-
-void runtime::partial_parseFinallyBlock(Block& block, ast* pAst) {
-    resolveBlockBranches(pAst->getsubast(ast_block), block);
-}
-
-void runtime::partial_parseTryCatch(Block& block, ast* pAst) {
-    resolveBlockBranches(pAst->getsubast(ast_block), block);
-
-    ast* sub;
-    for(unsigned int i = 1; i < pAst->getsubastcount(); i++) {
-        sub = pAst->getsubast(i);
-
-        switch(sub->gettype()) {
-            case ast_catch_clause:
-                partial_parseCatchSClause(block, pAst);
-                break;
-            case ast_finally_block:
-                partial_parseFinallyBlock(block, pAst);
-                break;
-        }
-    }
-}
-
-void runtime::partial_parseStatement(Block& block, ast* pAst) {
-    Scope* scope = current_scope();
-    addLine(block, pAst);
-
-    switch(pAst->gettype()) {
-        case ast_return_stmnt:
-            break;
-        case ast_if_statement:
-            // TODO: partial parse this to process inner block
-            resolveBlockBranches(pAst->getsubast(ast_block), block);
-            break;
-        case ast_expression:
-            break;
-        case ast_assembly_statement:
-            break;
-        case ast_for_statement:
-            scope->loops++;
-            resolveBlockBranches(pAst->getsubast(ast_block), block);
-            scope->loops++;
-            // TODO: partial parse this to process inner block
-            break;
-        case ast_foreach_statement:
-            scope->loops++;
-            resolveBlockBranches(pAst->getsubast(ast_block), block);
-            scope->loops++;
-            break;
-        case ast_while_statement:
-            resolveBlockBranches(pAst->getsubast(ast_block), block);
-            break;
-        case ast_do_while_statement:
-            resolveBlockBranches(pAst->getsubast(ast_block), block);
-            break;
-        case ast_trycatch_statement:
-            partial_parseTryCatch(block, pAst);
-            break;
-        case ast_throw_statement:
-            break;
-        case ast_continue_statement:
-            break;
-        case ast_break_statement:
-            parseBreakStatement(block, pAst);
-            break;
-        case ast_goto_statement:
-            parseGotoStatement(block, pAst);
-            break;
-        case ast_label_decl:
-            partial_parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
-            break;
-        case ast_var_decl:
-            break;
-        default: {
-            stringstream err;
-            err << ": unknown ast type: " << pAst->gettype();
-            errors->newerror(INTERNAL_ERROR, pAst->line, pAst->col, err.str());
-            break;
-        }
-    }
-}
-
-void runtime::resolveBlockBranches(ast* pAst, Block& block) {
-    Scope* scope = current_scope();
-    scope->blocks++;
-
-    ast* trunk;
-    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
-        trunk = pAst->getsubast(i);
-
-        if(trunk->gettype() == ast_block) {
-            resolveBlockBranches(trunk, block);
-            continue;
-        } else
-            trunk = trunk->getsubast(0);
-
-        partial_parseStatement(block, trunk);
-    }
-
-    scope->blocks--;
 }
 
 void runtime::parseBlock(ast* pAst, Block& block) {
@@ -989,8 +842,8 @@ void runtime::parseConstructorDecl(ast* pAst) {
 
         Block fblock;
         parseBlock(pAst->getsubast(ast_block), fblock);
-        resolveBlockBranches(pAst->getsubast(ast_block), fblock);
 
+        resolveAllBranches(fblock);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
@@ -1050,7 +903,6 @@ void runtime::parseMethodDecl(ast* pAst) {
 
         Block fblock;
         parseBlock(pAst->getsubast(ast_block), fblock);
-        resolveBlockBranches(pAst->getsubast(ast_block), fblock);
 
         resolveAllBranches(fblock);
         method->code.__asm64.addAll(fblock.code.__asm64);
@@ -1860,7 +1712,8 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     }
 
     if(expression.type == expression_class) {
-        // TODO: add asm to push class id
+        int64_t i64;
+        expression.code.push_i64(SET_Di(i64, op_MOVI, expression.utype.klass->vaddr), ebx);
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
@@ -2091,6 +1944,13 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
         }
     }
 
+//    if(fn != NULL) {
+//        int64_t i64;
+//        setupFrame(expression, fn);
+//
+//        expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+//    }
+
     __freeList(params);
     __freeList(expressions);
     ptr.free();
@@ -2121,6 +1981,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
         pAst2 = pAst->getsubast(ast_dot_fn_e);
         fn = resolveMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list));
         if(fn != NULL) {
+
             expression.type = methodReturntypeToExpressionType(fn);
             if(expression.type == expression_lclass) {
                 expression.utype.klass = fn->klass;
@@ -2185,6 +2046,18 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
     expression.lnk = pAst;
     return expression;
+}
+
+void runtime::setupFrame(Expression &expression, Method *fn) {
+    int64_t i64;
+    if(methodReturntypeToExpressionType(fn) != lvoid) {
+        expression.code.push_i64(SET_Di(i64, op_INC, sp)); // reserve space for function on the stack
+    }
+
+    expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+    if(fn->isStatic()) {
+        // TODO: push self on the stack
+    }
 }
 
 Expression runtime::parsePrimaryExpression(ast* pAst) {

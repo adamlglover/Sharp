@@ -204,7 +204,8 @@ struct Scope {
             base(false),
             function(NULL),
             blocks(0),
-            loops(0)
+            loops(0),
+            trys(0)
     {
         locals.init();
         label_map.init();
@@ -219,7 +220,8 @@ struct Scope {
             base(false),
             function(NULL),
             blocks(0),
-            loops(0)
+            loops(0),
+            trys(0)
     {
         locals.init();
         label_map.init();
@@ -234,7 +236,8 @@ struct Scope {
             base(false),
             function(func),
             blocks(0),
-            loops(0)
+            loops(0),
+            trys(0)
     {
         locals.init();
         label_map.init();
@@ -269,7 +272,7 @@ struct Scope {
         return -1;
     }
 
-    void addBranch(string& label, long offset, m64Assembler& assembler, int line, int col) {
+    void addBranch(string label, long offset, m64Assembler& assembler, int line, int col) {
         BranchTable bt;
         assembler.__asm64.add(0); // add empty instruction for branch later
         bt.branch_pc = assembler.__asm64.size()-1;
@@ -280,7 +283,7 @@ struct Scope {
         branches.push_back(bt);
     }
 
-    void addStore(string& label, int _register, long offset, m64Assembler& assembler, int line, int col) {
+    void addStore(string label, int _register, long offset, m64Assembler& assembler, int line, int col) {
         BranchTable bt;
         assembler.__asm64.add(0); // add empty instruction for storeing later
         assembler.__asm64.add(0);
@@ -301,7 +304,7 @@ struct Scope {
     List<keypair<std::string, int64_t>> label_map;
     List<BranchTable> branches;
     int blocks;
-    int loops;
+    int loops, trys;
     bool self, base;
 
     void free() {
@@ -375,6 +378,10 @@ public:
 #define for_label_begin_id "$$for_start"
 
 #define for_label_end_id "$$for_end"
+
+#define try_label_end_id "$$try_end"
+
+#define __init_label_address (block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1)
 
 class runtime
 {
@@ -776,25 +783,11 @@ private:
 
     void parseGotoStatement(Block &block, ast *pAst);
 
-    void resolveBlockBranches(ast *pAst, Block &block);
-
-    void partial_breakStatement(Block &block, ast *pAst);
-
     int64_t get_label(string label);
 
     bool label_exists(string label);
 
-    void partial_parseTryCatch(Block &block, ast *pAst);
-
-    void partial_parseCatchSClause(Block &block, ast *pAst);
-
-    void partial_parseFinallyBlock(Block &block, ast *pAst);
-
-    void partial_parseGotoStatement(Block &block, ast *pAst);
-
     void parseLabelDecl(Block &block, ast *pAst);
-
-    void partial_parseStatement(Block &block, ast *pAst);
 
     void parseVarDecl(Block &block, ast *pAst);
 
@@ -821,6 +814,8 @@ private:
     void addLine(Block& block, ast *pAst);
 
     void resolveAllBranches(Block& block);
+
+    void setupFrame(Expression &expression, Method *fn);
 };
 
 #define progname "bootstrap"
