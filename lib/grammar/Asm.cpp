@@ -518,7 +518,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
             } else if(instruction_is("hlt")) {
                 assembler.push_i64(SET_Ei(i64, op_HLT));
             } else if(instruction_is("new_i")) {
-                expect_int();
+                expect_register();
                 assembler.push_i64(SET_Di(i64, op_NEWi, i2.high_bytes));
             } else if(instruction_is("check_cast")) {
                 assembler.push_i64(SET_Ei(i64, op_CHECK_CAST));
@@ -749,6 +749,8 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                     _offset = i2.high_bytes;
                     i2.high_bytes=adx;
+                } else {
+                    i2.high_bytes=get_label(name);
                 }
 
                 if(label_exists(name)) {

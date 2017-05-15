@@ -418,6 +418,7 @@ public:
         parse_map.key.init();
         parse_map.value.init();
         scope_map.init();
+        Generator::instance=this;
         interpret();
     }
 
@@ -757,7 +758,7 @@ private:
 
     void parseForEachStatement(Block &block, ast *trunk);
 
-    void parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
+    Expression parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
 
     void parseWhileStatement(Block &block, ast *pAst);
 
@@ -816,6 +817,20 @@ private:
     void resolveAllBranches(Block& block);
 
     void setupFrame(Expression &expression, Method *fn);
+
+    class Generator {
+
+    public:
+        static runtime* instance;
+
+        static void setupVariable(m64Assembler& assembler, int64_t address);
+
+        static void assignValue(m64Assembler &assembler, Expression &expression, token_entity entity);
+    };
+
+    void assignVariable(Field &field, Expression &assignExpr, token_entity assignOper, Expression &outExpr);
+
+    void initVariable(Field &field, Expression &outExpr);
 };
 
 #define progname "bootstrap"

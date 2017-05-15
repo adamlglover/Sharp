@@ -71,7 +71,7 @@ public:
 
     keypair<List<string>, List<m64Assembler>> injectors;
 
-    void inject(int64_t &i, m64Assembler &assembler) {
+    void inject(int64_t i, m64Assembler &assembler) {
         if(i < 0) return;
 
         int64_t start = i, iter = 0;

@@ -20,6 +20,7 @@ options c_options;
 _operator string_toop(string op);
 
 unsigned int runtime::classUID = 0;
+runtime* runtime::Generator::instance = 0;
 
 void runtime::interpret() {
 
@@ -368,10 +369,41 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     scope->loops--;
 }
 
-void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
+void runtime::assignVariable(Field &field, Expression &assignExpr,
+                             token_entity assignOper, Expression &outExpr) {
+    int64_t i64;
+    if(field.nativeInt()) {
+        outExpr.code.inject(outExpr.code.__asm64.size(), assignExpr.code); // integer value will be set in ebx
+
+        Generator::setupVariable(outExpr.code, field.vaddr); // get refrence to variable
+
+        outExpr.code.push_i64(SET_Di(i64, op_MOVI, 0), ecx);
+        outExpr.code.push_i64(SET_Ci(i64, op_RMOV, ecx, 0, ebx));
+    } else if(field.dynamicObject()) {
+
+    } else if(field.klass != NULL) {
+
+    }
+}
+
+void runtime::initVariable(Field& field, Expression& outExpr) {
+    Generator::setupVariable(outExpr.code, field.vaddr); // get refrence to variable
+    int64_t i64;
+
+    if(field.nativeInt()) {
+        outExpr.code.push_i64(SET_Di(i64, op_MOVI, 1), ecx);
+        outExpr.code.__asm64.add(SET_Di(i64, op_NEWi, ecx));
+    } else if(field.dynamicObject()) {
+        /* do nothing */
+    } else if(field.klass != NULL) {
+        outExpr.code.__asm64.add(SET_Di(i64, op_NEW_CLASS, field.klass));
+    }
+}
+
+Expression runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
     if(pAst->hassubast(ast_utype_arg)) {
         keypair<string, ResolvedReference> utypeArg = parseUtypeArg(pAst->getsubast(ast_utype_arg));
-        Expression expression;
+        Expression expression, result;
 
         if(pAst->hassubast(ast_value)) {
             expression = parse_value(pAst->getsubast(ast_value));
@@ -384,9 +416,10 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
 
             keypair<int, Field> local;
             local.set(scope->blocks, utypeArgToField(utypeArg));
-
             local.value.vaddr = scope->locals.size() - 1;
             scope->locals.push_back(local);
+
+            initVariable(local.value, result);
 
             Expression assignee(pAst);
             assignee.type = expression_field;
@@ -394,6 +427,8 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
             assignee.utype.type = ResolvedReference::FIELD;
             assignee.utype.refrenceName = scope->locals.get(scope->locals.size() - 1).value.name;
 
+
+            assignVariable(local.value, expression, pAst->getentity(0), result);
             if(comparator != NULL) {
                 equals(assignee, *comparator);
             }
@@ -403,7 +438,11 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
                 equals(assignee, expression);
             }
         }
+
+        return result;
     }
+
+    return Expression();
 }
 
 void runtime::parseForEachStatement(Block& block, ast* pAst) {
@@ -2050,7 +2089,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
 void runtime::setupFrame(Expression &expression, Method *fn) {
     int64_t i64;
-    if(methodReturntypeToExpressionType(fn) != lvoid) {
+    if(methodReturntypeToExpressionType(fn) != expression_void) {
         expression.code.push_i64(SET_Di(i64, op_INC, sp)); // reserve space for function on the stack
     }
 
@@ -6381,4 +6420,21 @@ void runtime::generate() {
     }
     _ostream.end();
     allMethods.free();
+}
+
+void runtime::Generator::setupVariable(m64Assembler &assembler, int64_t address) {
+    int64_t i64;
+    if(instance->current_scope()->type == scope_instance_block) {
+        /*
+         * We add 1 to the local address because self will be refrence 0
+         * on the stack
+         */
+        address++;
+    }
+
+    assembler.push_i64(SET_Di(i64, op_MOVL, address));
+}
+
+void runtime::Generator::assignValue(m64Assembler &assembler, Expression &expression, token_entity entity) {
+    if(instance->)
 }

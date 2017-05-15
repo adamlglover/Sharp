@@ -87,7 +87,6 @@ void Sh_object::createstr(int64_t ref) {
 void Sh_object::createclass(int64_t k) {
     ClassObject* klass = env->findClass(k);
     createclass(klass);
-
 }
 
 void Sh_object::createclass(ClassObject *klass) {
