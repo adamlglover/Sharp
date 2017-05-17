@@ -264,6 +264,25 @@ bool ClassObject::hasBaseClass(ClassObject *pObject) {
     }
 }
 
+int ClassObject::baseClassDepth(ClassObject *pObject) {
+    if(base == NULL) return 0;
+    ClassObject* k, *_klass = this;
+    int depth=0;
+
+    for(;;) {
+        depth++;
+        k = _klass->getBaseClass();
+
+        if(k == NULL)
+            return depth;
+
+        if(k->match(pObject)) {
+            return depth;
+        }else
+            _klass = k;
+    }
+}
+
 bool ClassObject::hasOverload(_operator op) {
     for(OperatorOverload& oper : *overloads) {
         if(op == oper.getOperator())

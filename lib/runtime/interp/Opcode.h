@@ -107,6 +107,26 @@ sh_asp* curr_func();
 
 #define imod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)x; _brh
 
+#define _addl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=__rxs[r]; _brh
+
+#define _subl(r,x) __stack[(int64_t)__rxs[fp]+x].var-=__rxs[r]; _brh
+
+#define _mull(r,x) __stack[(int64_t)__rxs[fp]+x].var*=__rxs[r]; _brh
+
+#define _divl(r,x) __stack[(int64_t)__rxs[fp]+x].var/=__rxs[r]; _brh
+
+#define modl(r,x)  (int64_t)__stack[(int64_t)__rxs[fp]+x].var%=(int64_t)__rxs[r]; _brh
+
+#define _iaddl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=r; _brh
+
+#define _isubl(r,x) __stack[(int64_t)__rxs[fp]+x].var-=r; _brh
+
+#define _imull(r,x) __stack[(int64_t)__rxs[fp]+x].var*=r; _brh
+
+#define _idivl(r,x) __stack[(int64_t)__rxs[fp]+x].var/=r; _brh
+
+#define imodl(r,x)  (int64_t)__stack[(int64_t)__rxs[fp]+x].var%=r; _brh
+
 #define _pop --__rxs[sp]; _brh
 
 #define inc(r) __rxs[r]++; _brh
@@ -257,6 +277,11 @@ sh_asp* curr_func();
         &&LOCK,                       \
         &&ULOCK,                       \
         &&EXP,                          \
+        &&ADDL,                          \
+        &&SUBL,                           \
+        &&MULL,                            \
+        &&DIVL,                             \
+        &&MODL,                              \
     };
 
 /*
@@ -334,6 +359,11 @@ enum OPCODE {
     op_LOCK=0x42,
     op_UlOCK=0x43,
     op_EXP=0x44,
+    op_ADDL=0x45,
+    op_SUBL=0x46,
+    op_MULL=0x47,
+    op_DIVL=0x48,
+    op_MODL=0x49,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

@@ -167,6 +167,8 @@ public:
 
     long getFieldIndex(string name);
 
+    int baseClassDepth(ClassObject *pObject);
+
 private:
     AccessModifier modifier;
     long uid;

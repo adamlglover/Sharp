@@ -118,7 +118,8 @@ struct Expression {
             code(),
             dot(false),
             lnk(NULL),
-            _new(false)
+            _new(false),
+            func(false)
     {
     }
 
@@ -129,7 +130,8 @@ struct Expression {
             code(),
             dot(false),
             lnk(pAst),
-            _new(false)
+            _new(false),
+            func(false)
     {
     }
 
@@ -139,7 +141,7 @@ struct Expression {
     ResolvedReference utype;
     m64Assembler code;
     ast* lnk;
-    bool dot, _new;
+    bool dot, _new, func;
     string value;
 
     string typeToString();
@@ -475,6 +477,7 @@ private:
     /* One off variables */
     RuntimeNote last_note;
     string last_notemsg;
+    int64_t i64;
 
     void interpret();
 
@@ -826,11 +829,27 @@ private:
         static void setupVariable(m64Assembler& assembler, int64_t address);
 
         static void assignValue(m64Assembler &assembler, Expression &expression, token_entity entity);
+
+        static int64_t variableOffset(int64_t address);
     };
 
     void assignVariable(Field &field, Expression &assignExpr, token_entity assignOper, Expression &outExpr);
 
     void initVariable(Field &field, Expression &outExpr);
+
+    void _CREATE_VARIABLE(m64Assembler& code, Field &variable);
+
+    void _ASSIGN_VARIABLE(m64Assembler &code, _operator op, Field &variable, Expression &value);
+
+    Expression fieldToExpression(ast *pAst, string name);
+
+    Expression fieldToExpression(ast *pAst, Field &field);
+
+    void _ASSIGN_CLASS_VARIABlE(m64Assembler &code, _operator op, Field &variable, Expression &value);
+
+    void _PUSH_VAR_VALUE_TO_REGISTER(Expression &value, int reg);
+
+    void parseBoolLiteral(token_entity token, Expression &expression);
 };
 
 #define progname "bootstrap"

@@ -716,6 +716,16 @@ void Thread::run() {
                 __ulock()
             EXP:
                 exp(GET_Da(cache[pc]))
+            ADDL:
+                _addl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            SUBL:
+                _subl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            MULL:
+                _mull(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            DIVL:
+                _divl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            MODL:
+                modl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error

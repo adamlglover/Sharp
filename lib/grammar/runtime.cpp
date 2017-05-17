@@ -340,31 +340,43 @@ void runtime::removeForLabels(Scope* scope) {
 
 void runtime::parseForStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
+    Expression cond, iter, init;
     scope->blocks++;
     scope->loops++;
+    int64_t conditionAddress, i64;
+    stringstream ss;
 
-    parseUtypeArg(pAst, scope, block);
+    init=parseUtypeArg(pAst, scope, block);
+    //block.code.inject(block.code.__asm64.size(), init.code);
 
-    Expression cond, iter;
+   // conditionAddress=__init_label_address;
     if(pAst->hassubast(ast_for_expresion_cond)) {
         cond = parseExpression(pAst->getsubast(ast_for_expresion_cond));
+      //  block.code.inject(block.code.__asm64.size(), cond.code);
+
+//        checkExpressionTypeVar(cond);
+//
+//        ss << for_label_end_id << scope->loops;
+//        scope->addStore(ss.str(), adx, 0, block.code, pAst->getsubast(ast_for_expresion_cond)->line,
+//                         pAst->getsubast(ast_for_expresion_cond)->col);
+//        block.code.push_i64(SET_Ei(i64, op_IFNE));
     }
 
     if(pAst->hassubast(ast_for_expresion_iter)) {
         iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
     }
 
-    // TODO: add real address
-    stringstream ss;
+    ss.str("");
     ss << for_label_begin_id << scope->loops;
 
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address));
 
     parseBlock(pAst->getsubast(ast_block), block);
+   //block.code.inject(block.code.__asm64.size(), iter.code);
 
     ss.str("");
     ss << for_label_end_id << scope->loops;
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address));
     scope->blocks--;
     scope->loops--;
 }
@@ -421,11 +433,7 @@ Expression runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Express
 
             initVariable(local.value, result);
 
-            Expression assignee(pAst);
-            assignee.type = expression_field;
-            assignee.utype.field = &scope->locals.get(scope->locals.size() - 1).value;
-            assignee.utype.type = ResolvedReference::FIELD;
-            assignee.utype.refrenceName = scope->locals.get(scope->locals.size() - 1).value.name;
+            Expression assignee = fieldToExpression(pAst, local.value);
 
 
             assignVariable(local.value, expression, pAst->getentity(0), result);
@@ -443,6 +451,32 @@ Expression runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Express
     }
 
     return Expression();
+}
+
+Expression runtime::fieldToExpression(ast *pAst, string name) {
+    Scope* scope=current_scope();
+    Expression fieldExpr(pAst);
+    keypair<int, Field>* field;
+
+    if((field =scope->getLocalField(name)) == NULL)
+        return fieldExpr;
+
+    fieldExpr.type = expression_field;
+    fieldExpr.utype.field = &field->value;
+    fieldExpr.utype.type = ResolvedReference::FIELD;
+    fieldExpr.utype.refrenceName = field->value.name;
+    return fieldExpr;
+}
+
+Expression runtime::fieldToExpression(ast *pAst, Field& field) {
+    Scope* scope=current_scope();
+    Expression fieldExpr(pAst);
+
+    fieldExpr.type = expression_field;
+    fieldExpr.utype.field = &field;
+    fieldExpr.utype.type = ResolvedReference::FIELD;
+    fieldExpr.utype.refrenceName = field.name;
+    return fieldExpr;
 }
 
 void runtime::parseForEachStatement(Block& block, ast* pAst) {
@@ -1125,9 +1159,8 @@ void runtime::parseStringLiteral(token_entity token, Expression& expression) {
     string_map.addif(parsed_string);
 }
 
-void parseBoolLiteral(token_entity token, Expression& expression) {
+void runtime::parseBoolLiteral(token_entity token, Expression& expression) {
     expression.type = expression_var;
-    int64_t i64;
     expression.code.push_i64(SET_Di(i64, op_MOVI, (token.gettoken() == "true" ? 1 : 0)), ebx);
 }
 
@@ -1202,7 +1235,8 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                     errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "static access on instance field `" + object_name + "`");
                 }
 
-
+                // for now we are just generating code for x.x.f not Main.x...thats static access
+                expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
 
                 if(lastRefrence) {
                     expression.utype.type = ResolvedReference::FIELD;
@@ -1236,8 +1270,11 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                 return;
             }
         } else {
+            if(field != NULL) {
+                field = NULL;
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " ecpected class or module before `" + object_name + "` ");
+            }
             if(lastRefrence) {
-                expression.code.free();
                 expression.utype.type = ResolvedReference::CLASS;
                 expression.utype.klass = klass;
                 expression.type = expression_class;
@@ -1315,6 +1352,9 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                     expression.utype.type = ResolvedReference::CLASS;
                     expression.utype.klass = ref.klass;
                     expression.type = expression_class;
+
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV));
                 } else {
                     // klass provided is not a base
                     errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + reference.refname + "`" +
@@ -1342,6 +1382,10 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 expression.utype.type = ResolvedReference::CLASS;
                 expression.utype.klass = base;
                 expression.type = expression_class;
+                expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                int max = scope->klass->baseClassDepth(base);
+                for(int j = 0; j < max; j++)
+                    expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
                 return;
             } else {
                 // klass provided is not a base
@@ -1372,6 +1416,11 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 // first must be class
                 if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
                     if(scope->klass->hasBaseClass(klass)) {
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                        int max = scope->klass->baseClassDepth(base);
+                        for(int j = 0; j < max; j++)
+                            expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
+
                         resolveClassHeiarchy(klass, reference, expression, pAst);
                     } else {
                         // klass provided is not a base
@@ -1394,13 +1443,25 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 ref = getBaseClassOrField(starter_name, klass);
                 if(ref.type != ResolvedReference::NOTRESOLVED) {
                     if(ref.type == ResolvedReference::FIELD) {
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                        expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
+                        expression.code.push_i64(SET_Di(i64, op_MOVN, ref.field->vaddr)); // gain access to field in object
+                        // TODO: this code needs some touching up field can be anywhere
                         resolveFieldHeiarchy(ref.field, reference, expression, pAst);
                     } else {
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                        expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base object
+
                         resolveClassHeiarchy(ref.klass, reference, expression, pAst);
                     }
                 } else {
                     if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
                         if(scope->klass->hasBaseClass(klass)) {
+                            expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                            int max = scope->klass->baseClassDepth(base);
+                            for(int j = 0; j < max; j++)
+                                expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
+
                             resolveClassHeiarchy(klass, reference, expression, pAst);
                         } else {
                             errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + starter_name + "`" +
@@ -1456,6 +1517,9 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
                     expression.utype.type = ResolvedReference::FIELD;
                     expression.utype.field = field;
                     expression.type = expression_field;
+
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
                 } else {
                     /* Un resolvable */
                     errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
@@ -1506,6 +1570,9 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 expression.type = expression_unresolved;
             } else {
                 if((field = scope->klass->getField(starter_name)) != NULL) {
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+
                     resolveFieldHeiarchy(field, reference, expression, pAst);
                 } else {
                     /* Un resolvable */
@@ -1751,8 +1818,7 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     }
 
     if(expression.type == expression_class) {
-        int64_t i64;
-        expression.code.push_i64(SET_Di(i64, op_MOVI, expression.utype.klass->vaddr), ebx);
+        expression.macroOpcodes.add(macro_Op(__SET_INTEGER_LITERAL, expression.utype.klass->vaddr));
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
@@ -2035,6 +2101,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
                 List<Param> emptyParams;
 
                 expression.type = expression_var;
+                expression.func = true;
                 if(fn->array) {
                     errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "` must return an int to use `" + entity.gettoken() + "` operator");
                 } else {
@@ -2885,6 +2952,123 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
     }
 
     return expression;
+}
+
+void runtime::_CREATE_VARIABLE(m64Assembler& code, Field& variable) {
+    Generator::setupVariable(code, variable.vaddr); // get refrence to variable
+
+    if(variable.nativeInt()) {
+        code.push_i64(SET_Di(i64, op_MOVI, 1), ecx);
+        code.__asm64.add(SET_Di(i64, op_NEWi, ecx));
+    } else if(variable.dynamicObject()) {
+        /* do nothing */
+    } else if(variable.klass != NULL) {
+        code.__asm64.add(SET_Di(i64, op_NEW_CLASS, variable.klass));
+    }
+}
+
+void runtime::_PUSH_VAR_VALUE_TO_REGISTER(Expression& value, int reg) {
+    if(value.func) {
+        /*
+         * movr %adx,%sp
+         * smov %reg
+         */
+        value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+        value.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
+    } else {
+        switch(value.type) {
+            case expression_var:
+                /* Do nothing */
+                break;
+            case expression_field:
+                /*
+                 * movi #0,ecx
+                 * movx reg,ecx
+                 */
+                value.code.push_i64(SET_Di(i64, op_MOVI, 0), ecx);
+                value.code.push_i64(SET_Ci(i64, op_MOVX, reg,0, ecx));
+                break;
+            default:
+                /* Do nothing */
+                break;
+        }
+    }
+}
+
+void runtime::_ASSIGN_VARIABLE(m64Assembler& code, _operator op, Field& variable, Expression& value) {
+    if(variable.type == field_unresolved) return;
+
+    if(variable.type == field_class)
+        _ASSIGN_CLASS_VARIABlE(code, op, variable, value);
+    else {
+        Expression fieldExpr = fieldToExpression(NULL, variable);
+        if(equals(fieldExpr, value)) {
+
+            switch(op) {
+                case oper_EQUALS:
+                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
+                    /*
+                     * movr adx,fp
+                     * smovr ebx+<var_offset>
+                     */
+                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    value.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, Generator::variableOffset(variable.vaddr)));
+                    break;
+                case oper_PLUS_EQ:
+                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
+                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
+                    /*
+                     * add ebx,ecx
+                     * movr adx,fp
+                     * smovr bmr+<var_offset>
+                     */
+                    value.code.push_i64(SET_Ci(i64, op_ADD, ebx,0, ecx));
+                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
+                    break;
+                case oper_MIN_EQ:
+                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
+                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
+                    /*
+                     * sub ebx,ecx
+                     * movr adx,fp
+                     * smovr bmr+<var_offset>
+                     */
+                    value.code.push_i64(SET_Ci(i64, op_SUB, ebx,0, ecx));
+                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
+                    break;
+                case oper_DIV_EQ:
+                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
+                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
+                    /*
+                     * div ebx,ecx
+                     * movr adx,fp
+                     * smovr bmr+<var_offset>
+                     */
+                    value.code.push_i64(SET_Ci(i64, op_DIV, ebx,0, ecx));
+                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
+                    break;
+                case oper_MOD_EQ:
+                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
+                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
+                    /*
+                     * mod ebx,ecx
+                     * movr adx,fp
+                     * smovr bmr+<var_offset>
+                     */
+                    value.code.push_i64(SET_Ci(i64, op_MOD, ebx,0, ecx));
+                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
+                    break;
+            }
+        }
+    }
+}
+
+void runtime::_ASSIGN_CLASS_VARIABlE(m64Assembler& code, _operator op, Field& variable, Expression& value) {
+
 }
 
 Expression runtime::parseArrayExpression(ast* pAst) {
@@ -6424,17 +6608,21 @@ void runtime::generate() {
 
 void runtime::Generator::setupVariable(m64Assembler &assembler, int64_t address) {
     int64_t i64;
-    if(instance->current_scope()->type == scope_instance_block) {
+
+    assembler.push_i64(SET_Di(i64, op_MOVL, variableOffset(address)));
+}
+
+int64_t runtime::Generator::variableOffset(int64_t address) {
+    if(runtime::Generator::instance->current_scope()->type == scope_instance_block) {
         /*
          * We add 1 to the local address because self will be refrence 0
          * on the stack
          */
         address++;
     }
-
-    assembler.push_i64(SET_Di(i64, op_MOVL, address));
+    return address;
 }
 
 void runtime::Generator::assignValue(m64Assembler &assembler, Expression &expression, token_entity entity) {
-    if(instance->)
+
 }

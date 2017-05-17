@@ -4,14 +4,15 @@ mod std.err;
  * Created by BraxtonN on 5/5/2017.
  */
 class Throwable {
-    string message;
+    var[] message;
+    var[] stackTrace;
 
     Throwable(var[] message) {
         self->message = message;
     }
 
     Throwable(string message) {
-        self->message = message;
+        self->message = message.getData();
     }
 
     fn getStackTrace() : string {
