@@ -169,6 +169,8 @@ public:
 
     int baseClassDepth(ClassObject *pObject);
 
+    long getTotalFieldCount();
+
 private:
     AccessModifier modifier;
     long uid;

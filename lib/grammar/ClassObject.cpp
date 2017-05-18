@@ -117,7 +117,7 @@ bool ClassObject::addField(Field field) {
     if(getField(field.name) != NULL)
         return false;
 
-    field.vaddr = this->fieldCount()==0?0:this->fieldCount()-1;
+    field.vaddr = this->getTotalFieldCount()==0?0:this->getTotalFieldCount()-1;
     field.fullName = this->fullName + "." + name;
     fields->push_back(field);
     return true;
@@ -338,4 +338,20 @@ OperatorOverload *ClassObject::getPreDecOverload() {
     }
 
     return NULL;
+}
+
+long ClassObject::getTotalFieldCount() {
+    if(base == NULL) return fieldCount();
+    ClassObject* k, *_klass = this;
+    long fields=fieldCount();
+
+    for(;;) {
+        k = _klass->getBaseClass();
+
+        if(k == NULL)
+            return fields;
+
+        fields+=k->fieldCount();
+        _klass = k;
+    }
 }

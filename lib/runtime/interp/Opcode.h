@@ -115,7 +115,7 @@ sh_asp* curr_func();
 
 #define _divl(r,x) __stack[(int64_t)__rxs[fp]+x].var/=__rxs[r]; _brh
 
-#define modl(r,x)  (int64_t)__stack[(int64_t)__rxs[fp]+x].var%=(int64_t)__rxs[r]; _brh
+#define modl(r,x)  __stack[(int64_t)__rxs[fp]+x].modul((int64_t)__rxs[r]); _brh
 
 #define _iaddl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=r; _brh
 
@@ -160,10 +160,6 @@ sh_asp* curr_func();
 #define lte(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
 
 #define movl(x) ptr=&__stack[(int64_t)__rxs[fp]+x].object; _brh
-
-#define object_nxt CHK_NULL(ptr=ptr->nxt;) _brh // TODO: add arg(x) to pick index of the node to jump to
-
-#define object_prev CHK_NULL(ptr=ptr->prev;) _brh // ToDO: for future check if node is null
 
 #define movbi(x) __rxs[0x0008]=x; pc++; _brh
 
@@ -239,8 +235,8 @@ sh_asp* curr_func();
 		&&GTE,	\
 		&&LTE,	\
 		&&MOVL,	\
-		&&OBJECT_NXT,	\
-		&&OBJECT_PREV,	\
+        &&_NOP,	\
+        &&_NOP,	\
 		&&RMOV,	\
 		&&MOV,	\
 		&&MOVD,	\

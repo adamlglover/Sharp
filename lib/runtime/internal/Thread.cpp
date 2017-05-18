@@ -652,10 +652,6 @@ void Thread::run() {
                 lte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOVL:
                 movl(GET_Da(cache[pc]))
-            OBJECT_NXT:
-                object_nxt
-            OBJECT_PREV:
-                object_prev
             RMOV:
                 CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh)
             MOV:
@@ -750,19 +746,19 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
                 tbl = et;
 
                 Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
-                Sh_object* eObject = exceptionObject;
+                ClassObject* klass = exceptionObject == NULL ? NULL : exceptionObject->klass;
 
                 for(;;) {
-                    if(eObject == NULL || eObject->klass == NULL)
+                    if(klass == NULL)
                         break;
 
-                    if(tbl->klass == eObject->klass->name) {
-                        object->mutate(eObject);
+                    if(tbl->klass == klass->name) {
+                        object->mutate(exceptionObject);
                         pc = tbl->handler_pc;
                         return true;
                     }
 
-                    eObject = eObject->prev;
+                    klass = klass->super;
                 }
             }
         }
@@ -905,7 +901,7 @@ void Thread::Throw(Sh_object* exceptionObject) {
     }
 
     stringstream ss;
-    ss << "Unhandled exception (most recent call last):\n"; ss << throwable.stackTrace.str();
+    ss << "Unhandled exception on thread " << name.str() << " (most recent call last):\n"; ss << throwable.stackTrace.str();
     ss << endl << throwable.throwable->name.str() << " ("
        << throwable.message.str() << ")\n";
     throw Exception(ss.str());

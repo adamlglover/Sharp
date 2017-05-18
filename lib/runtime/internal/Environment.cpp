@@ -101,7 +101,7 @@ void Environment::init(Sh_object* objects, int64_t size) {
         Sh_object* ptr=&objects[0];
         for(int64_t i = 0; i < size; i++) {
             ptr->HEAD=NULL;
-            ptr->_Node = NULL, ptr->prev=NULL,ptr->nxt=NULL;
+            ptr->_Node = NULL;
             ptr->_rNode = NULL;
             ptr->mark = gc_orange;
             ptr->size = 0;
@@ -120,7 +120,7 @@ void Environment::init(_gc_object* objects, int64_t size) {
         _gc_object* ptr=&objects[0];
         for(int64_t i = 0; i < size; i++) {
             ptr->HEAD=NULL;
-            ptr->_Node = NULL, ptr->prev=NULL,ptr->nxt=NULL;
+            ptr->_Node = NULL;
             ptr->_rNode=NULL;
             ptr->size = 0;
             ptr++;
@@ -175,7 +175,7 @@ void Environment::init(data_stack *st, int64_t stack_size) {
     if(stack_size > 0 && st != NULL) {
         for(int64_t i = 0; i < stack_size; i++) {
             st[i].object.HEAD=NULL;
-            st[i].object._Node = NULL, st[i].object.prev=NULL,st[i].object.nxt=NULL;
+            st[i].object._Node = NULL;
             st[i].object._rNode = NULL;
             st[i].object.mark = gc_orange;
             st[i].object.size = 0;
@@ -228,16 +228,9 @@ Sh_object *Environment::findfield(std::string name, Sh_object *object) {
         return NULL;
 
     int64_t index;
-    ClassObject* klass = object->klass;
-    for(;;) {
-        if(klass == NULL)
-            return NULL;
-
-        if((index = klass->fieldindex(name)) != -1) {
-            return &object->_Node[index];
-        }
-
-        klass = klass->super;
-        object = object->prev;
+    if((index = object->klass->fieldindex(name)) != -1) {
+        return &object->_Node[index];
     }
+
+    return NULL;
 }

@@ -53,7 +53,7 @@ private:
 
 struct _gc_object{
     double *HEAD;
-    Sh_object *_Node, *prev, *nxt;
+    Sh_object *_Node;
     Sh_object* _rNode;
     int64_t size;
 

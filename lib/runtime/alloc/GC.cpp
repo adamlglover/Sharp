@@ -114,8 +114,6 @@ void GC::_insert(Sh_object *gc_obj) {
         gc_obj->refs.free();
     }
 
-    gc->gc_alloc_heap[gc->allocptr].nxt=gc_obj->nxt;
-    gc->gc_alloc_heap[gc->allocptr].prev=gc_obj->prev;
     gc->gc_alloc_heap[gc->allocptr].HEAD=gc_obj->HEAD;
     gc->gc_alloc_heap[gc->allocptr]._Node=gc_obj->_Node;
     gc->gc_alloc_heap[gc->allocptr].size=gc_obj->size;
@@ -246,8 +244,7 @@ void GC::_insert_stack(Sh_object *stack, unsigned long len) {
             }
             ptr->refs.free();
         }
-        gc->gc_alloc_heap[gc->allocptr].nxt=ptr->nxt;
-        gc->gc_alloc_heap[gc->allocptr].prev=ptr->prev;
+
         gc->gc_alloc_heap[gc->allocptr].HEAD=ptr->HEAD;
         gc->gc_alloc_heap[gc->allocptr]._Node=ptr->_Node;
         gc->gc_alloc_heap[gc->allocptr].size=ptr->size;
@@ -274,8 +271,7 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
                 st[i].object.del_ref();
                 continue;
             }
-            gc->gc_alloc_heap[gc->allocptr].nxt=st[i].object.nxt;
-            gc->gc_alloc_heap[gc->allocptr].prev=st[i].object.prev;
+
             gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
             gc->gc_alloc_heap[gc->allocptr]._Node=st[i].object._Node;
             gc->gc_alloc_heap[gc->allocptr]._rNode=NULL;
@@ -284,7 +280,7 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
             gc->allocptr++;
 
             st[i].object.HEAD=NULL;
-            st[i].object._Node = NULL, st[i].object.prev=NULL,st[i].object.nxt=NULL;
+            st[i].object._Node = NULL;
             st[i].object.mark = gc_orange;
             st[i].object.size = 0;
             st[i].object.monitor = Monitor();

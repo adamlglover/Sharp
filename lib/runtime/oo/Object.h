@@ -40,8 +40,6 @@ enum Type {
 
 #define Sh_InvRef(x) { \
 x->HEAD=NULL; \
-x->nxt==NULL;  \
-x->prev=NULL;  \
 x->size=0;  \
 x->_Node=NULL;  \
 x->_rNode=NULL;  \
@@ -62,7 +60,7 @@ public:
     gc_mark mark;
     int64_t size;
     ClassObject* klass;
-    Sh_object *_Node, *prev, *nxt;
+    Sh_object *_Node;
     Monitor monitor;
     List<Sh_object*> refs;
     Sh_object* _rNode;
