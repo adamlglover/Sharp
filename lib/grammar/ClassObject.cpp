@@ -7,7 +7,7 @@
 #include "runtime.h"
 
 size_t ClassObject::constructorCount() {
-    return constructors->size();
+    return constructors.size();
 }
 
 bool ClassObject::addChildClass(ClassObject klass) {
@@ -18,16 +18,17 @@ bool ClassObject::addChildClass(ClassObject klass) {
     }
 
     klass.vaddr = runtime::classUID++;
-    childClasses->push_back(klass);
+    childClasses.push_back(klass);
     return true;
 }
 
 Method* ClassObject::getConstructor(int p) {
-    return &(*std::next(constructors->begin(), p));
+    return &constructors.get(p);
 }
 
 Method *ClassObject::getConstructor(List<Param>& params) {
-    for(Method& function : *constructors) {
+    for(unsigned int i = 0; i < constructors.size(); i++) {
+        Method& function = constructors.get(i);
         if(Param::match(*function.getParams(), params))
             return &function;
     }
@@ -42,20 +43,21 @@ bool ClassObject::addConstructor(Method constr) {
     if(getConstructor(*constr.getParams()) != NULL)
         return false;
 
-    constructors->push_back(constr);
+    constructors.push_back(constr);
     return true;
 }
 
 size_t ClassObject::functionCount() {
-    return functions->size();
+    return functions.size();
 }
 
 Method* ClassObject::getFunction(int p) {
-    return &(*std::next(functions->begin(), p));
+    return &functions.get(p);
 }
 
 Method *ClassObject::getFunction(string name, List<Param>& params) {
-    for(Method& function : *functions) {
+    for(unsigned int i = 0; i < functions.size(); i++) {
+        Method& function = functions.get(i);
         if(Param::match(*function.getParams(), params) && name == function.getName())
             return &function;
     }
@@ -64,7 +66,8 @@ Method *ClassObject::getFunction(string name, List<Param>& params) {
 }
 
 Method *ClassObject::getFunction(string name, int64_t _offset) {
-    for(Method& function : *functions) {
+    for(unsigned int i = 0; i < functions.size(); i++) {
+        Method& function = functions.get(i);
         if(name == function.getName()) {
             if(_offset == 0)
                 return &function;
@@ -80,20 +83,21 @@ bool ClassObject::addFunction(Method function) {
     if(getFunction(function.getName(), *function.getParams()) != NULL)
         return false;
 
-    functions->push_back(function);
+    functions.push_back(function);
     return true;
 }
 
 size_t ClassObject::fieldCount() {
-    return fields->size();
+    return fields.size();
 }
 
 Field* ClassObject::getField(int p) {
-    return &(*std::next(fields->begin(), p));
+    return &fields.get(p);
 }
 
 Field* ClassObject::getField(string name) {
-    for(Field& field : *fields) {
+    for(unsigned int i = 0; i < fields.size(); i++) {
+        Field& field = fields.get(i);
         if(field.name == name)
             return &field;
     }
@@ -104,7 +108,8 @@ Field* ClassObject::getField(string name) {
 
 long ClassObject::getFieldIndex(string name) {
     long iter = 0;
-    for(Field& field : *fields) {
+    for(unsigned int i = 0; i < fields.size(); i++) {
+        Field& field = fields.get(i);
         if(field.name == name)
             return iter;
         iter++;
@@ -119,20 +124,21 @@ bool ClassObject::addField(Field field) {
 
     field.vaddr = this->getTotalFieldCount()==0?0:this->getTotalFieldCount()-1;
     field.fullName = this->fullName + "." + name;
-    fields->push_back(field);
+    fields.push_back(field);
     return true;
 }
 
 size_t ClassObject::childClassCount() {
-    return childClasses->size();
+    return childClasses.size();
 }
 
 ClassObject* ClassObject::getChildClass(int p) {
-    return &(*std::next(childClasses->begin(), p));
+    return &childClasses.get(p);
 }
 
 ClassObject* ClassObject::getChildClass(string name) {
-    for(ClassObject& klass : *childClasses) {
+    for(unsigned int i = 0; i < childClasses.size(); i++) {
+        ClassObject& klass = childClasses.get(i);
         if(klass.name == name)
             return &klass;
     }
@@ -145,15 +151,16 @@ void ClassObject::free() {
 }
 
 size_t ClassObject::overloadCount() {
-    return overloads->size();
+    return overloads.size();
 }
 
 OperatorOverload *ClassObject::getOverload(size_t p) {
-    return &element_at(*overloads, p);
+    return &overloads.get(p);
 }
 
 OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params) {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(Param::match(*oper.getParams(), params) && op == oper.getOperator())
             return &oper;
     }
@@ -162,7 +169,8 @@ OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params) {
 }
 
 OperatorOverload *ClassObject::getOverload(_operator op, int64_t _offset) {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(op == oper.getOperator()) {
             if(_offset == 0)
                 return &oper;
@@ -178,20 +186,21 @@ bool ClassObject::addOperatorOverload(OperatorOverload overload) {
     if(getOverload(overload.getOperator(), *overload.getParams()) != NULL)
         return false;
 
-    overloads->push_back(overload);
+    overloads.push_back(overload);
     return true;
 }
 
 size_t ClassObject::macrosCount() {
-    return macros->size();
+    return macros.size();
 }
 
 Method *ClassObject::getMacros(int p) {
-    return &element_at(*macros,p);
+    return &macros.get(p);
 }
 
 Method *ClassObject::getMacros(string name, List<Param> &params) {
-    for(Method& macro : *macros) {
+    for(unsigned int i = 0; i < macros.size(); i++) {
+        Method& macro = macros.get(i);
         if(Param::match(*macro.getParams(), params) && name == macro.getName())
             return &macro;
     }
@@ -200,7 +209,8 @@ Method *ClassObject::getMacros(string name, List<Param> &params) {
 }
 
 Method *ClassObject::getMacros(string name, int64_t _offset) {
-    for(Method& macro : *macros) {
+    for(unsigned int i = 0; i < macros.size(); i++) {
+        Method& macro = macros.get(i);
         if(name == macro.getName()) {
             if(_offset == 0)
                 return &macro;
@@ -216,7 +226,7 @@ bool ClassObject::addMacros(Method macro) {
     if(getMacros(macro.getName(), *macro.getParams()) != NULL)
         return false;
 
-    macros->push_back(macro);
+    macros.push_back(macro);
     return true;
 }
 
@@ -231,7 +241,8 @@ bool ClassObject::curcular(ClassObject *pObject) {
         return super->curcular(pObject);
     }
 
-    for(ClassObject& klass : *this->childClasses) {
+    for(unsigned int i = 0; i < childClasses.size(); i++) {
+        ClassObject& klass = this->childClasses.get(i);
         if(klass.match(pObject) || klass.curcular(pObject)) {
             cSuper = 0;
             return true;
@@ -284,7 +295,8 @@ int ClassObject::baseClassDepth(ClassObject *pObject) {
 }
 
 bool ClassObject::hasOverload(_operator op) {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(op == oper.getOperator())
             return true;
     }
@@ -293,7 +305,8 @@ bool ClassObject::hasOverload(_operator op) {
 }
 
 OperatorOverload *ClassObject::getPostIncOverload() {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(oper_INC == oper.getOperator()) {
             if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
@@ -305,7 +318,8 @@ OperatorOverload *ClassObject::getPostIncOverload() {
 }
 
 OperatorOverload *ClassObject::getPostDecOverload() {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(oper_DEC == oper.getOperator()) {
             if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
@@ -317,7 +331,8 @@ OperatorOverload *ClassObject::getPostDecOverload() {
 }
 
 OperatorOverload *ClassObject::getPreIncOverload() {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(oper_INC == oper.getOperator()) {
             if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
@@ -329,7 +344,8 @@ OperatorOverload *ClassObject::getPreIncOverload() {
 }
 
 OperatorOverload *ClassObject::getPreDecOverload() {
-    for(OperatorOverload& oper : *overloads) {
+    for(unsigned int i = 0; i < overloads.size(); i++) {
+        OperatorOverload& oper = overloads.get(i);
         if(oper_DEC == oper.getOperator()) {
             if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
@@ -367,7 +383,7 @@ long ClassObject::getTotalFunctionCount() {
         if(k == NULL)
             return total;
 
-        fields+=TOTAL_FUNCS(k);
+        total+=TOTAL_FUNCS(k);
         _klass = k;
     }
 }

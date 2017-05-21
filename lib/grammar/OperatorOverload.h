@@ -43,6 +43,11 @@ public:
         this->op = op;
     }
 
+    OperatorOverload()
+             : Method() {
+        op = oper_NO;
+    }
+
     _operator getOperator() { return op; }
 
 private:

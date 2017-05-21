@@ -29,12 +29,12 @@ public:
             note(),
             fullName("")
     {
-        functions = new list<Method>();
-        constructors = new list<Method>();
-        macros = new list<Method>();
-        overloads = new list<OperatorOverload>();
-        fields = new list<Field>();
-        childClasses = new list<ClassObject>();
+        functions.init();
+        constructors.init();
+        macros.init();
+        overloads.init();
+        fields.init();
+        childClasses.init();
     }
     ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note)
     :
@@ -48,12 +48,12 @@ public:
             note(note),
             fullName("")
     {
-        functions = new list<Method>();
-        constructors = new list<Method>();
-        macros = new list<Method>();
-        overloads = new list<OperatorOverload>();
-        fields = new list<Field>();
-        childClasses = new list<ClassObject>();
+        functions.init();
+        constructors.init();
+        macros.init();
+        overloads.init();
+        fields.init();
+        childClasses.init();
     }
 
     ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note,
@@ -69,12 +69,12 @@ public:
             note(note),
             fullName("")
     {
-        functions = new list<Method>();
-        constructors = new list<Method>();
-        macros = new list<Method>();
-        overloads = new list<OperatorOverload>();
-        fields = new list<Field>();
-        childClasses = new list<ClassObject>();
+        functions.init();
+        constructors.init();
+        macros.init();
+        overloads.init();
+        fields.init();
+        childClasses.init();
     }
 
     AccessModifier getAccessModifier() { return modifier; }
@@ -185,12 +185,12 @@ private:
     string name;
     string fullName;
     string module_name;
-    list<Method>* constructors;
-    list<Method>* functions;
-    list<Method>* macros;
-    list<OperatorOverload>* overloads;
-    list<Field> *fields;
-    list<ClassObject>* childClasses;
+    List<Method> constructors;
+    List<Method> functions;
+    List<Method> macros;
+    List<OperatorOverload> overloads;
+    List<Field> fields;
+    List<ClassObject> childClasses;
     ClassObject *super, *head;
     ClassObject* base;
 
