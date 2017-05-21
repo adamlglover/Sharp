@@ -171,6 +171,8 @@ public:
 
     long getTotalFieldCount();
 
+    long getTotalFunctionCount();
+
 private:
     AccessModifier modifier;
     long uid;
@@ -187,6 +189,8 @@ private:
     ClassObject* base;
 
 };
+
+#define TOTAL_FUNCS(x) x->functionCount()+x->constructorCount()+x->overloadCount()+x->macrosCount()
 
 
 #endif //SHARP_CLASSOBJECT_H

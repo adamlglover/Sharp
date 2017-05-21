@@ -819,8 +819,6 @@ private:
 
     void resolveAllBranches(Block& block);
 
-    void setupFrame(Expression &expression, Method *fn);
-
     class Generator {
 
     public:

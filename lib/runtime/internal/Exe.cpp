@@ -18,7 +18,7 @@ uint64_t n = 0, jobIndx=0;
 
 bool checkFile(file::buffer& exe);
 
-nString getstring(file::buffer& exe);
+string getstring(file::buffer& exe);
 
 int64_t getlong(file::buffer& exe);
 
@@ -180,10 +180,10 @@ int Process_Exe(std::string exe)
                                 n++;
                             } else
                                 break;
-                        }
 
-                        if(fieldPtr != klass->fieldCount) {
-                            throw std::runtime_error("invalid field size");
+                            if(fieldPtr > klass->fieldCount) {
+                                throw std::runtime_error("invalid field size");
+                            }
                         }
                     }
 
@@ -478,8 +478,8 @@ void getField(file::buffer& exe, list <MetaField>& mFields, Field* field) {
     mFields.push_back(MetaField(field, getlong(exe)));
 }
 
-nString getstring(file::buffer& exe) {
-    nString s;
+string getstring(file::buffer& exe) {
+    string s;
     char c = exe.at(n);
     while(exe.at(n++) != nil) {
         s+=exe.at(n-1);
@@ -489,7 +489,9 @@ nString getstring(file::buffer& exe) {
 }
 
 int64_t getlong(file::buffer& exe) {
-    return strtoll(getstring(exe).str().c_str(), NULL, 0);
+    nString integer;
+    integer = getstring(exe);
+    return strtoll(integer.str().c_str(), NULL, 0);
 }
 
 nString string_forward(file::buffer& str, size_t begin, size_t end) {

@@ -1818,7 +1818,7 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     }
 
     if(expression.type == expression_class) {
-        expression.macroOpcodes.add(macro_Op(__SET_INTEGER_LITERAL, expression.utype.klass->vaddr));
+       // expression.macroOpcodes.add(macro_Op(__SET_INTEGER_LITERAL, expression.utype.klass->vaddr));
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
@@ -2152,18 +2152,6 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
     expression.lnk = pAst;
     return expression;
-}
-
-void runtime::setupFrame(Expression &expression, Method *fn) {
-    int64_t i64;
-    if(methodReturntypeToExpressionType(fn) != expression_void) {
-        expression.code.push_i64(SET_Di(i64, op_INC, sp)); // reserve space for function on the stack
-    }
-
-    expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
-    if(fn->isStatic()) {
-        // TODO: push self on the stack
-    }
 }
 
 Expression runtime::parsePrimaryExpression(ast* pAst) {
@@ -5313,7 +5301,7 @@ void help() {
 }
 
 #define opt(v) strcmp(argv[i], v) == 0
-void _srt_start(list<string> files);
+void _srt_start(List<string> files);
 
 void print_vers();
 
@@ -5333,7 +5321,7 @@ int _bootstrap(int argc, const char* argv[]) {
         return 1;
     }
 
-    list<string> files;
+    List<string> files;
     for (int i = 1; i < argc; ++i) {
         args_:
             if(opt("-a")){
@@ -5417,8 +5405,7 @@ int _bootstrap(int argc, const char* argv[]) {
                         goto args_;
                     f =string(argv[i++]);
 
-                    if(!element_has(files, f))
-                        files.push_back(f);
+                    files.addif(f);
                 }while(i<argc);
                 break;
             }
@@ -5429,7 +5416,9 @@ int _bootstrap(int argc, const char* argv[]) {
         return 1;
     }
 
-    for(string file : files){
+    for(unsigned int i = 0; i < files.size(); i++) {
+        string& file = files.get(i);
+
         if(!file::exists(file.c_str())){
             rt_error("file `" + file + "` doesnt exist!");
         }
@@ -5446,7 +5435,7 @@ void print_vers() {
     cout << progname << " " << progvers;
 }
 
-void _srt_start(list<string> files)
+void _srt_start(List<string> files)
 {
     std::list<parser*> parsers;
     parser* p = NULL;
@@ -5455,7 +5444,8 @@ void _srt_start(list<string> files)
     size_t errors=0, uo_errors=0;
     int succeeded=0, failed=0, panic=0;
 
-    for(string file : files) {
+    for(unsigned int i = 0; i < files.size(); i++) {
+        string& file = files.get(i);
         source.begin();
 
         file::read_alltext(file.c_str(), source);
@@ -6424,35 +6414,88 @@ std::string runtime::class_to_stream(ClassObject& klass) {
     kstream << (klass.getSuperClass() == NULL ? -1 : klass.getSuperClass()->vaddr) << ((char)nil);
     kstream << mi64_tostr(klass.vaddr);
     kstream << klass.getFullName() << ((char)nil);
-    kstream << klass.fieldCount() << ((char)nil);
-    kstream << (klass.functionCount()+klass.constructorCount()+klass.overloadCount()+klass.macrosCount()) << ((char)nil);
+    kstream << klass.getTotalFieldCount() << ((char)nil);
+    kstream << klass.getTotalFunctionCount() << ((char)nil);
 
     for(long long i = 0; i < klass.fieldCount(); i++) {
         kstream << field_to_stream(*klass.getField(i));
     }
 
+    ClassObject* base = klass.getBaseClass();
+    while(base != NULL) {
+        for(long long i = 0; i < base->fieldCount(); i++) {
+            kstream << field_to_stream(*base->getField(i));
+        }
+
+        base = base->getBaseClass();
+    }
+
+    /* Constructors */
     for(long long i = 0; i < klass.constructorCount(); i++) {
         kstream << (char)data_method;
         kstream << mi64_tostr(klass.getConstructor(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getConstructor(i));
     }
 
+    base = klass.getBaseClass();
+    while(base != NULL) {
+        for(long long i = 0; i < base->constructorCount(); i++) {
+            kstream << (char)data_method;
+            kstream << mi64_tostr(base->getConstructor(i)->vaddr) << ((char)nil);
+        }
+
+        base = base->getBaseClass();
+    }
+
+    /* Methods */
     for(long long i = 0; i < klass.functionCount(); i++) {
         kstream << (char)data_method;
         kstream << mi64_tostr(klass.getFunction(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getFunction(i));
     }
 
+    base = klass.getBaseClass();
+    while(base != NULL) {
+        for(long long i = 0; i < base->functionCount(); i++) {
+            kstream << (char)data_method;
+            kstream << mi64_tostr(base->getFunction(i)->vaddr) << ((char)nil);
+        }
+
+        base = base->getBaseClass();
+    }
+
+    /* Overloads */
     for(long long i = 0; i < klass.overloadCount(); i++) {
         kstream << (char)data_method;
         kstream << mi64_tostr(klass.getOverload(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getOverload(i));
     }
 
+    base = klass.getBaseClass();
+    while(base != NULL) {
+        for(long long i = 0; i < base->overloadCount(); i++) {
+            kstream << (char)data_method;
+            kstream << mi64_tostr(base->getOverload(i)->vaddr) << ((char)nil);
+        }
+
+        base = base->getBaseClass();
+    }
+
+    /* Macros */
     for(long long i = 0; i < klass.macrosCount(); i++) {
         kstream << (char)data_method;
         kstream << mi64_tostr(klass.getMacros(i)->vaddr) << ((char)nil);
         allMethods.add(klass.getMacros(i));
+    }
+
+    base = klass.getBaseClass();
+    while(base != NULL) {
+        for(long long i = 0; i < base->macrosCount(); i++) {
+            kstream << (char)data_method;
+            kstream << mi64_tostr(base->getMacros(i)->vaddr) << ((char)nil);
+        }
+
+        base = base->getBaseClass();
     }
 
     for(long long i = 0; i < klass.childClassCount(); i++) {

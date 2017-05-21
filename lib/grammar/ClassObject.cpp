@@ -355,3 +355,19 @@ long ClassObject::getTotalFieldCount() {
         _klass = k;
     }
 }
+
+long ClassObject::getTotalFunctionCount() {
+    if(base == NULL) return TOTAL_FUNCS(this);
+    ClassObject* k, *_klass = this;
+    long total=TOTAL_FUNCS(this);
+
+    for(;;) {
+        k = _klass->getBaseClass();
+
+        if(k == NULL)
+            return total;
+
+        fields+=TOTAL_FUNCS(k);
+        _klass = k;
+    }
+}
