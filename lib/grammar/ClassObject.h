@@ -29,6 +29,12 @@ public:
             note(),
             fullName("")
     {
+        functions = new list<Method>();
+        constructors = new list<Method>();
+        macros = new list<Method>();
+        overloads = new list<OperatorOverload>();
+        fields = new list<Field>();
+        childClasses = new list<ClassObject>();
     }
     ClassObject(string name, string pmodule, long uid, AccessModifier modifier, RuntimeNote note)
     :

@@ -5399,13 +5399,11 @@ int _bootstrap(int argc, const char* argv[]) {
             }
             else {
                 // add the source files
-                string f;
                 do {
                     if(string(argv[i]).at(0) == '-')
                         goto args_;
-                    f =string(argv[i++]);
 
-                    files.addif(f);
+                    files.addif(string(argv[i++]));
                 }while(i<argc);
                 break;
             }
