@@ -317,7 +317,12 @@ int Process_Exe(std::string exe)
                         et.klass=getstring(buffer);
                         et.local=getmi64(buffer);
                         et.start_pc=getmi64(buffer);
-                        adsp->exceptions.push_back(et);
+                        adsp->exceptions.push_back();
+
+                        ExceptionTable &e = adsp->exceptions.get(adsp->exceptions.size()-1);
+                        e.init();
+
+                        e = et;
                     }
                     break;
                 }

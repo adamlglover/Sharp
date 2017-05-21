@@ -75,9 +75,30 @@ struct ExceptionTable{
     :
             start_pc(0),
             end_pc(0),
-            local(0),
-            klass()
+            local(0)
     {
+        klass.init();
+    }
+
+    void init() {
+        start_pc=0;
+        end_pc=0;
+        local=0;
+        klass.init();
+    }
+
+    ~ExceptionTable()
+    {
+        klass.free();
+    }
+
+    void operator=(const ExceptionTable& e) {
+        this->start_pc=e.start_pc;
+        this->end_pc=e.end_pc;
+        this->handler_pc=e.handler_pc;
+        this->local=e.local;
+        this->klass.init();
+        this->klass=e.klass;
     }
 
     uint64_t start_pc, end_pc;
