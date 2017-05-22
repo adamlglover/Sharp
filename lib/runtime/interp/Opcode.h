@@ -161,6 +161,8 @@ sh_asp* curr_func();
 
 #define movl(x) ptr=&__stack[(int64_t)__rxs[fp]+x].object; _brh
 
+#define movsl(x) ptr=&__stack[(int64_t)__rxs[sp]+x].object; _brh
+
 #define movbi(x) __rxs[0x0008]=x; pc++; _brh
 
 #define _sizeof(r) CHK_NULL(__rxs[r]=ptr->size;) _brh
@@ -201,6 +203,8 @@ sh_asp* curr_func();
 #define __ulock() CHK_NULL(ptr->monitor.release();) _brh
 
 #define exp(r) __rxs[0x0008] = exponent(__rxs[r]);
+
+#define del() CHK_NULL(ptr->null();) _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \
@@ -278,6 +282,8 @@ sh_asp* curr_func();
         &&MULL,                            \
         &&DIVL,                             \
         &&MODL,                              \
+        &&MOVSL,                              \
+        &&DEL,                              \
     };
 
 /*
@@ -360,6 +366,8 @@ enum OPCODE {
     op_MULL=0x47,
     op_DIVL=0x48,
     op_MODL=0x49,
+    op_MOVSL=0x4a,
+    op_DEL=0x4b,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

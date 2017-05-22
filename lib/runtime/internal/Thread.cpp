@@ -722,6 +722,10 @@ void Thread::run() {
                 _divl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MODL:
                 modl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            MOVSL:
+                movsl(GET_Da(cache[pc]))
+            DEL:
+                del()
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error
@@ -743,23 +747,27 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
 
             if (et->start_pc <= pc && et->end_pc >= pc)
             {
-                tbl = et;
+                if (tbl == null || et.start_pc > tbl->start_pc)
+                    tbl = et;
+            }
+        }
 
-                Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
-                ClassObject* klass = exceptionObject == NULL ? NULL : exceptionObject->klass;
+        if(tbl != NULL)
+        {
+            Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
+            ClassObject* klass = exceptionObject == NULL ? NULL : exceptionObject->klass;
 
-                for(;;) {
-                    if(klass == NULL)
-                        break;
+            for(;;) {
+                if(klass == NULL)
+                    break;
 
-                    if(tbl->klass == klass->name) {
-                        object->mutate(exceptionObject);
-                        pc = tbl->handler_pc;
-                        return true;
-                    }
-
-                    klass = klass->super;
+                if(tbl->klass == klass->name) {
+                    object->mutate(exceptionObject);
+                    pc = tbl->handler_pc;
+                    return true;
                 }
+
+                klass = klass->super;
             }
         }
     }
@@ -969,7 +977,7 @@ void Thread::init_frame() {
     if(sp+frame_alloc < STACK_SIZE) {
         __stack[(int64_t )++_SP].var = old_sp; // store sp
         __stack[(int64_t )++_SP].var = _FP; // store frame pointer
-        ++_SP; // store pc
+        ++_SP; // store pc later
         __stack[(int64_t )++_SP].var = curr_adsp; // store address_space id
     } else {
         throw Exception(&Environment::StackOverflowErr, "");

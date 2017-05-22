@@ -1157,6 +1157,7 @@ void runtime::parseStringLiteral(token_entity token, Expression& expression) {
 
     expression.value = parsed_string;
     string_map.addif(parsed_string);
+    expression.intValue = string_map.indexof(parsed_string);
 }
 
 void runtime::parseBoolLiteral(token_entity token, Expression& expression) {
@@ -1986,6 +1987,23 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
                 out.code.push_i64(SET_Ei(i64, op_PUSHREF));
             }
             break;
+        case expression_lclass:
+            if(expression.func) {
+                /* I think we do nothing? */
+            } else {
+                out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            }
+            break;
+        case expression_string:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Di(i64, op_NEWSTR, expression.intValue));
+            out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            break;
+        case expression_null:
+            break;
+        case expression_dynamicclass:
+            break;
     }
 }
 
@@ -1999,11 +2017,6 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
     List<Param> params;
     List<Expression> expressions = parseValueList(pAst2);
     Expression expression;
-
-    out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
-    for(unsigned int i = 0; i < expressions.size(); i++) {
-        pushExpressionToStack(expressions.get(i), out);
-    }
 
     expressionListToParams(params, expressions);
     ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));
@@ -2073,12 +2086,13 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
         }
     }
 
-//    if(fn != NULL) {
-//        int64_t i64;
-//        setupFrame(expression, fn);
-//
-//        expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
-//    }
+    if(fn != NULL) {
+        out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+        for(unsigned int i = 0; i < expressions.size(); i++) {
+            pushExpressionToStack(expressions.get(i), out);
+        }
+        out.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
+    }
 
     __freeList(params);
     __freeList(expressions);
@@ -2108,7 +2122,7 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
     if(pAst->hassubast(ast_dot_fn_e)) {
         pAst2 = pAst->getsubast(ast_dot_fn_e);
-        fn = resolveMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list));
+        fn = resolveMethodUtype(pAst2->getsubast(ast_utype), pAst2->getsubast(ast_value_list), expression);
         if(fn != NULL) {
 
             expression.type = methodReturntypeToExpressionType(fn);

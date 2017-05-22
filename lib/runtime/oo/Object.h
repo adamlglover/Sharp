@@ -73,6 +73,7 @@ public:
     void createstr(nString& str);
     void createclass(int64_t klass);
     void mutate(Sh_object *pObject);
+    void null();
 
     void createclass(ClassObject *klass);
 };

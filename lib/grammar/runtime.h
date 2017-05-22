@@ -119,7 +119,8 @@ struct Expression {
             dot(false),
             lnk(NULL),
             _new(false),
-            func(false)
+            func(false),
+            intValue(0)
     {
     }
 
@@ -131,7 +132,8 @@ struct Expression {
             dot(false),
             lnk(pAst),
             _new(false),
-            func(false)
+            func(false),
+            intValue(0)
     {
     }
 
@@ -143,6 +145,7 @@ struct Expression {
     ast* lnk;
     bool dot, _new, func;
     string value;
+    double intValue;
 
     string typeToString();
     void free() {

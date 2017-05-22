@@ -136,6 +136,12 @@ void Sh_object::mutate(Sh_object *object) {
     Sh_InvRef(object)
 }
 
+void SH_object::null() {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+}
+
 void Sh_object::createstr(nString &str) {
     if(mark == gc_green) {
         GC::_insert(this);
