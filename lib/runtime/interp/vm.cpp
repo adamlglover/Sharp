@@ -43,52 +43,66 @@ int CreateSharpVM(std::string exe)
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->Throwable;
 
-
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
     env->RuntimeErr = ClassObject(
             "std.err#RuntimeErr",
-            NULL,
-            0,
+            fields,
+            2,
             &env->Throwable,
             manifest.classes
     );
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->RuntimeErr;
 
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
     env->StackOverflowErr = ClassObject(
             "std.err#StackOverflowErr",
-            NULL,
-            0,
+            fields,
+            2,
             &env->RuntimeErr,
             manifest.classes
     );
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->StackOverflowErr;
 
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
     env->classes[manifest.classes].init();
     env->ThreadStackException = ClassObject(
             "std.err#ThreadStackException",
-            NULL,
-            0,
+            fields,
+            2,
             &env->RuntimeErr,
             manifest.classes
     );
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->ThreadStackException;
 
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
     env->IndexOutOfBoundsException = ClassObject(
             "std.err#IndexOutOfBoundsException",
-            NULL,
-            0,
+            fields,
+            2,
             &env->RuntimeErr,
             manifest.classes
     );
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->IndexOutOfBoundsException;
 
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
     env->NullptrException = ClassObject(
             "std.err#NullptrException",
-            NULL,
-            0,
+            fields,
+            2,
             &env->RuntimeErr,
             manifest.classes
     );

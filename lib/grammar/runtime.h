@@ -628,7 +628,7 @@ private:
 
     void resolveConstructorDecl(ast *pAst);
 
-    Method *resolveMethodUtype(ast *pAst, ast* valueList);
+    Method *resolveMethodUtype(ast *pAst, ast* valueList, Expression &out);
 
     bool splitMethodUtype(string &name, ref_ptr &ptr);
 
@@ -848,6 +848,8 @@ private:
     void _PUSH_VAR_VALUE_TO_REGISTER(Expression &value, int reg);
 
     void parseBoolLiteral(token_entity token, Expression &expression);
+
+    void pushExpressionToStack(Expression &expression, Expression &out);
 };
 
 #define progname "bootstrap"

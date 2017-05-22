@@ -180,7 +180,7 @@ sh_asp* curr_func();
 
 #define _loadx(r) __rxs[r] = pc; _brh
 
-#define pushref(x) CHK_NULL(ptr->inc_ref(&__stack[(int64_t)++__rxs[sp]].object);) _brh
+#define pushref() CHK_NULL(ptr->inc_ref(&__stack[(int64_t)++__rxs[sp]].object);) _brh
 
 #define delref(x) CHK_NULL(ptr->del_ref();) _brh
 

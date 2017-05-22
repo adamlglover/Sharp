@@ -675,7 +675,7 @@ void Thread::run() {
             NEWstr:
                 _newstr(GET_Da(cache[pc]))
             PUSHREF:
-                pushref(ptr)
+                pushref()
             DELREF:
                 delref(ptr)
             INIT_FRAME:

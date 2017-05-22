@@ -1818,7 +1818,7 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     }
 
     if(expression.type == expression_class) {
-       // expression.macroOpcodes.add(macro_Op(__SET_INTEGER_LITERAL, expression.utype.klass->vaddr));
+        expression.code.push_i64(SET_Di(i64, op_MOVI, expression.utype.klass->vaddr));
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
@@ -1970,7 +1970,26 @@ string runtime::paramsToString(List<Param> &param) {
     return message;
 }
 
-Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
+void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
+    out.code.inject(out.code.__asm64.size(), expression.code);
+
+    switch(expression.type) {
+        case expression_var:
+            out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            break;
+        case expression_field:
+            if(expression.utype.field->nativeInt()) {
+                out.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
+                out.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+                out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            } else if(expression.utype.field->dynamicObject() || expression.utype.field->type == field_class) {
+                out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            }
+            break;
+    }
+}
+
+Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
     Scope* scope = current_scope();
     Method* fn = NULL;
 
@@ -1980,6 +1999,11 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2) {
     List<Param> params;
     List<Expression> expressions = parseValueList(pAst2);
     Expression expression;
+
+    out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+    for(unsigned int i = 0; i < expressions.size(); i++) {
+        pushExpressionToStack(expressions.get(i), out);
+    }
 
     expressionListToParams(params, expressions);
     ptr = parse_type_identifier(pAst->getsubast(ast_type_identifier));

@@ -12,7 +12,7 @@
 
     inc %sp
     iframe
-    movi #7,%ebx
+    movi #10240,%ebx
     pushr %ebx
     call <fact>
 
