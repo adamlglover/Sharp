@@ -88,17 +88,17 @@ void Environment::newClass(int64_t object, int64_t klass) {
     global_heap[object].mark = gc_green;
 }
 
-void Environment::newClass(Sh_object* object, int64_t klass) {
+void Environment::newClass(Object* object, int64_t klass) {
     if(object->mark == gc_green)
         object->free();
 
     object->mark = gc_green;
 }
 
-void Environment::init(Sh_object* objects, int64_t size) {
+void Environment::init(Object* objects, int64_t size) {
     if(objects != NULL)
     {
-        Sh_object* ptr=&objects[0];
+        Object* ptr=&objects[0];
         for(int64_t i = 0; i < size; i++) {
             ptr->HEAD=NULL;
             ptr->_Node = NULL;
@@ -114,14 +114,13 @@ void Environment::init(Sh_object* objects, int64_t size) {
 
 }
 
-void Environment::init(_gc_object* objects, int64_t size) {
+void Environment::init(GcObject* objects, int64_t size) {
     if(objects != NULL)
     {
-        _gc_object* ptr=&objects[0];
+        GcObject* ptr=&objects[0];
         for(int64_t i = 0; i < size; i++) {
             ptr->HEAD=NULL;
             ptr->_Node = NULL;
-            ptr->_rNode=NULL;
             ptr->size = 0;
             ptr++;
         }
@@ -129,24 +128,24 @@ void Environment::init(_gc_object* objects, int64_t size) {
 
 }
 
-void Environment::newNative(Sh_object *object, int8_t type) {
+void Environment::newNative(Object *object, int8_t type) {
     if(object->mark == gc_green)
         object->free();
 }
 
-void Environment::newArray(Sh_object *object, int64_t len) {
-    if(object->mark == gc_green)
-        object->free();
-
-}
-
-void Environment::newRefrence(Sh_object *object) {
+void Environment::newArray(Object *object, int64_t len) {
     if(object->mark == gc_green)
         object->free();
 
 }
 
-void Environment::free(Sh_object *objects, int64_t len) {
+void Environment::newRefrence(Object *object) {
+    if(object->mark == gc_green)
+        object->free();
+
+}
+
+void Environment::free(Object *objects, int64_t len) {
     if(len > 0 && objects != NULL) {
         for(int64_t i = 0; i < len; i++) {
             // TodO: implement
@@ -156,13 +155,13 @@ void Environment::free(Sh_object *objects, int64_t len) {
     }
 }
 
-void Environment::gcinsert_stack(Sh_object *objects, int64_t len) {
+void Environment::gcinsert_stack(Object *objects, int64_t len) {
     if(len > 0 && objects != NULL) {
         GC::_insert_stack(objects, len);
     }
 }
 
-void Environment::freesticky(_gc_object *objects, int64_t len) {
+void Environment::freesticky(GcObject *objects, int64_t len) {
     if(len > 0 && objects != NULL) {
         for(int64_t i = 0; i < len; i++) {
             // TodO: implement
@@ -200,7 +199,7 @@ nString& Environment::getstring(int64_t ref) {
     return strings[0].value;
 }
 
-nString Environment::getstringfield(string name, Sh_object *pObject) {
+nString Environment::getstringfield(string name, Object *pObject) {
     if(pObject != NULL && pObject->klass == NULL) {
         ClassObject* klass = pObject->klass;
         Field* field = NULL;
@@ -223,7 +222,7 @@ nString Environment::getstringfield(string name, Sh_object *pObject) {
     return nString();
 }
 
-Sh_object *Environment::findfield(std::string name, Sh_object *object) {
+Object *Environment::findfield(std::string name, Object *object) {
     if(object == NULL || object->klass == NULL)
         return NULL;
 

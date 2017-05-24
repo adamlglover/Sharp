@@ -15,7 +15,7 @@ enum gc_sig{
     gc_COLLECT_CONCURRENT=1
 };
 
-struct _gc_object;
+struct GcObject;
 
 class GC {
 public:
@@ -26,14 +26,14 @@ public:
     static void _init_GC();
     static void _collect_GC_CONCURRENT();
     static void _collect_GC_EXPLICIT();
-    static void _insert(Sh_object*);
-    static void _insert_stack(Sh_object*, unsigned long);
+    static void _insert(Object*);
+    static void _insert_stack(Object*, unsigned long);
     static void _insert_stack(data_stack* st, unsigned long sz);
     static void notify(int sig);
 
 private:
     Monitor mutex, sigMutex;
-    _gc_object* gc_alloc_heap;
+    GcObject* gc_alloc_heap;
     unsigned long allocptr;
     int signal;
 
@@ -51,10 +51,9 @@ private:
     void _GC_run();
 };
 
-struct _gc_object{
+struct GcObject{
     double *HEAD;
-    Sh_object *_Node;
-    Sh_object* _rNode;
+    Object *_Node;
     int64_t size;
 
     void free(){

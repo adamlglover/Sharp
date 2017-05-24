@@ -22,10 +22,11 @@ class Main {
             "smovr %ebx-0x5"
             "ret"
             ".L1:"
-            "dec %ebx"
+            "movr ecf,ebx"
+            "dec %ecf"
             "inc %sp"
             "iframe"
-            "pushr %ebx"
+            "pushr %ecf"
             "call <fact>"
             "movr %adx,%sp"
             "smov %ebx"
@@ -41,8 +42,17 @@ class Main {
     }
 
     static fn main(string[] args) : var {
-        var[] str = "factorial of 7 is ";
-        // fact(x);
-        __asm("odessy/x64/compute_factorial.asm");
+        var[] str = "factorial of 8 is ";
+        print(str);
+        fact(8);
+        __asm
+        (
+            "movr adx,sp"
+            "smovr ebx"
+            "put ebx"
+            "ret"
+        );
+        //fact(6);
+        //__asm("odessy/x64/compute_factorial.asm");
     }
 }

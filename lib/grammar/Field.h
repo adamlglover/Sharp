@@ -85,6 +85,7 @@ public:
         modifiers.addAll(f.modifiers);
         array = f.array;
         null = f.null;
+        vaddr=f.vaddr;
     }
 
     void free(){

@@ -567,7 +567,7 @@ double exponent(int64_t n){
 
 void Thread::run() {
     thread_self = this;
-    Sh_object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
+    Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
     if(id != main_threadid) {
         __rxs[sp] = -1;
@@ -670,6 +670,8 @@ void Thread::run() {
                 _checklen(GET_Da(cache[pc]))
             GOTO:
                 _goto(GET_Da(cache[pc]))
+            MOVG:
+                movg(GET_Da(cache[pc]))
             LOADX:
                 _loadx(GET_Da(cache[pc]))
             NEWstr:
@@ -726,6 +728,10 @@ void Thread::run() {
                 movsl(GET_Da(cache[pc]))
             DEL:
                 del()
+            MOVND:
+                movnd(GET_Da(cache[pc]))
+            SDELREF:
+                sdelref(GET_Da(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error
@@ -739,7 +745,7 @@ void Thread::run() {
     }
 }
 
-bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
+bool Thread::TryThrow(sh_asp* asp, Object* exceptionObject) {
     if(asp->exceptions.size() > 0) {
         ExceptionTable* et, *tbl=NULL;
         for(unsigned int i = 0; i < asp->exceptions.size(); i++) {
@@ -747,14 +753,14 @@ bool Thread::TryThrow(sh_asp* asp, Sh_object* exceptionObject) {
 
             if (et->start_pc <= pc && et->end_pc >= pc)
             {
-                if (tbl == null || et.start_pc > tbl->start_pc)
+                if (tbl == NULL || et->start_pc > tbl->start_pc)
                     tbl = et;
             }
         }
 
         if(tbl != NULL)
         {
-            Sh_object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
+            Object* object = &__stack[(int64_t)__rxs[fp]+tbl->local].object;
             ClassObject* klass = exceptionObject == NULL ? NULL : exceptionObject->klass;
 
             for(;;) {
@@ -805,10 +811,12 @@ void Thread::fillStackTrace(nString& stack_trace) {
     sh_asp* m = env->__address_spaces+curr_adsp;
     int64_t pc = this->pc, _fp=FP64;
     List<sh_asp*> calls;
+    List<long long> pcs;
 
     while(m != NULL)
     {
         calls.add(m);
+        pcs.add(pc);
         if(m->id == main->id) {
             break;
         } else {
@@ -848,7 +856,7 @@ void Thread::fillStackTrace(nString& stack_trace) {
         } else
             ss << ", line ?";
 
-        ss << ", in "; ss << calls.get(i)->name.str() << "() [0x" << std::hex << calls.get(i)->id  << std::dec << "]";
+        ss << ", in "; ss << calls.get(i)->name.str() << "() [0x" << std::hex << calls.get(i)->id << "] $0x" << pcs.get(i)  << std::dec;
 
         if(line != -1 && metaData.sourceFiles.size() > 0) {
             ss << getPrettyErrorLine(line, calls.get(i)->sourceFile);
@@ -859,17 +867,18 @@ void Thread::fillStackTrace(nString& stack_trace) {
 
     stack_trace = ss.str();
     calls.free();
+    pcs.free();
 }
 
-void Thread::fillStackTrace(Sh_object* exceptionObject) {
+void Thread::fillStackTrace(Object* exceptionObject) {
     nString str;
     fillStackTrace(str);
     throwable.stackTrace = str;
 
     if(exceptionObject->klass != NULL) {
 
-        Sh_object* stackTrace = env->findfield("stackTrace", exceptionObject);
-        Sh_object* message = throwable.native ? env->findfield("message", exceptionObject) : NULL;
+        Object* stackTrace = env->findfield("stackTrace", exceptionObject);
+        Object* message = throwable.native ? env->findfield("message", exceptionObject) : NULL;
 
         if(stackTrace != NULL) {
             stackTrace->createstr(str);
@@ -880,7 +889,7 @@ void Thread::fillStackTrace(Sh_object* exceptionObject) {
     }
 }
 
-void Thread::Throw(Sh_object* exceptionObject) {
+void Thread::Throw(Object* exceptionObject) {
     if(exceptionObject->klass == NULL) {
         cout << "object ia not a class" << endl;
         return;
@@ -939,6 +948,19 @@ int64_t get_reg(int64_t i) {
 sh_asp* curr_func() {
     return env->__address_spaces+thread_self->curr_adsp;
 }
+
+void print_stack() {
+    cout << endl << "==============================\n";
+    cout << "@" << thread_self->curr_adsp << ":"
+         << (thread_self->curr_adsp+env->__address_spaces)->name.str() << " ";
+    cout << "[[" << "sp:" << SP64 << " fp:" << FP64 << endl;
+    for(unsigned int i = 0; i < SP64; i++) {
+        if(i==FP64) cout << "#FP: ";
+        cout << "{@" << i << " v:" << thread_self->__stack[i].var << ":"
+             << thread_self->__stack[i].object.toString() << endl;
+    }
+    cout << endl << "]]";
+}
 #endif
 
 
@@ -969,7 +991,7 @@ void Thread::call_asp(int64_t id) {
 }
 
 void Thread::init_frame() {
-    int64_t old_sp = (int64_t )__rxs[sp], frame_alloc = 4;
+    int64_t old_sp = SP64, frame_alloc = 4;
 
     /*
      * Do we have enough space to allocate this new frame?
@@ -986,7 +1008,7 @@ void Thread::init_frame() {
 
 void Thread::return_asp() {
 
-    int64_t id = (int64_t )__stack[(int64_t )__rxs[fp]-1].var;
+    int64_t id = (int64_t )__stack[FP64-1].var;
     if(id < 0 || id >= manifest.addresses) {
         stringstream ss;
         ss << "could not return from method @" << id << "; method not found.";
@@ -998,7 +1020,7 @@ void Thread::return_asp() {
     cache = asp->bytecode;
     cache_size=asp->cache_size;
 
-    pc = (int64_t )__stack[FP64-pc_offset].var;
+    pc = (uint64_t )__stack[FP64-pc_offset].var;
     _SP = __stack[FP64-sp_offset].var;
     _FP = __stack[FP64-fp_offset].var;
 }

@@ -3,3 +3,8 @@
 //
 
 #include "Method.h"
+#include "ClassObject.h"
+
+string Method::getFullName(){
+    return pklass==NULL?name:pklass->getFullName()+"."+name;
+}

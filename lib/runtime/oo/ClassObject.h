@@ -9,7 +9,7 @@
 #include "string.h"
 
 class Field;
-class Sh_object;
+class Object;
 class Method;
 
 class ClassObject {

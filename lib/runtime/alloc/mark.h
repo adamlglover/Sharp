@@ -6,9 +6,9 @@
 #define SHARP_MARK_H
 
 enum gc_mark {
-    gc_green, // allive and well
-    gc_orange, // null but alive
-    gc_blue // free these
+    gc_green=0x0, // allive and well
+    gc_orange=0x1, // null but alive
+    gc_blue=0x2 // free these
 };
 
 #endif //SHARP_MARK_H

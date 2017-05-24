@@ -120,7 +120,8 @@ struct Expression {
             lnk(NULL),
             _new(false),
             func(false),
-            intValue(0)
+            intValue(0),
+            value("")
     {
     }
 
@@ -133,7 +134,8 @@ struct Expression {
             lnk(pAst),
             _new(false),
             func(false),
-            intValue(0)
+            intValue(0),
+            value("")
     {
     }
 
@@ -387,6 +389,8 @@ public:
 #define try_label_end_id "$$try_end"
 
 #define __init_label_address (block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1)
+
+#define field_offset(s, offset) (s->function->isStatic() ? offset : (1+offset))
 
 class runtime
 {
@@ -853,6 +857,10 @@ private:
     void parseBoolLiteral(token_entity token, Expression &expression);
 
     void pushExpressionToStack(Expression &expression, Expression &out);
+
+    void createDumpFile();
+
+    string find_method(int64_t id);
 };
 
 #define progname "bootstrap"
@@ -918,6 +926,11 @@ struct options {
      * Easter egg to enable magic mode
      */
     bool magic = false;
+
+    /*
+     * Dump object code
+     */
+    bool objDump = false;
 
     /*
      * Machine platform target to runon

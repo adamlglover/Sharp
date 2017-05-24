@@ -84,6 +84,10 @@ public:
         }
     }
 
+    int64_t size() {
+        return __asm64.size();
+    }
+
 private:
 
 

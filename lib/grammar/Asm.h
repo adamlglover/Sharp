@@ -33,6 +33,8 @@ public:
 
     void parse(m64Assembler& assembler, runtime* instance, string& code, ast* pAst);
 
+    static string registrerToString(int64_t);
+
     int64_t errors, uo_errors;
 private:
     int64_t npos, i64;

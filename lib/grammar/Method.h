@@ -88,6 +88,7 @@ public:
 
     ClassObject* getParentClass() { return pklass; }
     string getName() { return name; }
+    string getFullName();
     string getModule() { return module; }
     size_t paramCount() { return params.size(); }
     List<Param>* getParams() { return &params; }

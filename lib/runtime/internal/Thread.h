@@ -127,10 +127,10 @@ private:
     static void push_thread(Thread *thread);
     static void pop_thread(Thread *thread);
 
-    bool TryThrow(sh_asp* asp, Sh_object* exceptionObject);
-    void Throw(Sh_object *exceptionObject);
+    bool TryThrow(sh_asp* asp, Object* exceptionObject);
+    void Throw(Object *exceptionObject);
 
-    void fillStackTrace(Sh_object *exceptionObject);
+    void fillStackTrace(Object *exceptionObject);
 
     void fillStackTrace(nString &str);
 

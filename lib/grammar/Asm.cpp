@@ -667,10 +667,6 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 }
 
                 assembler.push_i64(SET_Di(i64, op_MOVL, i2.high_bytes));
-            } else if(instruction_is("obj_next")) {
-                assembler.push_i64(SET_Ei(i64, op_OBJECT_NXT));
-            } else if(instruction_is("obj_prev")) {
-                assembler.push_i64(SET_Ei(i64, op_OBJECT_PREV));
             } else if(instruction_is("rmov")) {
                 expect_register();
                 itmp = i2;
@@ -893,4 +889,35 @@ void Asm::check_CB() {
 
 token_entity Asm::current() {
     return tk->getentities().get(npos);
+}
+
+string Asm::registrerToString(int64_t r) {
+    switch(r) {
+        case adx:
+            return "adx";
+        case cx:
+            return "cx";
+        case cmt:
+            return "cmt";
+        case ebx:
+            return "ebx";
+        case ecx:
+            return "ecx";
+        case ecf:
+            return "ecf";
+        case edf:
+            return "edf";
+        case ehf:
+            return "ehf";
+        case bmr:
+            return "bmr";
+        case egx:
+            return "egx";
+        case sp:
+            return "sp";
+        case fp:
+            return "fp";
+        default:
+            return "?";
+    }
 }

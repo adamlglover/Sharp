@@ -228,7 +228,8 @@ void runtime::parse_class_decl(ast *pAst) {
 
 void runtime::parseReturnStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    Expression returnVal, value = parse_value(pAst->getsubast(ast_value));
+    Expression returnVal, value;
+    value=parse_value(pAst->getsubast(ast_value));
 
     returnVal.type = methodReturntypeToExpressionType(scope->function);
     if(returnVal.type == expression_lclass) {
@@ -822,8 +823,10 @@ void runtime::parseStatement(Block& block, ast* pAst) {
         case ast_if_statement:
             parseIfStatement(block, pAst);
             break;
-        case ast_expression:
-            parseExpression(pAst);
+        case ast_expression: {
+            Expression expr =parseExpression(pAst);
+            block.code.inject(block.code.size(), expr.code);
+        }
             break;
         case ast_assembly_statement:
             parseAssemblyStatement(block, pAst);
@@ -970,6 +973,7 @@ void runtime::parseMethodDecl(ast* pAst) {
         Scope* curr = current_scope();
         for(unsigned int i = 0; i < params.size(); i++) {
 
+            params.get(i).field.vaddr=i;
             local.set(curr->blocks, params.get(i).field);
             curr->locals.add(local);
         }
@@ -1275,6 +1279,7 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                 field = NULL;
                 errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " ecpected class or module before `" + object_name + "` ");
             }
+            expression.code.push_i64(SET_Di(i64, op_MOVG, klass->vaddr));
             if(lastRefrence) {
                 expression.utype.type = ResolvedReference::CLASS;
                 expression.utype.klass = klass;
@@ -1355,7 +1360,6 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                     expression.type = expression_class;
 
                     expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                    expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV));
                 } else {
                     // klass provided is not a base
                     errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "class `" + reference.refname + "`" +
@@ -1384,9 +1388,6 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 expression.utype.klass = base;
                 expression.type = expression_class;
                 expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                int max = scope->klass->baseClassDepth(base);
-                for(int j = 0; j < max; j++)
-                    expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
                 return;
             } else {
                 // klass provided is not a base
@@ -1418,10 +1419,6 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
                     if(scope->klass->hasBaseClass(klass)) {
                         expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                        int max = scope->klass->baseClassDepth(base);
-                        for(int j = 0; j < max; j++)
-                            expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
-
                         resolveClassHeiarchy(klass, reference, expression, pAst);
                     } else {
                         // klass provided is not a base
@@ -1445,13 +1442,11 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 if(ref.type != ResolvedReference::NOTRESOLVED) {
                     if(ref.type == ResolvedReference::FIELD) {
                         expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                        expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
                         expression.code.push_i64(SET_Di(i64, op_MOVN, ref.field->vaddr)); // gain access to field in object
-                        // TODO: this code needs some touching up field can be anywhere
+
                         resolveFieldHeiarchy(ref.field, reference, expression, pAst);
                     } else {
                         expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                        expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base object
 
                         resolveClassHeiarchy(ref.klass, reference, expression, pAst);
                     }
@@ -1459,9 +1454,6 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
                     if((klass = getClassGlobal(reference.module, starter_name)) != NULL) {
                         if(scope->klass->hasBaseClass(klass)) {
                             expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                            int max = scope->klass->baseClassDepth(base);
-                            for(int j = 0; j < max; j++)
-                                expression.code.push_i64(SET_Ei(i64, op_OBJECT_PREV)); // for now this is how we sill gain access to base objects
 
                             resolveClassHeiarchy(klass, reference, expression, pAst);
                         } else {
@@ -1625,15 +1617,18 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     field = &scope->getLocalField(refrence.refname)->value;
                     expression.utype.type = ResolvedReference::FIELD;
                     expression.utype.field = field;
-                    expression.code.push_i64(SET_Di(i64, op_MOVL, scope->getLocalFieldIndex(refrence.refname)));
                     expression.type = expression_field;
+
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
                 }
                 else if((field = scope->klass->getField(refrence.refname)) != NULL) {
                     // field?
                     expression.utype.type = ResolvedReference::FIELD;
                     expression.utype.field = field;
-                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
                     expression.type = expression_field;
+
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
                 } else {
                     if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
                         // global class ?
@@ -1676,18 +1671,6 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
             string starter_name = refrence.class_heiarchy->at(0);
 
             if(scope->type == scope_global) {
-                if(scope->self) {
-                    /* cannot get self from global refrence */
-                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + refrence.refname + "` from self at global scope");
-
-                    expression.utype.type = ResolvedReference::NOTRESOLVED;
-                    expression.utype.refrenceName = refrence.refname;
-                    expression.type = expression_unresolved;
-                    return;
-                } else if(scope->base) {
-                    resolveBaseUtype(scope, refrence, expression, pAst);
-                    return;
-                }
 
                 // class?
                 if((klass = getClassGlobal(refrence.module, starter_name)) != NULL) {
@@ -1703,42 +1686,6 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
 
                 }
             } else {
-                if(scope->self) {
-                    if(refrence.module != "") {
-                        /* Un resolvable */
-                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " use of module {" + refrence.module + "} in expression signifies global access of object");
-
-                        expression.utype.type = ResolvedReference::NOTRESOLVED;
-                        expression.utype.refrenceName = refrence.refname;
-                        expression.type = expression_unresolved;
-                        return;
-                    }
-
-                    if(scope->type == scope_static_block) {
-                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + refrence.refname + "` from self in static context");
-
-                        expression.utype.type = ResolvedReference::NOTRESOLVED;
-                        expression.utype.refrenceName = refrence.refname;
-                        expression.type = expression_unresolved;
-                    } else {
-                        if((field = scope->klass->getField(starter_name)) != NULL) {
-                            resolveFieldHeiarchy(field, refrence, expression, pAst);
-                        } else {
-                            /* Un resolvable */
-                            errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + refrence.refname + "` " +
-                                                                                                                                                       (refrence.module == "" ? "" : "in module {" + refrence.module + "} "));
-
-                            expression.utype.type = ResolvedReference::NOTRESOLVED;
-                            expression.utype.refrenceName = refrence.refname;
-                            expression.type = expression_unresolved;
-                        }
-                    }
-
-                    return;
-                } else if(scope->base) {
-                    resolveBaseUtype(scope, refrence, expression, pAst);
-                    return;
-                }
 
                 // scope_class? | scope_instance_block? | scope_static_block?
                 if(refrence.module != "") {
@@ -1757,10 +1704,19 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
 
                 if(scope->type != scope_class && scope->getLocalField(refrence.refname) != NULL) {
                     field = &scope->getLocalField(refrence.refname)->value;
+
+                    if(field->nativeInt()) {
+                        expression.code.push_i64(SET_Ci(i64, op_MOVR, ecx,0, fp));
+                        expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
+                    }
+                    else
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
                     resolveFieldHeiarchy(field, refrence, expression, pAst);
                     return;
                 }
                 else if((field = scope->klass->getField(starter_name)) != NULL) {
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
                     resolveFieldHeiarchy(field, refrence, expression, pAst);
                     return;
                 } else {
@@ -1819,7 +1775,7 @@ Expression runtime::psrseUtypeClass(ast* pAst) {
     }
 
     if(expression.type == expression_class) {
-        expression.code.push_i64(SET_Di(i64, op_MOVI, expression.utype.klass->vaddr));
+        expression.code.push_i64(SET_Di(i64, op_MOVI, expression.utype.klass->vaddr), ebx);
     } else {
         errors->newerror(GENERIC, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_utype)->getsubast(ast_type_identifier)->col, "expected class");
     }
@@ -1979,10 +1935,12 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
             out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
             break;
         case expression_field:
-            if(expression.utype.field->nativeInt()) {
+            if(expression.utype.field->nativeInt() && !expression.utype.field->array) {
                 out.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
                 out.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
                 out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            } else if(expression.utype.field->nativeInt() && expression.utype.field->array) {
+                out.code.push_i64(SET_Ei(i64, op_PUSHREF));
             } else if(expression.utype.field->dynamicObject() || expression.utype.field->type == field_class) {
                 out.code.push_i64(SET_Ei(i64, op_PUSHREF));
             }
@@ -1998,11 +1956,14 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
             out.code.push_i64(SET_Di(i64, op_INC, sp));
             out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
             out.code.push_i64(SET_Di(i64, op_NEWSTR, expression.intValue));
-            out.code.push_i64(SET_Ei(i64, op_PUSHREF));
             break;
         case expression_null:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Ei(i64, op_DEL));
             break;
         case expression_dynamicclass:
+            // ToDO: implement
             break;
     }
 }
@@ -2087,6 +2048,9 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
     }
 
     if(fn != NULL) {
+        if(fn->type != lvoid)
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+
         out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
         for(unsigned int i = 0; i < expressions.size(); i++) {
             pushExpressionToStack(expressions.get(i), out);
@@ -2148,7 +2112,17 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
                             errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "cannot use `" + entity.gettoken() + "` operator on function that returns void ");
                             break;
                         case lnative_object:
-                            // TODO: increment return value
+                            if(fn->nobj == fdynamic)
+                                errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "function returning dynamic_object must be casted before using `" + entity.gettoken() + "` operator");
+                            else {
+                                expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                                expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
+
+                                if(pAst->hasentity(_INC))
+                                    expression.code.push_i64(SET_Di(i64, op_INC, ebx));
+                                else
+                                    expression.code.push_i64(SET_Di(i64, op_DEC, ebx));
+                            }
                             break;
                         case lclass_object:
                             if((overload = fn->klass->getOverload(string_toop(entity.gettoken()), emptyParams)) != NULL) {
@@ -2158,6 +2132,11 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
                                     expression.utype.klass = overload->klass;
                                     expression.utype.type = ResolvedReference::CLASS;
                                 }
+
+                                if(overload->type != lvoid)
+                                    expression.code.push_i64(SET_Di(i64, op_INC, sp));
+                                expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+                                expression.code.push_i64(SET_Di(i64, op_CALL, overload->vaddr));
                             } else if(fn->klass->hasOverload(string_toop(entity.gettoken()))) {
                                 errors->newerror(GENERIC, entity.getline(), entity.getcolumn(), "call to function `" + fn->getName() + paramsToString(*fn->getParams()) + "`; missing overload params for operator `"
                                                                                                 + fn->klass->getFullName() + ".operator" + entity.gettoken() + "`");
@@ -2181,7 +2160,10 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
     if(pAst->getsubastcount() > 1) {
         // chained calls
-        parseDotNotationChain(pAst, expression, 1);
+        if(expression.type == expression_void) {
+            errors->newerror(GENERIC, pAst->getsubast(1)->line, pAst->getsubast(1)->col, "illegal acces to function of return type `void`");
+        } else
+            parseDotNotationChain(pAst, expression, 1);
     }
 
     if(pAst->hasentity(DOT)) {
@@ -2904,13 +2886,10 @@ Expression runtime::parseDotNotationCallContext(Expression& contextExpression, a
 }
 
 Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
-    Expression expression, indexExpr, rightExpr;
-    Field* field;
+    Expression expression(interm), indexExpr;
 
     indexExpr = parseExpression(pAst);
 
-    expression.type = interm.type;
-    expression.utype = interm.utype;
     expression.utype.array = false;
     expression.lnk = pAst;
 
@@ -2920,31 +2899,65 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
                 // error not an array
                 errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+
             if(interm.utype.field->type == field_class) {
                 expression.utype.klass = interm.utype.field->klass;
                 expression.type = expression_lclass;
+
+                expression.code.push_i64(SET_Di(i64, op_MOVND, adx));
             } else if(interm.utype.field->type == field_native) {
                 expression.type = expression_var;
+                expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
             }else {
                 expression.type = expression_unknown;
             }
-            // TODO: access array at size
+
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_string:
-            // TODO: add code to get string at index
-            expression.type = expression_var;
+            errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             break;
         case expression_var:
             if(!interm.utype.array) {
                 // error not an array
                 errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_lclass:
             if(!interm.utype.array) {
                 // error not an array
                 errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Di(i64, op_MOVND, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_null:
             errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "null cannot be used as an array");
@@ -2954,6 +2967,16 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
                 // error not an array
                 errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Di(i64, op_MOVND, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_void:
             errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "void cannot be used as an array");
@@ -3183,7 +3206,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
 Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos) {
 
     ast* utype;
-    Expression rightExpr = expression;
+    Expression rightExpr(expression);
     for(unsigned int i = startpos; i < pAst->getsubastcount(); i++) {
             utype = pAst->getsubast(i);
 
@@ -5332,6 +5355,7 @@ void help() {
     cout <<               "    -w                disable warnings." << endl;
     cout <<               "    -v<version>       set application version." << endl;
     cout <<               "    -unsafe -u        allow unsafe code." << endl;
+    cout <<               "    -objdmp           create a dump file of the entire generated assembly." << endl;
     cout <<               "    -target           specify target platform to run on. i.e sharp:" << endl;
     cout <<               "    -werror           enable warnings as errors." << endl;
     cout <<               "    -release -r       disable debugging on application." << endl;
@@ -5431,6 +5455,9 @@ int _bootstrap(int argc, const char* argv[]) {
             else if(opt("-werror")){
                 c_options.werrors = true;
                 c_options.warnings = true;
+            }
+            else if(opt("-objdmp")){
+                c_options.objDump = true;
             }
             else if(string(argv[i]).at(0) == '-'){
                 rt_error("invalid option `" + string(argv[i]) + "`, try bootstrap -h");
@@ -6193,7 +6220,6 @@ int64_t runtime::get_string(string basic_string) {
 void runtime::mov_field(Expression &expression, ast* pAst) {
     int64_t i64;
     if(expression.utype.type == ResolvedReference::FIELD) {
-        expression.code.push_i64(SET_Di(i64, op_OBJECT_NXT, expression.utype.field->vaddr));
         expression.code.push_i64(SET_Di(i64, op_MOVI, 0), egx);
         expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, egx));
     } else {
@@ -6678,11 +6704,615 @@ void runtime::generate() {
 
     // ToDo: create line tabel and meta data
 
+    if(c_options.objDump)
+        createDumpFile();
+
     if(file::write(c_options.out.c_str(), _ostream)) {
         cout << progname << ": error: failed to write out to executable " << c_options.out << endl;
     }
     _ostream.end();
     allMethods.free();
+}
+
+string runtime::find_method(int64_t id) {
+    for(unsigned int i = 0; i < allMethods.size(); i++) {
+        if(allMethods.get(i)->vaddr == id)
+            return allMethods.get(i)->getFullName();
+    }
+    return "";
+}
+
+void runtime::createDumpFile() {
+    file::buffer _ostream;
+    _ostream.begin();
+
+    _ostream << "Object Dump file:\n" << "################################\n\n";
+    for(unsigned int i =0; i < allMethods.size(); i++) {
+        Method* method = allMethods.get(i);
+        stringstream tmp;
+        tmp << "func:@" << method->vaddr;
+
+        _ostream << tmp.str() << " [" << method->getName() << "] "
+                 << method->note.getNote("") << "\n\n";
+        _ostream << method->getName() << ":\n";
+        for(unsigned int x = 0; x < method->code.size(); x++) {
+            stringstream ss;
+            int64_t x64=method->code.__asm64.get(x);
+            ss <<std::hex << "[0x" << x << std::dec << "] " << x << ":" << '\t';
+
+            switch(GET_OP(x64)) {
+                case op_NOP:
+                {
+                    ss<<"nop";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_INT:
+                {
+                    ss<<"int 0x" << std::hex << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVI:
+                {
+                    ss<<"movi #" << GET_Da(x64) << ", ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x)) ;
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_RET:
+                {
+                    ss<<"ret";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_HLT:
+                {
+                    ss<<"hlt";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_NEWi:
+                {
+                    ss<<"newi ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_CHECK_CAST:
+                {
+                    ss<<"check_cast";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOV8:
+                {
+                    ss<<"mov8 ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOV16:
+                {
+                    ss<<"mov16 ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOV32:
+                {
+                    ss<<"mov32 ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOV64:
+                {
+                    ss<<"mov64 ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_PUSHR:
+                {
+                    ss<<"pushr ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_ADD:
+                {
+                    ss<<"add ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SUB:
+                {
+                    ss<<"sub ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MUL:
+                {
+                    ss<<"mul ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_DIV:
+                {
+                    ss<<"div ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOD:
+                {
+                    ss<<"mod ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_POP:
+                {
+                    ss<<"pop";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_INC:
+                {
+                    ss<<"inc ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_DEC:
+                {
+                    ss<<"dec ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVR:
+                {
+                    ss<<"movr ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVX:
+                {
+                    ss<<"movx ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_LT:
+                {
+                    ss<<"lt ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_BRH:
+                {
+                    ss<<"brh";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_BRE:
+                {
+                    ss<<"bre";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IFE:
+                {
+                    ss<<"ife";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IFNE:
+                {
+                    ss<<"ifne";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_GT:
+                {
+                    ss<<"gt ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_GTE:
+                {
+                    ss<<"gte ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_LTE:
+                {
+                    ss<<"lte ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVL:
+                {
+                    ss<<"movl " << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_RMOV:
+                {
+                    ss<<"rmov ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOV:
+                {
+                    ss<<"mov ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVD:
+                {
+                    ss<<"movd ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVBI:
+                {
+                    ss<<"movbi #" << GET_Da(x64) << ", #";
+                    ss<< method->code.__asm64.get(++x);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SIZEOF:
+                {
+                    ss<<"sizeof ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_PUT:
+                {
+                    ss<<"put ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_PUTC:
+                {
+                    ss<<"putc ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_CHECKLEN:
+                {
+                    ss<<"chklen ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVU8:
+                {
+                    ss<<"";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVU16:
+                {
+                    ss<<"";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVU32:
+                {
+                    ss<<"";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVU64:
+                {
+                    ss<<"";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVN:
+                {
+                    ss<<"movn #" << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_GOTO:
+                {
+                    ss<<"goto @" << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVG:
+                {
+                    ss<<"movg @"<< GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_LOADX:
+                {
+                    ss<<"loadx ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_NEWSTR:
+                {
+                    ss<<"newstr @" << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_PUSHREF:
+                {
+                    ss<<"pushref";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_DELREF:
+                {
+                    ss<<"del_ref";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_INIT_FRAME:
+                {
+                    ss<<"iframe";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_CALL:
+                {
+                    ss<<"call @" << GET_Da(x64) << " // ";
+                    ss << find_method(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_NEW_CLASS:
+                {
+                    ss<<"new_class @" << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SMOV:
+                {
+                    ss<<"smov ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << '+';
+                    if(GET_Cb(x64)<0) ss<<"[";
+                    ss<<GET_Cb(x64);
+                    if(GET_Cb(x64)<0) ss<<"]";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SMOVR:
+                {
+                    ss<<"smovr ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << '+';
+                    if(GET_Cb(x64)<0) ss<<"[";
+                    ss<<GET_Cb(x64);
+                    if(GET_Cb(x64)<0) ss<<"]";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SMOVOBJ:
+                {
+                    ss<<"smovobj @" << GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IADD:
+                {
+                    ss<<"iadd ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_ISUB:
+                {
+                    ss<<"isub ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IMUL:
+                {
+                    ss<<"imul ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IDIV:
+                {
+                    ss<<"idiv ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_IMOD:
+                {
+                    ss<<"imod ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", #";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SLEEP:
+                {
+                    ss<<"sleep ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_TEST:
+                {
+                    ss<<"test ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_LOCK:
+                {
+                    ss<<"_lck ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_UlOCK:
+                {
+                    ss<<"ulck";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_EXP:
+                {
+                    ss<<"exp ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_ADDL:
+                {
+                    ss<<"addl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SUBL:
+                {
+                    ss<<"subl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MULL:
+                {
+                    ss<<"mull ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_DIVL:
+                {
+                    ss<<"divl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MODL:
+                {
+                    ss<<"modl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVSL:
+                {
+                    ss<<"movsl #";
+                    ss<< GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_DEL:
+                {
+                    ss<<"del";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MOVND:
+                {
+                    ss<<"movnd ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SDELREF:
+                {
+                    ss<<"sdelref @" << GET_Ca(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                default:
+                    _ostream << "?";
+                    break;
+            }
+
+            _ostream << "\n";
+        }
+
+        _ostream << '\n';
+    }
+
+    if(file::write((c_options.out + ".asm").c_str(), _ostream)) {
+        cout << progname << ": error: failed to write out to dump file " << c_options.out << endl;
+    }
+    _ostream.end();
 }
 
 void runtime::Generator::setupVariable(m64Assembler &assembler, int64_t address) {

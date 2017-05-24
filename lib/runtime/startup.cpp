@@ -18,7 +18,7 @@ int __vinit(string e, List<nString>& pArgs);
 
 void init_main(List <nString>& list1);
 
-void createStringArray(Sh_object *pObject, List<nString> &list1);
+void createStringArray(Object *pObject, List<nString> &list1);
 
 void version() {
     cout << progname << " " << progvers << endl;
@@ -122,7 +122,7 @@ void init_main(List <nString>& pArgs) {
     __rxs[fp] = 0;
     Environment::init(Thread::threads[main_threadid]->__stack, STACK_SIZE);
     Thread::threads[main_threadid]->init_frame();
-    Sh_object* object = &Thread::threads[main_threadid]->__stack[(long)++__rxs[sp]].object;
+    Object* object = &Thread::threads[main_threadid]->__stack[(long)++__rxs[sp]].object;
 
     createStringArray(object, pArgs);
     for(unsigned int i = 0; i < pArgs.size(); i++) {
@@ -131,13 +131,13 @@ void init_main(List <nString>& pArgs) {
     pArgs.free();
 }
 
-void createStringArray(Sh_object *pObject, List<nString> &args) {
+void createStringArray(Object *pObject, List<nString> &args) {
     pObject->createstr(manifest.executable);
     int16_t MIN_ARGS = 4;
     int64_t size = MIN_ARGS+args.size();
     int64_t iter=0;
 
-    pObject->_Node=(Sh_object*)memalloc(sizeof(Sh_object)*size);
+    pObject->_Node=(Object*)memalloc(sizeof(Object)*size);
     Environment::init(pObject->_Node, size);
     pObject->size = size+1;
 

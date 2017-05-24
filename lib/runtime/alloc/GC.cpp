@@ -90,12 +90,12 @@ void GC::_init_GC() {
     gc->mutex = Monitor();
     gc->sigMutex = Monitor();
     gc->signal = 0;
-    gc->gc_alloc_heap=(_gc_object*)malloc(sizeof(_gc_object)*gc_max_heap_size);
+    gc->gc_alloc_heap=(GcObject*)malloc(sizeof(GcObject)*gc_max_heap_size);
     Environment::init(gc->gc_alloc_heap, gc_max_heap_size);
     gc->allocptr=0;
 }
 
-void GC::_insert(Sh_object *gc_obj) {
+void GC::_insert(Object *gc_obj) {
     gc->mutex.acquire(INDEFINITE);
     if(gc->allocptr == gc_max_heap_size) {
         _collect_GC_EXPLICIT();
@@ -221,13 +221,13 @@ void GC::_GC_run() {
     }
 }
 
-void GC::_insert_stack(Sh_object *stack, unsigned long len) {
+void GC::_insert_stack(Object *stack, unsigned long len) {
     gc->mutex.acquire(INDEFINITE);
     if(gc->allocptr == gc_max_heap_size) {
         _collect_GC_EXPLICIT();
     }
 
-    Sh_object* ptr =&stack[0];
+    Object* ptr =&stack[0];
     for(unsigned long i=0; i < len; i++) {
         if(gc->allocptr == gc_max_heap_size) {
             _collect_GC_CONCURRENT();
@@ -274,7 +274,6 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
 
             gc->gc_alloc_heap[gc->allocptr].HEAD=st[i].object.HEAD;
             gc->gc_alloc_heap[gc->allocptr]._Node=st[i].object._Node;
-            gc->gc_alloc_heap[gc->allocptr]._rNode=NULL;
             gc->gc_alloc_heap[gc->allocptr].size=st[i].object.size;
 
             gc->allocptr++;

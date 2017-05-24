@@ -31,7 +31,7 @@ class Thread {
         _create_thread(name);
     }
 
-    public function start(function *funcptr(dynamic_object), dynamic_object arg) {
+    public function start(fn *funcptr(dynamic_object), dynamic_object arg) {
         __asm (
             "movl 0         # move @funcptr to ptr                                      "
             "movi 0,%adx    # move address to value of function ptr to address register "
@@ -48,6 +48,13 @@ class Thread {
             "movl 1          # move char[] n to ptr"
             "int 0x3f        # create thread with name in char[]"
         )
+    }
+
+    private fn nativeThreadStart() {
+        __asm
+        (
+            ""
+        );
     }
 
 }

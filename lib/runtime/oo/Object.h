@@ -12,6 +12,7 @@
 #include "../internal/Monitor.h"
 #include "Exception.h"
 #include "../../util/List.h"
+#include "ClassObject.h"
 
 #define ref_cap 0x16e
 
@@ -49,33 +50,61 @@ x->klass=NULL;  \
 #define CHK_NULL(x) if(ptr==NULL) { throw Exception(&Environment::NullptrException, ""); } else { x }
 
 /* Objects stored in memory */
-class Sh_object {
+class Object {
 public:
-    Sh_object();
+    Object();
 
-    Sh_object(int64_t type);
+    Object(double);
 
     double *HEAD;
 
     gc_mark mark;
     int64_t size;
     ClassObject* klass;
-    Sh_object *_Node;
+    Object *_Node;
     Monitor monitor;
-    List<Sh_object*> refs;
-    Sh_object* _rNode;
+    List<Object*> refs;
+    Object* _rNode;
 
-    void inc_ref(Sh_object *ptr);
+    void inc_ref(Object *ptr);
     void del_ref();
     void free();
     void createnative(int64_t size);
+    void createnative(int64_t size, double init);
     void createstr(int64_t size);
     void createstr(nString& str);
     void createclass(int64_t klass);
-    void mutate(Sh_object *pObject);
+    void mutate(Object *pObject);
     void null();
 
     void createclass(ClassObject *klass);
+
+#ifdef DEBUGGING
+    string toString() {
+        stringstream ss;
+
+        ss << "{";
+        ss << "size:" << size << " mark:" << mark;
+        ss << (klass==NULL?"" : (" klass:" + klass->name.str()));
+        ss << " refs:" << refs.size();
+        ss << (_rNode==NULL? " refrence:false" : " refrence:true");
+        if(size>0) {
+            ss << " data:[";
+            for(unsigned int i=0; i < size; i++) {
+                if(klass==NULL) {
+                    ss << HEAD[i] << ",";
+                } else {
+                    ss << _Node[i].toString() << ",";
+                }
+            }
+            ss << "]";
+        }
+
+        ss << "}";
+
+        return ss.str();
+    }
+#endif
 };
 
 #endif //SHARP_OBJECT_H

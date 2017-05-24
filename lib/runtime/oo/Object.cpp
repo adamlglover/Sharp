@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <cstring>
 
-Sh_object::Sh_object() {
+Object::Object() {
     this->mark = gc_orange;
     this->monitor = Monitor();
     this->HEAD = NULL;
@@ -18,16 +18,18 @@ Sh_object::Sh_object() {
     refs.init();
 }
 
-Sh_object::Sh_object(int64_t type) {
+Object::Object(double val) {
     this->mark = gc_orange;
     this->klass=NULL;
     this->monitor = Monitor();
     this->HEAD = NULL;
     _Node = NULL;
     refs.init();
+
+    createnative(1,val);
 }
 
-void Sh_object::free() {
+void Object::free() {
     mark = gc_orange;
     if(HEAD != NULL)
         std::free(HEAD); HEAD = NULL;
@@ -44,47 +46,51 @@ void Sh_object::free() {
     klass=NULL;
 }
 
-void Sh_object::createnative(int64_t size) {
-    if(mark != gc_green) {
+void Object::createnative(int64_t size) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
 
-        if(size == 0)
-            HEAD = NULL;
-        else
-            HEAD= (double*)memalloc(sizeof(double)*size);
-        this->size=size;
-        klass=NULL;
-        _Node=NULL, _rNode=NULL;
-        mark = gc_green;
+    if(size == 0)
+        HEAD = NULL;
+    else
+        HEAD= (double*)memalloc(sizeof(double)*size);
+    this->size=size;
+    klass=NULL;
+    _Node=NULL, _rNode=NULL;
+    mark = gc_green;
 
-        for(int64_t i=0; i<size; i++){
-            _nativewrite(i,0)
-        }
+    for(int64_t i=0; i<size; i++){
+        _nativewrite(i,0)
     }
 }
 
-void Sh_object::inc_ref(Sh_object *ptr) {
-    this->refs.addif(ptr);
-    ptr->HEAD=HEAD;
-    ptr->klass=klass;
-    ptr->size=size;
-    ptr->_Node=_Node;
-    ptr->_rNode=this;
-    ptr->mark = gc_green;
+void Object::inc_ref(Object *ptr) {
+    if(ptr!=this)
+    {
+        this->refs.addif(ptr);
+        ptr->HEAD=HEAD;
+        ptr->klass=klass;
+        ptr->size=size;
+        ptr->_Node=_Node;
+        ptr->_rNode=this;
+        ptr->mark = gc_green;
+    }
 }
 
-void Sh_object::createstr(int64_t ref) {
+void Object::createstr(int64_t ref) {
     nString str;
     str = env->getstring(ref);
 
     createstr(str);
 }
 
-void Sh_object::createclass(int64_t k) {
+void Object::createclass(int64_t k) {
     ClassObject* klass = env->findClass(k);
     createclass(klass);
 }
 
-void Sh_object::createclass(ClassObject *klass) {
+void Object::createclass(ClassObject *klass) {
     if(mark == gc_green) {
         GC::_insert(this);
     }
@@ -96,14 +102,14 @@ void Sh_object::createclass(ClassObject *klass) {
     mark = gc_green;
     size =klass->fieldCount;
     if(size > 0)
-        _Node =(Sh_object*)memalloc(sizeof(Sh_object) * size);
+        _Node =(Object*)memalloc(sizeof(Object) * size);
     else
         _Node = NULL;
     Environment::init(_Node, size);
 }
 
-void Sh_object::del_ref() {
-    if(_Node != NULL) {
+void Object::del_ref() {
+    if(_rNode != NULL) {
         _rNode->refs.remove(this);
 
         HEAD=NULL;
@@ -118,12 +124,12 @@ void Sh_object::del_ref() {
  * Objects cannot be coppied as they can be infinatley large,
  * they can only be mutated
  */
-void Sh_object::mutate(Sh_object *object) {
+void Object::mutate(Object *object) {
     if(mark == gc_green) {
         GC::_insert(this);
     }
 
-    std::memcpy(this, object, sizeof(Sh_object));
+    std::memcpy(this, object, sizeof(Object));
 
     if(object->_rNode != NULL) {
         object->_rNode->refs.replace(object, this);
@@ -136,13 +142,15 @@ void Sh_object::mutate(Sh_object *object) {
     Sh_InvRef(object)
 }
 
-void SH_object::null() {
+void Object::null() {
     if(mark == gc_green) {
         GC::_insert(this);
     }
+
+    Sh_InvRef(this)
 }
 
-void Sh_object::createstr(nString &str) {
+void Object::createstr(nString &str) {
     if(mark == gc_green) {
         GC::_insert(this);
     }
@@ -158,5 +166,24 @@ void Sh_object::createstr(nString &str) {
 
     for(int64_t i=0; i<size; i++){
         _nativewrite(i,str.chars[i])
+    }
+}
+
+void Object::createnative(int64_t size, double init) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
+    if(size == 0)
+        HEAD = NULL;
+    else
+        HEAD= (double*)memalloc(sizeof(double)*size);
+    this->size=size;
+    klass=NULL;
+    _Node=NULL, _rNode=NULL;
+    mark = gc_green;
+
+    for(int64_t i=0; i<size; i++){
+        _nativewrite(i,init)
     }
 }

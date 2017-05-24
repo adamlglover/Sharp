@@ -9,10 +9,10 @@
 #include "../oo/ClassObject.h"
 #include "sh_asp.h"
 
-class Sh_object;
+class Object;
 class Method;
 class ArrayObject;
-struct _gc_object;
+struct GcObject;
 
 class Environment {
 public:
@@ -32,10 +32,10 @@ public:
     ClassObject* findClass(int64_t id);
 
     void newClass(int64_t,int64_t);
-    void newClass(Sh_object*,int64_t);
-    void newNative(Sh_object*, int8_t);
-    void newArray(Sh_object*, int64_t);
-    void newRefrence(Sh_object*);
+    void newClass(Object*,int64_t);
+    void newNative(Object*, int8_t);
+    void newArray(Object*, int64_t);
+    void newRefrence(Object*);
 
     // TODO: create the aux classes to be used internally
     // Alloce'd by new()
@@ -46,7 +46,7 @@ public:
     static ClassObject IndexOutOfBoundsException;
     static ClassObject NullptrException;
 
-    Sh_object* global_heap;
+    Object* global_heap;
 
     ClassObject* classes;
 
@@ -58,17 +58,17 @@ public:
 
     nString& getstring(int64_t ref);
 
-    static void init(_gc_object*,int64_t);
-    static void init(Sh_object*,int64_t);
+    static void init(GcObject*,int64_t);
+    static void init(Object*,int64_t);
     static void init(data_stack*,int64_t);
 
-    static void free(Sh_object*, int64_t);
-    static void freesticky(_gc_object*, int64_t);
-    static void gcinsert_stack(Sh_object *, int64_t);
+    static void free(Object*, int64_t);
+    static void freesticky(GcObject*, int64_t);
+    static void gcinsert_stack(Object *, int64_t);
 
-    nString getstringfield(string name, Sh_object *pObject);
+    nString getstringfield(string name, Object *pObject);
 
-    Sh_object *findfield(std::string name, Sh_object *object);
+    Object *findfield(std::string name, Object *object);
 };
 
 extern Environment* env;

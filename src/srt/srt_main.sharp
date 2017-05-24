@@ -17,9 +17,9 @@ class Start {
         /* Initialize singleton libraries and GC */
 
         // under the hood this comes in as a var[][] with string values
-        transposeArray(args);
+//        transposeArray(args);
         string[] pArgs = null;
-        var retVal = application#Main.main(pArgs);
+        var retVal =9;//= application#Main.main(pArgs);
         __asm("odessy/x64/bootstrap_main.asm");
 
         /* Shutdown threads and do other stuff before exit */

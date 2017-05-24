@@ -45,6 +45,7 @@ int64_t get_cb(int64_t);
 int64_t get_reg(int64_t);
 data_stack* stack_at(int64_t pos, bool usefp = true);
 sh_asp* curr_func();
+void print_stack();
 #endif
 
 #define DA_MAX 36028797018963967
@@ -206,6 +207,12 @@ sh_asp* curr_func();
 
 #define del() CHK_NULL(ptr->null();) _brh
 
+#define movg(x) ptr = &env->global_heap[x];
+
+#define movnd(x) CHK_NULL(ptr = &ptr->_Node[(int64_t)__rxs[x]];) _brh
+
+#define sdelref(offset) __stack[(int64_t)__rxs[sp]+offset].object.del_ref(); _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -255,7 +262,7 @@ sh_asp* curr_func();
         &&_NOP,	\
 		&&MOVN, \
         &&GOTO,	\
-        &&_NOP,	\
+        &&MOVG,	\
         &&_NOP,	\
         &&LOADX, \
         &&NEWstr, \
@@ -283,7 +290,9 @@ sh_asp* curr_func();
         &&DIVL,                             \
         &&MODL,                              \
         &&MOVSL,                              \
-        &&DEL,                              \
+        &&DEL,                                 \
+        &&MOVND,                                \
+        &&SDELREF,                                \
     };
 
 /*
@@ -322,8 +331,6 @@ enum OPCODE {
     op_GTE=0x1c,
     op_LTE=0x1d,
     op_MOVL=0x1e,
-    op_OBJECT_NXT=0x1f,
-    op_OBJECT_PREV=0x20,
     op_RMOV=0x21,
     op_MOV=0x22,
     op_MOVD=0x23,
@@ -368,6 +375,8 @@ enum OPCODE {
     op_MODL=0x49,
     op_MOVSL=0x4a,
     op_DEL=0x4b,
+    op_MOVND=0x4c,
+    op_SDELREF=0x4d,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };
