@@ -228,8 +228,7 @@ void runtime::parse_class_decl(ast *pAst) {
 
 void runtime::parseReturnStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    Expression returnVal, value;
-    value=parse_value(pAst->getsubast(ast_value));
+    Expression returnVal, value = parse_value(pAst->getsubast(ast_value));
 
     returnVal.type = methodReturntypeToExpressionType(scope->function);
     if(returnVal.type == expression_lclass) {
@@ -6955,7 +6954,7 @@ void runtime::createDumpFile() {
                 }
                 case op_GTE:
                 {
-                    ss<<"gte ";
+                    ss<<"ge ";
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
@@ -6964,7 +6963,7 @@ void runtime::createDumpFile() {
                 }
                 case op_LTE:
                 {
-                    ss<<"lte ";
+                    ss<<"le ";
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
@@ -7027,7 +7026,7 @@ void runtime::createDumpFile() {
                 }
                 case op_PUTC:
                 {
-                    ss<<"putc ";
+                    ss<<"_putc ";
                     ss<< Asm::registrerToString(GET_Da(x64));
                     _ostream << ss.str();
                     break;

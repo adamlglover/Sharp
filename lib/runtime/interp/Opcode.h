@@ -158,7 +158,7 @@ void print_stack();
 
 #define gte(r,x) __rxs[0x0002]=__rxs[r]>=__rxs[x]; _brh
 
-#define lte(r,x) __rxs[0x0002]=__rxs[r]<__rxs[x]; _brh
+#define lte(r,x) __rxs[0x0002]=__rxs[r]<=__rxs[x]; _brh
 
 #define movl(x) ptr=&__stack[(int64_t)__rxs[fp]+x].object; _brh
 

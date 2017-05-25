@@ -10,13 +10,11 @@ class Main {
         return (x == 1 ? x : x * fact(x - 1));
         try {
         __asm(
-            "movl 1"
-            "new_class <Throwable>"
             "movr %adx,%fp"
             "smov %ebx"
             "movi 1,%ecx"
-            "test %ecx,%ebx"
             "movi $L1,%adx"
+            "le ebx,ecx"
             "ifne"
             "movr %adx,%fp"
             "smovr %ebx-0x5"
