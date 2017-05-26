@@ -211,7 +211,7 @@ void print_stack();
 
 #define movnd(x) CHK_NULL(ptr = &ptr->_Node[(int64_t)__rxs[x]];) _brh
 
-#define sdelref(offset) __stack[(int64_t)__rxs[sp]+offset].object.del_ref(); _brh
+#define sdelref() __stack[(int64_t)__rxs[sp]--].object.del_ref(); _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \

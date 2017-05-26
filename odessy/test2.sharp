@@ -12,6 +12,9 @@ class Main {
         __asm(
             "movr %adx,%fp"
             "smov %ebx"
+            "put ebx"
+            "movi ' ',egx"
+            "_putc egx"
             "movi 1,%ecx"
             "movi $L1,%adx"
             "le ebx,ecx"
@@ -41,15 +44,12 @@ class Main {
 
     static fn main(string[] args) : var {
         var[] str = "factorial of 8 is ";
-        print(str);
-        fact(8);
-        __asm
-        (
-            "movr adx,sp"
-            "smovr ebx"
-            "put ebx"
-            "ret"
-        );
+        fact(str[9]);
+        __asm(
+            "movr %adx,%sp"
+            "smov %ebx"
+            "put %ebx"
+         );
         //fact(6);
         //__asm("odessy/x64/compute_factorial.asm");
     }

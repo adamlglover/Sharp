@@ -145,7 +145,7 @@ struct Expression {
     ResolvedReference utype;
     m64Assembler code;
     ast* lnk;
-    bool dot, _new, func;
+    bool dot, _new, func, literal;
     string value;
     double intValue;
 
@@ -698,7 +698,7 @@ private:
 
     void resolveUtypeContext(ClassObject *classContext, ref_ptr &reference, Expression &expression, ast *pAst);
 
-    Method *resolveContextMethodUtype(ClassObject *classContext, ast *pAst, ast *pAst2);
+    Method *resolveContextMethodUtype(ClassObject *classContext, ast *pAst, ast *pAst2, Expression& out, Expression& contextExpression);
 
     Expression &parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos);
 
@@ -861,6 +861,10 @@ private:
     void createDumpFile();
 
     string find_method(int64_t id);
+
+    string find_class(int64_t id);
+
+    bool currentRefrenceAffected(Expression &expr);
 };
 
 #define progname "bootstrap"

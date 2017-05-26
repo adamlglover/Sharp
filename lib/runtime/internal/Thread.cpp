@@ -731,7 +731,7 @@ void Thread::run() {
             MOVND:
                 movnd(GET_Da(cache[pc]))
             SDELREF:
-                sdelref(GET_Da(cache[pc]))
+                sdelref()
         }
     } catch (std::bad_alloc &e) {
         // TODO: throw out of memory error

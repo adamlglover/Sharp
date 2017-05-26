@@ -945,6 +945,10 @@ void runtime::resolveAllBranches(Block& block) {
             errors->newerror(COULD_NOT_RESOLVE, bt->line, bt->col, " `" + bt->label.str() + "`");
     }
 
+
+    if(block.code.size() == 0 || GET_OP(block.code.__asm64.get(block.code.size() -1)) != op_RET) {
+        block.code.push_i64(SET_Ei(i64, op_RET));
+    }
     __freeList(scope->branches);
 }
 
@@ -2755,7 +2759,7 @@ Expression runtime::parseUtypeContext(ClassObject* classContext, ast* pAst) {
     return expression;
 }
 
-Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst, ast* pAst2) {
+Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst, ast* pAst2, Expression& out, Expression& contextExpression) {
     Scope* scope = current_scope();
     Method* fn = NULL;
 
@@ -2827,6 +2831,29 @@ Method* runtime::resolveContextMethodUtype(ClassObject* classContext, ast* pAst,
         }
     }
 
+
+    if(fn != NULL) {
+        if(contextExpression.func)
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+
+        if(fn->type != lvoid) {
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+        }
+
+        expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+        if(contextExpression.func) {
+            expression.code.push_i64(SET_Di(i64, op_INC, sp));
+            expression.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0)); // mutate object to the stack
+        }
+        else
+            expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+
+        for(unsigned int i = 0; i < expressions.size(); i++) {
+            pushExpressionToStack(expressions.get(i), out);
+        }
+        out.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
+    }
+
     __freeList(params);
     __freeList(expressions);
     ptr.free();
@@ -2854,7 +2881,8 @@ Expression runtime::parseDotNotationCallContext(Expression& contextExpression, a
     ClassObject* klass = contextExpression.utype.klass;
 
     if(pAst->gettype() == ast_dot_fn_e) {
-        fn = resolveContextMethodUtype(klass, pAst->getsubast(ast_utype), pAst->getsubast(ast_value_list));
+        fn = resolveContextMethodUtype(klass, pAst->getsubast(ast_utype),
+                                       pAst->getsubast(ast_value_list), expression, contextExpression);
         if(fn != NULL) {
             expression.type = methodReturntypeToExpressionType(fn);
             if(expression.type == expression_lclass)
@@ -2865,7 +2893,11 @@ Expression runtime::parseDotNotationCallContext(Expression& contextExpression, a
             // TODO: parse dot_notation_chain expression
         } else
             expression.type = expression_unresolved;
+        expression.func=true;
     } else {
+        if(contextExpression.func)
+            expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+
         /*
          * Nasty way to check which ast to pass
          * can we do this a better way?
@@ -2901,7 +2933,7 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
 
             expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
             pushExpressionToStack(indexExpr, expression);
-            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, -1));
             expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
             expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
             expression.code.push_i64(SET_Di(i64, op_DEC, sp));
@@ -2933,7 +2965,7 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
 
             expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
             pushExpressionToStack(indexExpr, expression);
-            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, -1));
             expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
             expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
             expression.code.push_i64(SET_Di(i64, op_DEC, sp));
@@ -2949,7 +2981,7 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
             }
 
             pushExpressionToStack(indexExpr, expression);
-            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, -1));
             expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
             expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
             expression.code.push_i64(SET_Di(i64, op_DEC, sp));
@@ -3119,6 +3151,26 @@ void runtime::_ASSIGN_CLASS_VARIABlE(m64Assembler& code, _operator op, Field& va
 
 }
 
+bool runtime::currentRefrenceAffected(Expression& expr) {
+    int opcode;
+    for(unsigned int i = 0; i < expr.code.size(); i++) {
+        opcode = GET_OP(expr.code.__asm64.get(i));
+
+        switch(opcode) {
+            case op_MOVL:
+            case op_MOVSL:
+            case op_MOVN:
+            case op_MOVG:
+            case op_MOVND:
+                return true;
+            default:
+                break;
+        }
+    }
+
+    return false;
+}
+
 Expression runtime::parseArrayExpression(ast* pAst) {
     Expression expression, interm, indexExpr, rightExpr;
     Field* field;
@@ -3126,10 +3178,12 @@ Expression runtime::parseArrayExpression(ast* pAst) {
     interm = parseIntermExpression(pAst->getsubast(0));
     indexExpr = parseExpression(pAst->getsubast(1));
 
+    expression.code.inject(expression.code.__asm64.size(), interm.code);
     expression.type = interm.type;
     expression.utype = interm.utype;
     expression.utype.array = false;
     expression.lnk = pAst;
+    bool referenceAffected = currentRefrenceAffected(indexExpr);
 
     switch(interm.type) {
         case expression_field:
@@ -3137,31 +3191,81 @@ Expression runtime::parseArrayExpression(ast* pAst) {
                 // error not an array
                 errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            if(c_options.optimize) {
+                if(referenceAffected)
+                    expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            } else
+                expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+
+            expression.code.inject(expression.code.__asm64.size(), indexExpr.code);
+            if(indexExpr.func || indexExpr.type != expression_var) {
+                expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
+                expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            }
+
+            if(c_options.optimize) {
+                if(referenceAffected)
+                    expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            } else
+                expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, ebx));
+
             if(interm.utype.field->type == field_class) {
                 expression.utype.klass = interm.utype.field->klass;
                 expression.type = expression_lclass;
+
+                expression.code.push_i64(SET_Di(i64, op_MOVND, ebx));
             } else if(interm.utype.field->type == field_native) {
                 expression.type = expression_var;
+                expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, ebx));
             }else {
                 expression.type = expression_unknown;
             }
-            // TODO: access array at size
+
+            if(c_options.optimize) {
+                if(referenceAffected)
+                    expression.code.push_i64(SET_Ei(i64, op_SDELREF));
+            } else
+                expression.code.push_i64(SET_Ei(i64, op_SDELREF));
             break;
         case expression_string:
-            // TODO: add code to get string at index
-            expression.type = expression_var;
+            errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             break;
         case expression_var:
             if(!interm.utype.array) {
                 // error not an array
                 errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, -1));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_lclass:
             if(!interm.utype.array) {
                 // error not an array
                 errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Di(i64, op_MOVND, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_null:
             errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "null cannot be used as an array");
@@ -3171,6 +3275,16 @@ Expression runtime::parseArrayExpression(ast* pAst) {
                 // error not an array
                 errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
             }
+
+            pushExpressionToStack(indexExpr, expression);
+            expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            expression.code.push_i64(SET_Ci(i64, op_SMOV, adx,0, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
+            expression.code.push_i64(SET_Di(i64, op_CHECKLEN, adx));
+            expression.code.push_i64(SET_Di(i64, op_MOVND, adx));
+            expression.code.push_i64(SET_Di(i64, op_SDELREF, 0));
+            expression.code.push_i64(SET_Di(i64, op_DEC, sp));
             break;
         case expression_void:
             errors->newerror(GENERIC, pAst->getsubast(0)->line, pAst->getsubast(0)->col, "void cannot be used as an array");
@@ -3227,6 +3341,7 @@ Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, un
             if(rightExpr.type == expression_unresolved || rightExpr.type == expression_unknown)
                 break;
 
+            expression.code.inject(expression.code.size(), rightExpr.code);
             expression.type = rightExpr.type;
             expression.utype = rightExpr.utype;
             expression.utype.array = rightExpr.utype.array;
@@ -6721,6 +6836,21 @@ string runtime::find_method(int64_t id) {
     return "";
 }
 
+string runtime::find_class(int64_t id) {
+    for(unsigned int i = 0; i < classes.size(); i++) {
+        if(classes.get(i).vaddr == id)
+            return classes.get(i).getFullName();
+        else {
+            ClassObject &klass = classes.get(i);
+            for(unsigned int x = 0; x < klass.childClassCount(); x++) {
+                if(klass.getChildClass(x)->vaddr == id)
+                    return klass.getChildClass(x)->getFullName();
+            }
+        }
+    }
+    return "";
+}
+
 void runtime::createDumpFile() {
     file::buffer _ostream;
     _ostream.begin();
@@ -7077,6 +7207,7 @@ void runtime::createDumpFile() {
                 case op_MOVG:
                 {
                     ss<<"movg @"<< GET_Da(x64);
+                    ss << " // @"; ss << find_class(GET_Da(x64));
                     _ostream << ss.str();
                     break;
                 }
@@ -7113,14 +7244,15 @@ void runtime::createDumpFile() {
                 }
                 case op_CALL:
                 {
-                    ss<<"call @" << GET_Da(x64) << " // ";
-                    ss << find_method(GET_Da(x64));
+                    ss<<"call @" << GET_Da(x64) << " // <";
+                    ss << find_method(GET_Da(x64)) << ">";
                     _ostream << ss.str();
                     break;
                 }
                 case op_NEW_CLASS:
                 {
                     ss<<"new_class @" << GET_Da(x64);
+                    ss << " // "; ss << find_class(GET_Da(x64));
                     _ostream << ss.str();
                     break;
                 }
@@ -7293,7 +7425,7 @@ void runtime::createDumpFile() {
                 }
                 case op_SDELREF:
                 {
-                    ss<<"sdelref @" << GET_Ca(x64);
+                    ss<<"sdelref";
                     _ostream << ss.str();
                     break;
                 }
