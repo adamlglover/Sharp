@@ -49,3 +49,39 @@ void Exception::setupFrame() {
                 .object.mutate(&thread_self->__stack[0].object);
     }
 }
+
+ThreadPanic::ThreadPanic(char *msg, List<sh_asp*>& calls, List<long long>& pcs) : runtime_error(msg) {
+    message.init();
+    message= string(msg);
+    this->calls.init();
+    this->pcs.init();
+    this->calls.addAll(calls);
+    this->pcs.addAll(pcs);
+}
+
+ThreadPanic::ThreadPanic(std::string &__arg, List<sh_asp*> &calls, List<long long> &pcs) : runtime_error(__arg) {
+    message.init();
+    message= __arg;
+    this->calls.init();
+    this->pcs.init();
+    this->calls.addAll(calls);
+    this->pcs.addAll(pcs);
+}
+
+ThreadPanic::~ThreadPanic() {
+    message.free();
+    calls.free();
+    pcs.free();
+}
+
+nString &ThreadPanic::getMessage() {
+    return message;
+}
+
+List<sh_asp *> &ThreadPanic::getCalls() {
+    return calls;
+}
+
+List<long long> &ThreadPanic::getPcs() {
+    return pcs;
+}

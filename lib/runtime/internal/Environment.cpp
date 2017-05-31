@@ -15,6 +15,7 @@ ClassObject Environment::RuntimeErr;
 ClassObject Environment::ThreadStackException;
 ClassObject Environment::IndexOutOfBoundsException;
 ClassObject Environment::NullptrException;
+ClassObject Environment::ClassCastException;
 
 ClassObject *Environment::findClass(string name) {
     for (uint64_t i = 0; i < manifest.classes; i++) {

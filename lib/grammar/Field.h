@@ -33,7 +33,8 @@ public:
             klass(NULL),
             note(note),
             array(false),
-            null(false)
+            null(false),
+            local(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -50,7 +51,8 @@ public:
             klass(klass),
             note(note),
             array(false),
-            null(false)
+            null(false),
+            local(false)
     {
         this->modifiers.init();
         this->modifiers.addAll(modifiers);
@@ -65,7 +67,8 @@ public:
             modifiers(),
             note("","",0,0),
             array(false),
-            null(false)
+            null(false),
+            local(false)
     {
     }
 
@@ -86,6 +89,7 @@ public:
         array = f.array;
         null = f.null;
         vaddr=f.vaddr;
+        local=f.local;
     }
 
     void free(){
@@ -116,7 +120,7 @@ public:
         return nf == fdynamic;
     }
 
-    bool array, null;
+    bool array, null, local;
     field_type type;
     RuntimeNote note;
     NativeField nf;

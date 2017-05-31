@@ -1,9 +1,26 @@
 mod application;
 
-class Main {
+class Base {
+
+    static fn print2(var[] message) {
+        __asm("odessy/x64/print.asm");
+    }
+}
+
+class Main base Base {
+
+    var x;
 
     static fn print(var[] message) {
         __asm("odessy/x64/print.asm");
+    }
+
+    static fn printc(var char) {
+        __asm("odessy/x64/printc.asm");
+    }
+
+    static fn foo(Main main) {
+
     }
 
     static fn fact(var x) : var {
@@ -12,9 +29,6 @@ class Main {
         __asm(
             "movr %adx,%fp"
             "smov %ebx"
-            "put ebx"
-            "movi ' ',egx"
-            "_putc egx"
             "movi 1,%ecx"
             "movi $L1,%adx"
             "le ebx,ecx"
@@ -42,9 +56,28 @@ class Main {
         }
     }
 
+    static fn operator++(var x) {
+        x + 1;
+    }
+
     static fn main(string[] args) : var {
         var[] str = "factorial of 8 is ";
-        fact(str[9]);
+        dynamic_object o = new Main();
+        base->print2(str);
+        self->fact(8);
+        foo(new Main[9][0]);
+        Main main = new Main();
+        var x = 9;
+        __asm("movi #1,ecx" "new_i ecx");
+        //main++;
+        //(Main)o;
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(++x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x++);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(++x);
+        __asm("movi ' ',ebx" "_putc ebx");
         __asm(
             "movr %adx,%sp"
             "smov %ebx"

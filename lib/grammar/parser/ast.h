@@ -28,6 +28,7 @@ enum ast_types
     ast_utype_arg,
     ast_utype_arg_opt,
     ast_expression,
+    ast_array_expression,
     ast_primary_expr,
     ast_dotnotation_call_expr,
     ast_utype,

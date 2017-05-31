@@ -12,6 +12,22 @@
 #include "../oo/Exception.h"
 #include "sh_asp.h"
 
+class ThreadPanic : public std::runtime_error {
+public:
+    ThreadPanic(char *msg, List<sh_asp*>& calls, List<long long>& x);
+    ThreadPanic(std::string &__arg, List<sh_asp*>& calls, List<long long>&);
+
+    ~ThreadPanic();
+    nString &getMessage();
+    List<sh_asp *> &getCalls();
+    List<long long> &getPcs();
+
+private:
+    nString message;
+    List<sh_asp*> calls;
+    List<long long> pcs;
+};
+
 #define MAX_THREADS 0x40fe
 
 #define STACK_SIZE 0xefba
@@ -20,7 +36,8 @@ enum ThreadState {
     thread_init=0x000,
     thread_running=0x001,
     thread_suspend=0x002,
-    thread_killed=0x003
+    thread_killed=0x003,
+    thread_panicked=0xffff0
 };
 
 class Thread {
@@ -82,7 +99,7 @@ public:
     int32_t id;
     Monitor monitor;
     bool daemon;
-    int state;
+    unsigned int state;
     bool suspended;
     bool exited;
     nString name;
@@ -113,12 +130,15 @@ public:
 
     void init_frame();
 
+    void send_panic_message(ThreadPanic&);
+
 private:
     void call_asp(int64_t id);
     void return_asp();
 
     void wait();
 
+    void thread_panic(string message, List<sh_asp*> calls, List<long long> pcs);
     static int threadjoin(Thread*);
     static int unsuspendThread(Thread*);
     static void suspendThread(Thread*);
@@ -135,6 +155,7 @@ private:
     void fillStackTrace(nString &str);
 
     string getPrettyErrorLine(long line, long sourceFile);
+
 };
 
 extern thread_local Thread* thread_self;

@@ -109,6 +109,19 @@ int CreateSharpVM(std::string exe)
     env->classes[manifest.classes].init();
     env->classes[manifest.classes++] = env->NullptrException;
 
+    fields=(Field*)malloc(sizeof(Field)*2);
+    fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
+    fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
+    env->NullptrException = ClassObject(
+            "std.err#ClassCastException",
+            fields,
+            2,
+            &env->RuntimeErr,
+            manifest.classes
+    );
+    env->classes[manifest.classes].init();
+    env->classes[manifest.classes++] = env->ClassCastException;
+
     cout.precision(16);
     env->init(env->global_heap, manifest.classes - AUX_CLASSES);
 
@@ -136,10 +149,15 @@ void*
 
         try {
             thread_self->run();
+        } catch(ThreadPanic& e) {
+            thread_self->send_panic_message(e);
         } catch (Exception &e) {
-            thread_self->throwable = e.getThrowable();
-            thread_self->exceptionThrown = true;
-            cout << e.throwable.message.str();
+            if(thread_self->state != thread_panicked)
+            {
+                thread_self->throwable = e.getThrowable();
+                thread_self->exceptionThrown = true;
+                cout << e.throwable.message.str();
+            }
         }
 
         /*

@@ -73,10 +73,7 @@ void print_stack();
 
 #define _newstr(x) CHK_NULL(ptr->createstr(x);) _brh
 
-#define check_cast \
-{ \
-    \
-}; _brh
+#define check_cast(x) CHK_NULL(ptr->checkcast(x);) _brh
 
 #define mov8(r,x) __rxs[r]=(int8_t)__rxs[x]; _brh
 
@@ -213,6 +210,8 @@ void print_stack();
 
 #define sdelref() __stack[(int64_t)__rxs[sp]--].object.del_ref(); _brh
 
+#define new_obj_arry(x) CHK_NULL(ptr->createobjectarry(__rxs[x]);) _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -293,6 +292,7 @@ void print_stack();
         &&DEL,                                 \
         &&MOVND,                                \
         &&SDELREF,                                \
+        &&NEW_OBJ_ARRY,                     \
     };
 
 /*
@@ -377,6 +377,7 @@ enum OPCODE {
     op_DEL=0x4b,
     op_MOVND=0x4c,
     op_SDELREF=0x4d,
+    op_NEW_OBJ_ARRY=0x4e,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

@@ -76,6 +76,8 @@ public:
     void createclass(int64_t klass);
     void mutate(Object *pObject);
     void null();
+    void createobjectarry(int64_t size);
+    void checkcast(int64_t klass);
 
     void createclass(ClassObject *klass);
 

@@ -99,6 +99,16 @@ private:
         return injectors.value.get(0);
     }
 
+    void remove_injector(string key) {
+        for(unsigned int i = 0; i < injectors.key.size(); i++) {
+            if(injectors.key.at(i) == key) {
+                injectors.value.remove(i);
+                injectors.key.remove(i);
+                return;
+            }
+        }
+    }
+
     bool has_injector(string key) {
         for(unsigned int i = 0; i < injectors.key.size(); i++) {
             if(injectors.key.at(i) == key)

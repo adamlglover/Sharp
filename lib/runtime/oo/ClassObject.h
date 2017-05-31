@@ -61,6 +61,8 @@ public:
     int64_t fieldindex(string name);
 
     void init();
+
+    bool hasBaseClass(ClassObject *pObject);
 };
 
 

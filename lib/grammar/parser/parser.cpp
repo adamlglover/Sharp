@@ -740,6 +740,37 @@ bool parser::parse_dot_notation_call_expr(ast *pAst) {
     return true;
 }
 
+bool parser::parse_array_expression(ast* pAst) {
+    pAst = get_ast(pAst, ast_array_expression);
+
+    this->retainstate(pAst);
+    errors->enablecheck_mode();
+    expect(LEFTBRACE, pAst, "`[`");
+
+    if(peek(1).gettokentype() != RIGHTBRACE) {
+        if(!parse_expression(pAst))
+        {
+            errors->pass();
+            this->rollback();
+            return false;
+        } else
+        {
+            this->dumpstate();
+            errors->fail();
+        }
+    } else {
+        if (peek(2).gettokentype() == LEFTCURLY) {
+            pushback();
+            return false;
+        }
+    }
+
+    expect(RIGHTBRACE, pAst, "`]`");
+
+    return true;
+
+}
+
 bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
     CHECK_ERRORS2(false)
@@ -885,15 +916,20 @@ bool parser::parse_expression(ast *pAst) {
     {
         advance();
         expect_token(pAst, "new", "");
-        parse_utype(pAst);
+        parse_utype_naked(pAst);
 
-        if(peek(1).gettokentype() == LEFTCURLY)
+        if(peek(1).gettokentype() == LEFTBRACE && parse_array_expression(pAst)){}
+        else if(peek(1).gettokentype() == LEFTBRACE) {
+            expect(LEFTBRACE, pAst, "`[`");
+            expect(RIGHTBRACE, pAst, "`]`");
             parse_vectorarray(pAst);
+        }
         else if(peek(1).gettokentype() == LEFTPAREN)
             parse_valuelist(pAst);
 
         pAst->encapsulate(ast_new_e);
-        return true;
+        if(peek(1).gettokentype() != LEFTBRACE)
+            return true;
     }
 
     if(peek(1).gettokentype() == LEFTBRACE)
@@ -1080,7 +1116,7 @@ void parser::parse_vectorarray(ast* pAst) {
     pAst = get_ast(pAst, ast_vector_array);
     expect(LEFTCURLY, pAst, "`{`");
 
-    if(peek(1).gettokentype() != RIGHTPAREN)
+    if(peek(1).gettokentype() != RIGHTCURLY)
     {
         parse_expression(pAst);
         _pExpr:

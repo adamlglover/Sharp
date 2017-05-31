@@ -55,12 +55,15 @@ Method* ClassObject::getFunction(int p) {
     return &functions.get(p);
 }
 
-Method *ClassObject::getFunction(string name, List<Param>& params) {
+Method *ClassObject::getFunction(string name, List<Param>& params, bool ubase) {
     for(unsigned int i = 0; i < functions.size(); i++) {
         Method& function = functions.get(i);
         if(Param::match(*function.getParams(), params) && name == function.getName())
             return &function;
     }
+
+    if(ubase && base != NULL)
+        return base->getFunction(name, params, ubase);
 
     return NULL;
 }
@@ -95,12 +98,15 @@ Field* ClassObject::getField(int p) {
     return &fields.get(p);
 }
 
-Field* ClassObject::getField(string name) {
+Field* ClassObject::getField(string name, bool ubase) {
     for(unsigned int i = 0; i < fields.size(); i++) {
         Field& field = fields.get(i);
         if(field.name == name)
             return &field;
     }
+
+    if(ubase && base != NULL)
+        return base->getField(name, ubase);
 
     return NULL;
 }
@@ -158,12 +164,15 @@ OperatorOverload *ClassObject::getOverload(size_t p) {
     return &overloads.get(p);
 }
 
-OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params) {
+OperatorOverload *ClassObject::getOverload(_operator op, List<Param> &params, bool ubase) {
     for(unsigned int i = 0; i < overloads.size(); i++) {
         OperatorOverload& oper = overloads.get(i);
         if(Param::match(*oper.getParams(), params) && op == oper.getOperator())
             return &oper;
     }
+
+    if(ubase && base != NULL)
+        return base->getOverload(op, params, ubase);
 
     return NULL;
 }
@@ -198,12 +207,16 @@ Method *ClassObject::getMacros(int p) {
     return &macros.get(p);
 }
 
-Method *ClassObject::getMacros(string name, List<Param> &params) {
+Method *ClassObject::getMacros(string name, List<Param> &params, bool ubase) {
     for(unsigned int i = 0; i < macros.size(); i++) {
         Method& macro = macros.get(i);
         if(Param::match(*macro.getParams(), params) && name == macro.getName())
             return &macro;
     }
+
+
+    if(ubase && base != NULL)
+        return base->getMacros(name, params, ubase);
 
     return NULL;
 }
@@ -308,7 +321,7 @@ OperatorOverload *ClassObject::getPostIncOverload() {
     for(unsigned int i = 0; i < overloads.size(); i++) {
         OperatorOverload& oper = overloads.get(i);
         if(oper_INC == oper.getOperator()) {
-            if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+            if(oper.getParams()->size() == 1 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
             }
         }
@@ -321,7 +334,7 @@ OperatorOverload *ClassObject::getPostDecOverload() {
     for(unsigned int i = 0; i < overloads.size(); i++) {
         OperatorOverload& oper = overloads.get(i);
         if(oper_DEC == oper.getOperator()) {
-            if(oper.getParams()->size() > 0 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+            if(oper.getParams()->size() == 1 && oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
                 return &oper;
             }
         }
@@ -334,7 +347,7 @@ OperatorOverload *ClassObject::getPreIncOverload() {
     for(unsigned int i = 0; i < overloads.size(); i++) {
         OperatorOverload& oper = overloads.get(i);
         if(oper_INC == oper.getOperator()) {
-            if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+            if(oper.getParams()->size() == 0) {
                 return &oper;
             }
         }
@@ -347,7 +360,7 @@ OperatorOverload *ClassObject::getPreDecOverload() {
     for(unsigned int i = 0; i < overloads.size(); i++) {
         OperatorOverload& oper = overloads.get(i);
         if(oper_DEC == oper.getOperator()) {
-            if(oper.getParams()->size() == 0 || !oper.getParams()->get(oper.getParams()->size()-1).field.nativeInt()) {
+            if(oper.getParams()->size() == 0) {
                 return &oper;
             }
         }

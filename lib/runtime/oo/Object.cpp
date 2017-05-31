@@ -85,6 +85,19 @@ void Object::createstr(int64_t ref) {
     createstr(str);
 }
 
+void Object::checkcast(int64_t klass) {
+    if(this->klass == NULL)
+        throw Exception(&Environment::ClassCastException, "invalid cast on non-class object");
+
+    ClassObject* k = env->findClass(klass);
+    if(!k->hasBaseClass(this->klass)) {
+        stringstream ss;
+        ss << "illegal cast of class '" << this->klass->name.str() << "' and '";
+        ss << k->name.str() << "'";
+        throw Exception(&Environment::ClassCastException, ss.str());
+    }
+}
+
 void Object::createclass(int64_t k) {
     ClassObject* klass = env->findClass(k);
     createclass(klass);
@@ -103,6 +116,23 @@ void Object::createclass(ClassObject *klass) {
     size =klass->fieldCount;
     if(size > 0)
         _Node =(Object*)memalloc(sizeof(Object) * size);
+    else
+        _Node = NULL;
+    Environment::init(_Node, size);
+}
+
+void Object::createobjectarry(int64_t sz) {
+    if(mark == gc_green) {
+        GC::_insert(this);
+    }
+
+    HEAD = NULL;
+    _rNode =NULL;
+
+    mark = gc_green;
+    this->size =sz;
+    if(sz > 0)
+        _Node =(Object*)memalloc(sizeof(Object) * sz);
     else
         _Node = NULL;
     Environment::init(_Node, size);

@@ -231,6 +231,8 @@ private:
     void parse_foreachstmnt(ast *pAst);
 
     bool parse_utype_naked(ast *pAst);
+
+    bool parse_array_expression(ast *pAst);
 };
 
 #define _SHARP_CERROR_LIMIT 9999

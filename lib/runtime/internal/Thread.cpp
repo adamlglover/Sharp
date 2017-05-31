@@ -603,7 +603,7 @@ void Thread::run() {
             NEWi: /* Requires register value */
                 _newi(GET_Da(cache[pc]))
             CHECK_CAST:
-                check_cast
+                check_cast(GET_Da(cache[pc]))
             MOV8:
                 mov8(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             MOV16:
@@ -732,8 +732,11 @@ void Thread::run() {
                 movnd(GET_Da(cache[pc]))
             SDELREF:
                 sdelref()
+            NEW_OBJ_ARRY:
+                new_obj_arry(GET_Da(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
+        cout << "std::bad_alloc\n";
         // TODO: throw out of memory error
     } catch (Exception &e) {
         throwable = e.getThrowable();
@@ -743,6 +746,56 @@ void Thread::run() {
 
         DISPATCH();
     }
+}
+
+void Thread::send_panic_message(ThreadPanic& err) {
+    cout << "Fatal thread 0x" << std::hex << id;
+    cout << " panicked: " << err.getMessage().str() << " at 0x" << pc
+       << std::dec << " (code=" << pc << ")" << endl;
+
+    for(int i = 0; i < 13; i++)
+        cout << "*** ";
+    cout << endl;
+
+    cout << "Revision: '" << manifest.version.str() << "'" << endl;
+    cout << "platform: " << mvers << " thread-name: " << name.str()
+       << " >>> " << manifest.application.str() << endl;
+    cout << "adx "; printf("%08x",(int64_t)__rxs[adx]);
+    cout << " cx "; printf("%08x",(int64_t)__rxs[cx]);
+    cout << " cmt "; printf("%08x",(int64_t)__rxs[cmt]);
+    cout << " ebx "; printf("%08x",(int64_t)__rxs[ebx]); cout << endl;
+
+    cout << "ecx "; printf("%08x",(int64_t)__rxs[ecx]);
+    cout << " ecf "; printf("%08x",(int64_t)__rxs[ecf]);
+    cout << " edf "; printf("%08x",(int64_t)__rxs[edf]);
+    cout << " ehf "; printf("%08x",(int64_t)__rxs[ehf]); cout << endl;
+
+    cout << "bmr "; printf("%08x",(int64_t)__rxs[bmr]);
+    cout << " egx "; printf("%08x",(int64_t)__rxs[egx]);
+    cout << " sp "; printf("%08x",(int64_t)__rxs[sp]);
+    cout << " fp "; printf("%08x",(int64_t)__rxs[fp]); cout << endl;
+
+    cout << "backtrace:" << endl;
+    for(unsigned int i = 0; i < err.getCalls().size(); i++) {
+        sh_asp* call = err.getCalls().get(i);
+
+        cout << "#" << i <<  " pc " << std::hex << err.getPcs().get(i) << std::dec << " " << env->sourceFiles[call->sourceFile].str();
+        cout << ' ' << "(" << call->name.str() << ")" << endl;
+    }
+
+    if(cache != NULL) {
+        cout << "cache around pc: " << endl;
+        int iter=0;
+        for(unsigned int i = pc; i > 0; i++) {
+            if(iter++ > 24) break;
+            if(i%4 == 0) cout << endl;
+
+            printf("%08x ",cache[i]);
+        }
+    }
+
+
+    state=thread_panicked;
 }
 
 bool Thread::TryThrow(sh_asp* asp, Object* exceptionObject) {
@@ -826,6 +879,9 @@ void Thread::fillStackTrace(nString& stack_trace) {
                 break;
 
             m= env->__address_spaces+id;
+            if(_fp-sp_offset < 0)
+                thread_panic("stack is unaligned, check your assembly?", calls, pcs);
+
             pc = (int64_t )__stack[_fp-pc_offset].var;
             _fp = (int64_t )__stack[_fp-fp_offset].var;
         }
@@ -1007,6 +1063,15 @@ void Thread::init_frame() {
 }
 
 void Thread::return_asp() {
+    if((FP64-1) < 0) {
+        List<sh_asp*> calls;
+        List<long long> pcs;
+
+        calls.add(env->__address_spaces+curr_adsp);
+        pcs.add(pc);
+
+        thread_panic("stack is unaligned (ret), check your assembly?", calls, pcs);
+    }
 
     int64_t id = (int64_t )__stack[FP64-1].var;
     if(id < 0 || id >= manifest.addresses) {
@@ -1023,6 +1088,10 @@ void Thread::return_asp() {
     pc = (uint64_t )__stack[FP64-pc_offset].var;
     _SP = __stack[FP64-sp_offset].var;
     _FP = __stack[FP64-fp_offset].var;
+}
+
+void Thread::thread_panic(string message, List<sh_asp*> calls, List<long long> pcs) {
+    throw ThreadPanic(message, calls, pcs);
 }
 
 void __os_sleep(int64_t INTERVAL) {

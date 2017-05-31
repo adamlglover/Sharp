@@ -45,6 +45,7 @@ public:
     static ClassObject ThreadStackException;
     static ClassObject IndexOutOfBoundsException;
     static ClassObject NullptrException;
+    static ClassObject ClassCastException;
 
     Object* global_heap;
 
@@ -75,6 +76,6 @@ extern Environment* env;
 
 #define mvers versions.BASE
 
-#define AUX_CLASSES 6
+#define AUX_CLASSES 7
 
 #endif //SHARP_ENVIRONMENT_H

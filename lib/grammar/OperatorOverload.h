@@ -33,13 +33,14 @@ enum _operator {
 class OperatorOverload : public Method {
 public:
     OperatorOverload(RuntimeNote note, ClassObject *klass, List<Param> &params,
-                     List<AccessModifier> &modifiers, NativeField rtype, _operator op, long long sourceFile) : Method("$operator", "",klass, params, modifiers,
+                     List<AccessModifier> &modifiers, NativeField rtype, _operator op, long long sourceFile
+            , string oper) : Method("$operator"+oper, "",klass, params, modifiers,
                                                                                         rtype, note, sourceFile) {
         this->op = op;
     }
 
     OperatorOverload(RuntimeNote note, ClassObject* klass, List<Param> &params, List<AccessModifier> &modifiers,
-                     ClassObject* rtype, _operator op, long long sourceFile) : Method("$operator", "", klass, params, modifiers, rtype, note, sourceFile) {
+                     ClassObject* rtype, _operator op, long long sourceFile, string oper) : Method("$operator"+oper, "", klass, params, modifiers, rtype, note, sourceFile) {
         this->op = op;
     }
 

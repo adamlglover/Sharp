@@ -45,3 +45,12 @@ void ClassObject::init() {
     fieldCount = 0;
     methodCount = 0;
 }
+
+bool ClassObject::hasBaseClass(ClassObject *pObject) {
+    if(pObject == NULL)
+        return false;
+    if(this->id==pObject->id)
+        return true;
+
+    return super == NULL ? false : super->hasBaseClass(pObject);
+}

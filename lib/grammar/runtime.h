@@ -668,13 +668,13 @@ private:
 
     Expression parseSelfDotNotationCall(ast *pAst);
 
-    Method *resolveSelfMethodUtype(ast *pAst, ast *pAst2);
+    Method *resolveSelfMethodUtype(ast *pAst, ast *pAst2, Expression& out);
 
     Expression parseBaseDotNotationCall(ast *pAst);
 
     Expression parseBaseExpression(ast *pAst);
 
-    Method* resolveBaseMethodUtype(ast *pAst, ast* pAst2);
+    Method* resolveBaseMethodUtype(ast *pAst, ast* pAst2, Expression& out);
 
     Expression parseNullExpression(ast *pAst);
 
@@ -706,9 +706,9 @@ private:
 
     Expression parseCastExpression(ast *pAst);
 
-    Expression parseNativeCast(Expression &utype, Expression &arg);
+    void parseNativeCast(Expression &utype, Expression &arg, Expression& out);
 
-    Expression parseClassCast(Expression &utype, Expression &arg);
+    void parseClassCast(Expression &utype, Expression &arg, Expression& out);
 
     void postIncClass(Expression &expression, token_entity op, ClassObject* klass);
 
@@ -865,10 +865,16 @@ private:
     string find_class(int64_t id);
 
     bool currentRefrenceAffected(Expression &expr);
+
+    void parseNewArrayExpression(Expression &out, Expression &utype, ast *pAst);
+
+    void pushExpressionToRegister(Expression &expr, Expression &out, int reg);
+
+    void pushExpressionToRegisterNoInject(Expression &expr, Expression &out, int reg);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.59"
+#define progvers "0.1.66"
 
 struct options {
     ~options()

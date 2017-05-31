@@ -129,7 +129,7 @@ public:
 
     size_t functionCount();
     Method* getFunction(int p);
-    Method* getFunction(string name, List<Param>& params);
+    Method* getFunction(string name, List<Param>& params, bool ubase =false);
     Method* getFunction(string name, int64_t _offset);
     bool addFunction(Method function);
 
@@ -139,19 +139,19 @@ public:
     OperatorOverload* getPostDecOverload();
     OperatorOverload* getPreIncOverload();
     OperatorOverload* getPreDecOverload();
-    OperatorOverload* getOverload(_operator op, List<Param>& params);
+    OperatorOverload* getOverload(_operator op, List<Param>& params, bool ubase =false);
     OperatorOverload* getOverload(_operator op, int64_t _offset);
     bool hasOverload(_operator op);
     bool addOperatorOverload(OperatorOverload overload);
 
     size_t fieldCount();
     Field* getField(int p);
-    Field* getField(string name);
+    Field* getField(string name, bool ubase =false);
     bool addField(Field field);
 
     size_t macrosCount();
     Method* getMacros(int p);
-    Method* getMacros(string name, List<Param>& params);
+    Method* getMacros(string name, List<Param>& params, bool ubase =false);
     Method* getMacros(string name, int64_t _offset);
     bool addMacros(Method macros);
 
