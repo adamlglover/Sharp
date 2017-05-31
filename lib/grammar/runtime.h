@@ -121,7 +121,8 @@ struct Expression {
             _new(false),
             func(false),
             intValue(0),
-            value("")
+            value(""),
+            literal(false)
     {
     }
 
@@ -135,7 +136,8 @@ struct Expression {
             _new(false),
             func(false),
             intValue(0),
-            value("")
+            value(""),
+            literal(false)
     {
     }
 
@@ -882,7 +884,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.66"
+#define progvers "0.1.69"
 
 struct options {
     ~options()

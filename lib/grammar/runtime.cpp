@@ -1203,6 +1203,7 @@ Expression runtime::parseLiteral(ast* pAst) {
             }
             break;
     }
+    expression.literal = true;
     expression.lnk = pAst;
     return expression;
 }
@@ -7013,7 +7014,7 @@ std::string runtime::generate_manifest() {
     manifest << (char)manif;
     manifest << ((char)0x02); manifest << c_options.out << ((char)nil);
     manifest << ((char)0x4); manifest << c_options.vers << ((char)nil);
-    manifest << ((char)0x5); manifest << c_options.debug ? ((char)nil) : ((char)nil);
+    manifest << ((char)0x5); manifest << c_options.debug ? ((char)1) : ((char)nil);
     manifest << ((char)0x6); manifest << mi64_tostr(main->vaddr) << ((char)nil);
     manifest << ((char)0x7); manifest << mi64_tostr(address_spaces) << ((char)nil);
     manifest << ((char)0x8); manifest << mi64_tostr(class_size) << ((char)nil);

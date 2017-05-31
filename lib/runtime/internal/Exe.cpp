@@ -81,7 +81,7 @@ int Process_Exe(std::string exe)
                     manifest.version =getstring(buffer);
                     break;
                 case 0x5:
-                    manifest.debug = buffer.at(n++) == nil ? false : true;
+                    manifest.debug = buffer.at(n++) == 1;
                     break;
                 case 0x6:
                     manifest.entry =getmi64(buffer);
