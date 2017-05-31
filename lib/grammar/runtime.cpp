@@ -4917,12 +4917,10 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
 }
 
 Expression runtime::parseQuesExpression(ast* pAst) {
-    Expression condition, condIfTrue, condIfFalse;
-    Scope* scope = current_scope();
+    Expression condition(parseIntermExpression(pAst->getsubast(0))),
+            condIfTrue(parseExpression(pAst->getsubast(1))),
+            condIfFalse(parseExpression(pAst->getsubast(2)));
 
-    condition = parseIntermExpression(pAst->getsubast(0));
-    condIfTrue = parseExpression(pAst->getsubast(1));
-    condIfFalse = parseExpression(pAst->getsubast(2));
     Expression expression(condIfTrue);
     expression.code.__asm64.free();
     pushExpressionToRegister(condition, expression, cmt);
