@@ -212,7 +212,8 @@ struct Scope {
             function(NULL),
             blocks(0),
             loops(0),
-            trys(0)
+            trys(0),
+            uniqueLabelId(0)
     {
         locals.init();
         label_map.init();
@@ -228,7 +229,8 @@ struct Scope {
             function(NULL),
             blocks(0),
             loops(0),
-            trys(0)
+            trys(0),
+            uniqueLabelId(0)
     {
         locals.init();
         label_map.init();
@@ -244,7 +246,8 @@ struct Scope {
             function(func),
             blocks(0),
             loops(0),
-            trys(0)
+            trys(0),
+            uniqueLabelId(0)
     {
         locals.init();
         label_map.init();
@@ -313,6 +316,7 @@ struct Scope {
     int blocks;
     int loops, trys;
     bool self, base;
+    long uniqueLabelId;
 
     void free() {
         locals.free();
@@ -388,9 +392,11 @@ public:
 
 #define try_label_end_id "$$try_end"
 
-#define __init_label_address (block.code.__asm64.size() == 0 ? 0 : block.code.__asm64.size() - 1)
+#define __init_label_address(code) (code.__asm64.size() == 0 ? 0 : code.__asm64.size() - 1)
 
 #define field_offset(s, offset) (s->function->isStatic() ? offset : (1+offset))
+
+#define unique_label_id(x) "$$L" << (x)
 
 class runtime
 {
@@ -871,6 +877,8 @@ private:
     void pushExpressionToRegister(Expression &expr, Expression &out, int reg);
 
     void pushExpressionToRegisterNoInject(Expression &expr, Expression &out, int reg);
+
+    void createLabel(string name, m64Assembler &code, int line, int col);
 };
 
 #define progname "bootstrap"

@@ -370,14 +370,14 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     ss.str("");
     ss << for_label_begin_id << scope->loops;
 
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address));
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address(block.code)));
 
     parseBlock(pAst->getsubast(ast_block), block);
    //block.code.inject(block.code.__asm64.size(), iter.code);
 
     ss.str("");
     ss << for_label_end_id << scope->loops;
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address));
+    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address(block.code)));
     scope->blocks--;
     scope->loops--;
 }
@@ -559,7 +559,7 @@ void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
         field = scope->getLocalField(name);
         et.local = scope->getLocalFieldIndex(name);
         et.klass = f.klass == NULL ? "" : f.klass->getFullName();
-        et.handler_pc = __init_label_address;
+        et.handler_pc = __init_label_address(block.code);
         scope->function->exceptions.push_back(et);
 
         if(!(f.nativeInt() && !f.array))
@@ -598,7 +598,7 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
 
     stringstream ss;
     ss << try_label_end_id << scope->trys;
-    scope->label_map.add(keypair<string,int64_t>(ss.str(), __init_label_address));
+    scope->label_map.add(keypair<string,int64_t>(ss.str(), __init_label_address(block.code)));
 
     if(pAst->hassubast(ast_finally_block)) {
         parseFinallyBlock(block, pAst->getsubast(ast_finally_block));
@@ -681,16 +681,20 @@ void runtime::parseGotoStatement(Block& block, ast* pAst) {
     scope->addBranch(label, 0, block.code, pAst->line, pAst->col);
 }
 
-void runtime::parseLabelDecl(Block& block,ast* pAst) {
+void runtime::createLabel(string name, m64Assembler& code, int line, int col) {
     Scope* scope = current_scope();
 
-    string label = pAst->getentity(0).gettoken();
-    if(label_exists(label)) {
-        errors->newerror(GENERIC, pAst->getentity(0), "redefinition of label `" + label + "`");
+    if(label_exists(name)) {
+        errors->newerror(GENERIC, line, col, "redefinition of label `" + name + "`");
     } else {
-        scope->label_map.add(keypair<string, int64_t>(label, __init_label_address));
+        scope->label_map.add(keypair<string, int64_t>(name, __init_label_address(code)));
     }
+}
 
+void runtime::parseLabelDecl(Block& block,ast* pAst) {
+    string label = pAst->getentity(0).gettoken();
+
+    createLabel(label, block.code, pAst->getentity(0).getline(), pAst->getentity(0).getcolumn());
     parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
 }
 
@@ -1194,7 +1198,7 @@ Expression runtime::parseLiteral(ast* pAst) {
             break;
         default:
             if(pAst->getentity(0).gettoken() == "true" ||
-                    pAst->getentity(0).gettoken() == "true") {
+                    pAst->getentity(0).gettoken() == "false") {
                 parseBoolLiteral(pAst->getentity(0), expression);
             }
             break;
@@ -2638,11 +2642,16 @@ void runtime::pushExpressionToRegisterNoInject(Expression& expr, Expression& out
             if(expr.func) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
                 out.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
+            } else if(reg != ebx) {
+                out.code.push_i64(SET_Ci(i64, op_MOVR, reg,0, ebx));
             }
             break;
         case expression_field:
             if(expr.utype.field->nativeInt() && !expr.utype.field->array) {
                 if(expr.utype.field->local) {
+                    if(reg != ebx) {
+                        out.code.push_i64(SET_Ci(i64, op_MOVR, reg,0, ebx));
+                    }
                 } else {
                     out.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
                     out.code.push_i64(SET_Ci(i64, op_MOVX, reg,0, adx));
@@ -5020,11 +5029,22 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
 
 Expression runtime::parseQuesExpression(ast* pAst) {
     Expression condition, condIfTrue, condIfFalse;
+    Scope* scope = current_scope();
 
-    // TODO: use later for assembly
     condition = parseIntermExpression(pAst->getsubast(0));
     condIfTrue = parseExpression(pAst->getsubast(1));
     condIfFalse = parseExpression(pAst->getsubast(2));
+    Expression expression(condIfTrue);
+    expression.code.__asm64.free();
+    pushExpressionToRegister(condition, expression, cmt);
+
+    expression.code.push_i64(SET_Ci(i64, op_LOADF, adx,0, (condIfTrue.code.size() + 3)));
+    expression.code.push_i64(SET_Ei(i64, op_IFNE));
+
+    expression.code.inject(expression.code.size(), condIfTrue.code);
+    expression.code.push_i64(SET_Di(i64, op_SKP, condIfFalse.code.size()));
+    expression.code.inject(expression.code.size(), condIfFalse.code);
+
 
     if(equals(condIfTrue, condIfFalse)) {
         if(condIfTrue.type == expression_class) {
@@ -5033,7 +5053,7 @@ Expression runtime::parseQuesExpression(ast* pAst) {
         }
     }
 
-    return condIfTrue;
+    return expression;
 }
 
 int recursive_expressions = 0; // TODO: use this to figure out sneaky user errors
@@ -5077,7 +5097,7 @@ Expression runtime::parseExpression(ast *pAst) {
         case ast_assign_e:
             return parseBinaryExpression(encap);
         case ast_ques_e:
-            return parseQuesExpression(encap); //  TOdO: work on this one
+            return parseQuesExpression(encap);
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
@@ -7903,6 +7923,32 @@ void runtime::createDumpFile() {
                 {
                     ss<<"new_objarry ";
                     ss<< Asm::registrerToString(GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_NOT: //c
+                {
+                    ss<<"not ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SKP:// d
+                {
+                    ss<<"skp @";
+                    ss<< GET_Da(x64);
+                    ss << " // pc = " << (x + GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_LOADF: //c
+                {
+                    ss<<"loadf ";
+                    ss<< Asm::registrerToString(GET_Ca(x64)) << ',';
+                    ss<<GET_Cb(x64);
+                    ss << " // store pc at <@" << (x + GET_Cb(x64)) << ">";
                     _ostream << ss.str();
                     break;
                 }

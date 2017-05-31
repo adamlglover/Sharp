@@ -214,6 +214,10 @@ void print_stack();
 
 #define _not(r,x) __rxs[r]=!__rxs[x]; _brh
 
+#define skp(x) pc += x; _brh
+
+#define loadf(r, x) __rxs[r]=pc+x; _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -296,6 +300,8 @@ void print_stack();
         &&SDELREF,                                \
         &&NEW_OBJ_ARRY,                           \
         &&NOT,                                      \
+        &&SKP,                                       \
+        &&LOADF,                                      \
     };
 
 /*
@@ -382,6 +388,8 @@ enum OPCODE {
     op_SDELREF=0x4d,
     op_NEW_OBJ_ARRY=0x4e,
     op_NOT=0x4f,
+    op_SKP=0x50,
+    op_LOADF=0x51,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };
