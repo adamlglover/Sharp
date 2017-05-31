@@ -734,6 +734,8 @@ void Thread::run() {
                 sdelref()
             NEW_OBJ_ARRY:
                 new_obj_arry(GET_Da(cache[pc]))
+            NOT:
+                _not(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         cout << "std::bad_alloc\n";

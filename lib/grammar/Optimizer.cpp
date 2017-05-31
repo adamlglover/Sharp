@@ -34,9 +34,8 @@ void Optimizer::optimizeRegisterOverride() {
             case op_MOV16:
             case op_MOV32:
             case op_MOV64:
-            case op_POP:
             {
-                register_state &left=get_register(GET_Da(x64));
+                register_state &left=get_register(GET_Ca(x64));
                 left.assign_type=assign_self;
                 left.value=0;
                 break;
@@ -77,6 +76,7 @@ void Optimizer::optimizeRegisterOverride() {
             case op_SDELREF:
             case op_PUSHREF:
             case op_PUSHR:
+            case op_POP:
             {
                 register_state &left=get_register(sp);
                 left.assign_type=assign_self;

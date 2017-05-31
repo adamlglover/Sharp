@@ -2838,7 +2838,8 @@ Expression runtime::parsePostInc(ast* pAst) {
                 break;
             case expression_field:
                 if(interm.utype.field->type == field_class) {
-                    expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(current_scope(), interm.utype.field->vaddr)));
+                    if(expression.utype.field->local)
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(current_scope(), expression.utype.field->vaddr)));
                     postIncClass(expression, entity, interm.utype.field->klass);
                     return expression;
                 } else if(interm.utype.field->type == field_native) {
@@ -3753,7 +3754,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
     else if(arg.utype.type == ResolvedReference::FIELD && utype.utype.nf == arg.utype.field->nf)
         warning(GENERIC, utype.lnk->line, utype.lnk->col, "redundant cast of type `" + arg.typeToString() + "` to `" + utype.typeToString() + "`");
 
-    out.type = utype.type;
+    out.type = expression_var;
     out.utype = utype.utype;
     switch(utype.utype.nf) {
         case fi8:
@@ -3761,7 +3762,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOV8, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOV8, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3773,7 +3774,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOV16, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOV16, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3785,7 +3786,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOV32, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOV32, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3797,7 +3798,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOV8, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOV8, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3809,7 +3810,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOVU8, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOV8, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3821,7 +3822,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOVU16, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOVU16, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3833,7 +3834,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOVU32, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOVU32, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3845,7 +3846,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
                 out.code.push_i64(SET_Ci(i64, op_MOVU64, ebx,0, ebx));
                 return;
             } else if(arg.type == expression_field) {
-                pushExpressionToRegister(arg, out, ebx);
+                pushExpressionToRegisterNoInject(arg, out, ebx);
                 out.code.push_i64(SET_Ci(i64, op_MOVU64, ebx, 0, ebx));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
                 out.code.push_i64(SET_Ci(i64, op_SMOVR, ebx, 0, field_offset(scope, arg.utype.field->vaddr)));
@@ -3861,6 +3862,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
             errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "type `void` cannot be used as a cast");
             return;
         case fdynamic:
+            out.type = expression_lclass;
             if(arg.type == expression_lclass) {
                 return;
             }
@@ -3969,7 +3971,7 @@ void runtime::preIncClass(Expression& out, token_entity op, ClassObject* klass) 
             out.code.push_i64(SET_Di(i64, op_INC, sp));
 
         out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
-        out.code.push_i64(SET_Di(i64, op_MOVI, 1), ebx);
+        out.code.push_i64(SET_Di(i64, op_MOVI, 0), ebx);
         out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
 
         if(!overload->isStatic())
@@ -4019,7 +4021,8 @@ Expression runtime::parsePreInc(ast* pAst) {
                 break;
             case expression_field:
                 if(interm.utype.field->type == field_class) {
-                    expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(current_scope(), interm.utype.field->vaddr)));
+                    if(expression.utype.field->local)
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(current_scope(), expression.utype.field->vaddr)));
 
                     preIncClass(expression, entity, expression.utype.field->klass);
                     return expression;
@@ -4095,10 +4098,25 @@ Expression runtime::parseParenExpression(ast* pAst) {
     return expression;
 }
 
-void runtime::notClass(Expression& expression, ClassObject* klass, ast* pAst) {
+void runtime::notClass(Expression& out, ClassObject* klass, ast* pAst) {
     List<Param> emptyParams;
-    if(klass->getOverload(oper_NOT, emptyParams)) {
+    Method* overload;
+    if((overload = klass->getOverload(oper_NOT, emptyParams)) != NULL) {
         // call overload operator
+        if(overload->type != lvoid)
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+
+        out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+        if(!overload->isStatic())
+            out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+
+        out.code.push_i64(SET_Di(i64, op_CALL, overload->vaddr));
+
+        out.type = methodReturntypeToExpressionType(overload);
+        if(out.type == expression_lclass) {
+            out.utype.klass = overload->klass;
+            out.utype.type = ResolvedReference::CLASS;
+        }
     } else if(klass->hasOverload(oper_NOT)) {
         errors->newerror(GENERIC, pAst->line, pAst->col, "use of unary operator '!' on class `" + klass->getName() + "`; missing overload params for operator `"
                                                                         + klass->getFullName() + ".operator!`");
@@ -4112,14 +4130,18 @@ Expression runtime::parseNotExpression(ast* pAst) {
     Expression expression;
 
     expression = parseExpression(pAst->getsubast(ast_expression));
-
-    // TODO: check expression if it is a var then go ahead, else throw error
     switch(expression.type) {
         case expression_var:
             // negate value
+            if(expression.func)
+                pushExpressionToRegisterNoInject(expression, expression, ebx);
+
+            expression.code.push_i64(SET_Ci(i64, op_NOT, ebx,0, ebx));
             break;
         case expression_lclass:
             // check for !operator
+            if(expression.func)
+                expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
             notClass(expression, expression.utype.klass, pAst);
             break;
         case expression_unresolved:
@@ -4135,12 +4157,20 @@ Expression runtime::parseNotExpression(ast* pAst) {
             errors->newerror(GENERIC, pAst->line, pAst->col, "unary operator '!' cannot be applied to dynamic_object, did you forget to add a cast?  i.e !((SomeClass)dynamic_class)");
             break;
         case expression_field:
+            expression.type = expression_var;
             if(expression.utype.field->type == field_native) {
-                // negate value
+                if(expression.utype.field->dynamicObject()) {
+                    errors->newerror(GENERIC, pAst->line, pAst->col, "use of `!` operator on field of type `dynamic_object` without a cast. Try !((SomeClass)dynamic_class)");
+                } else if(expression.utype.field->nativeInt()) {
+                    pushExpressionToRegisterNoInject(expression, expression, ebx);
+                    expression.code.push_i64(SET_Ci(i64, op_NOT, ebx,0, ebx));
+                }
             } else if(expression.utype.field->type == field_class) {
+                if(expression.utype.field->local)
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(current_scope(), expression.utype.field->vaddr)));
                 notClass(expression, expression.utype.field->klass, pAst);
             } else {
-                // do nothjing field is unresolvable
+                errors->newerror(GENERIC, pAst->line, pAst->col, "field must evaluate to an int to use `!` operator");
             }
             break;
         case expression_null:
@@ -4155,7 +4185,6 @@ Expression runtime::parseNotExpression(ast* pAst) {
 
     }
 
-    expression.type = expression_var;
     return expression;
 }
 
@@ -5048,7 +5077,7 @@ Expression runtime::parseExpression(ast *pAst) {
         case ast_assign_e:
             return parseBinaryExpression(encap);
         case ast_ques_e:
-            return parseQuesExpression(encap);
+            return parseQuesExpression(encap); //  TOdO: work on this one
         default:
             stringstream err;
             err << ": unknown ast type: " << pAst->gettype();
