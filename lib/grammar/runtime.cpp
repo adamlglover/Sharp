@@ -1630,6 +1630,7 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     if(field->nativeInt()) {
                         expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
+                        cout << "smov222 " << pAst->line << endl;
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
@@ -1721,6 +1722,8 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     if(field->nativeInt()) {
                         expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
+
+                        cout << "smov-- " << pAst->line << endl;
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
@@ -2643,6 +2646,8 @@ void runtime::pushExpressionToRegisterNoInject(Expression& expr, Expression& out
             if(expr.func) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
                 out.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
+
+                cout << "smov11 " << expr.lnk->line << endl;
             } else if(reg != ebx) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, reg,0, ebx));
             }
@@ -3312,123 +3317,6 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
     }
 
     return expression;
-}
-
-void runtime::_CREATE_VARIABLE(m64Assembler& code, Field& variable) {
-    Generator::setupVariable(code, variable.vaddr); // get refrence to variable
-
-    if(variable.nativeInt()) {
-        code.push_i64(SET_Di(i64, op_MOVI, 1), ecx);
-        code.__asm64.add(SET_Di(i64, op_NEWi, ecx));
-    } else if(variable.dynamicObject()) {
-        /* do nothing */
-    } else if(variable.klass != NULL) {
-        code.__asm64.add(SET_Di(i64, op_NEW_CLASS, variable.klass));
-    }
-}
-
-void runtime::_PUSH_VAR_VALUE_TO_REGISTER(Expression& value, int reg) {
-    if(value.func) {
-        /*
-         * movr %adx,%sp
-         * smov %reg
-         */
-        value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-        value.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
-    } else {
-        switch(value.type) {
-            case expression_var:
-                /* Do nothing */
-                break;
-            case expression_field:
-                /*
-                 * movi #0,ecx
-                 * movx reg,ecx
-                 */
-                value.code.push_i64(SET_Di(i64, op_MOVI, 0), ecx);
-                value.code.push_i64(SET_Ci(i64, op_MOVX, reg,0, ecx));
-                break;
-            default:
-                /* Do nothing */
-                break;
-        }
-    }
-}
-
-void runtime::_ASSIGN_VARIABLE(m64Assembler& code, _operator op, Field& variable, Expression& value) {
-    if(variable.type == field_unresolved) return;
-
-    if(variable.type == field_class)
-        _ASSIGN_CLASS_VARIABlE(code, op, variable, value);
-    else {
-        Expression fieldExpr = fieldToExpression(NULL, variable);
-        if(equals(fieldExpr, value)) {
-
-            switch(op) {
-                case oper_EQUALS:
-                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
-                    /*
-                     * movr adx,fp
-                     * smovr ebx+<var_offset>
-                     */
-                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    value.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, Generator::variableOffset(variable.vaddr)));
-                    break;
-                case oper_PLUS_EQ:
-                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
-                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
-                    /*
-                     * add ebx,ecx
-                     * movr adx,fp
-                     * smovr bmr+<var_offset>
-                     */
-                    value.code.push_i64(SET_Ci(i64, op_ADD, ebx,0, ecx));
-                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
-                    break;
-                case oper_MIN_EQ:
-                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
-                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
-                    /*
-                     * sub ebx,ecx
-                     * movr adx,fp
-                     * smovr bmr+<var_offset>
-                     */
-                    value.code.push_i64(SET_Ci(i64, op_SUB, ebx,0, ecx));
-                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
-                    break;
-                case oper_DIV_EQ:
-                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
-                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
-                    /*
-                     * div ebx,ecx
-                     * movr adx,fp
-                     * smovr bmr+<var_offset>
-                     */
-                    value.code.push_i64(SET_Ci(i64, op_DIV, ebx,0, ecx));
-                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
-                    break;
-                case oper_MOD_EQ:
-                    _PUSH_VAR_VALUE_TO_REGISTER(value, ebx); // data will be in ebx
-                    _PUSH_VAR_VALUE_TO_REGISTER(fieldExpr, ecx); // data will be in ebx
-                    /*
-                     * mod ebx,ecx
-                     * movr adx,fp
-                     * smovr bmr+<var_offset>
-                     */
-                    value.code.push_i64(SET_Ci(i64, op_MOD, ebx,0, ecx));
-                    value.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    value.code.push_i64(SET_Ci(i64, op_SMOVR, bmr,0, Generator::variableOffset(variable.vaddr)));
-                    break;
-            }
-        }
-    }
-}
-
-void runtime::_ASSIGN_CLASS_VARIABlE(m64Assembler& code, _operator op, Field& variable, Expression& value) {
-
 }
 
 bool runtime::currentRefrenceAffected(Expression& expr) {
@@ -7954,7 +7842,7 @@ void runtime::createDumpFile() {
                     break;
                 }
                 default:
-                    _ostream << "?";
+                    _ostream << "? (" << GET_OP(x64) << ")";
                     break;
             }
 

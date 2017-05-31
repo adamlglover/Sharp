@@ -57,7 +57,6 @@ void Optimizer::optimizeRegisterOverride() {
                 left.assign_type=assign_bool;
                 left.value=0;
             }
-            case op_MOVBI:
             case op_EXP:
             {
                 register_state &left=get_register(0x8);
@@ -96,6 +95,14 @@ void Optimizer::optimizeRegisterOverride() {
                     get_register(i).assign_type=register_undefined;
                     get_register(i).value=0;
                 }
+                break;
+            }
+            case op_MOVBI:
+            {
+                register_state &left=get_register(0x8);
+                i++;
+                left.assign_type=assign_value;
+                left.value=0;
                 break;
             }
             default:

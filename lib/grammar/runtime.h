@@ -850,17 +850,9 @@ private:
 
     void initVariable(Field &field, Expression &outExpr);
 
-    void _CREATE_VARIABLE(m64Assembler& code, Field &variable);
-
-    void _ASSIGN_VARIABLE(m64Assembler &code, _operator op, Field &variable, Expression &value);
-
     Expression fieldToExpression(ast *pAst, string name);
 
     Expression fieldToExpression(ast *pAst, Field &field);
-
-    void _ASSIGN_CLASS_VARIABlE(m64Assembler &code, _operator op, Field &variable, Expression &value);
-
-    void _PUSH_VAR_VALUE_TO_REGISTER(Expression &value, int reg);
 
     void parseBoolLiteral(token_entity token, Expression &expression);
 
