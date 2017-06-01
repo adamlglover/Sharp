@@ -156,6 +156,8 @@ struct Expression {
     void free() {
         code.free();
     }
+
+    void copy(Expression &expression);
 };
 
 struct Block {

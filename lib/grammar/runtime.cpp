@@ -4921,7 +4921,8 @@ Expression runtime::parseQuesExpression(ast* pAst) {
             condIfTrue(parseExpression(pAst->getsubast(1))),
             condIfFalse(parseExpression(pAst->getsubast(2)));
 
-    Expression expression(condIfTrue);
+    Expression expression;
+    expression.copy(condIfTrue);
     expression.code.__asm64.free();
     pushExpressionToRegister(condition, expression, cmt);
 
@@ -6820,6 +6821,21 @@ string Expression::typeToString() {
             return "null";
     }
     return utype.typeToString();
+}
+
+void Expression::copy(Expression &expression) {
+    this->type=expression.type;
+    this->_new=expression._new;
+
+    this->code.free();
+    this->code.inject(0, expression.code);
+    this->dot=expression.dot;
+    this->func=expression.func;
+    this->intValue=expression.intValue;
+    this->literal=expression.literal;
+    this->lnk = expression.lnk;
+    this->utype  = expression.utype;
+    this->value = expression.value;
 }
 
 string ResolvedReference::toString() {
