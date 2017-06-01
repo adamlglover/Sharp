@@ -4913,11 +4913,11 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
 }
 
 Expression runtime::parseQuesExpression(ast* pAst) {
-    Expression condition(parseIntermExpression(pAst->getsubast(0))),
-            condIfTrue(parseExpression(pAst->getsubast(1))),
-            condIfFalse(parseExpression(pAst->getsubast(2)));
+    Expression condition,condIfTrue, condIfFalse, expression;
 
-    Expression expression;
+    condition = parseIntermExpression(pAst->getsubast(0));
+    condIfTrue = parseExpression(pAst->getsubast(1));
+    condIfFalse = parseExpression(pAst->getsubast(1));
     expression = condIfTrue;
 
     expression.code.__asm64.free();
@@ -6818,21 +6818,6 @@ string Expression::typeToString() {
             return "null";
     }
     return utype.typeToString();
-}
-
-void Expression::copy(Expression &expression) {
-    this->type=expression.type;
-    this->_new=expression._new;
-
-    this->code.free();
-    this->code.inject(0, expression.code);
-    this->dot=expression.dot;
-    this->func=expression.func;
-    this->intValue=expression.intValue;
-    this->literal=expression.literal;
-    this->lnk = expression.lnk;
-    this->utype  = expression.utype;
-    this->value = expression.value;
 }
 
 void Expression::operator=(Expression expression) {

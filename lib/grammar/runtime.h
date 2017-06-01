@@ -158,8 +158,6 @@ struct Expression {
     }
 
     void operator=(Expression e);
-
-    void copy(Expression &expression);
 };
 
 struct Block {
@@ -881,7 +879,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.69"
+#define progvers "0.1.71"
 
 struct options {
     ~options()
