@@ -46,7 +46,8 @@ public:
             klass(NULL),
             oo(NULL),
             refrenceName(""),
-            array(false)
+            array(false),
+            nf(fnof)
     {
     }
 
@@ -112,7 +113,7 @@ enum expression_type {
 
 struct Expression {
     Expression()
-    :
+            :
             type(expression_unknown),
             utype(),
             code(),
