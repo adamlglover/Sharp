@@ -1630,7 +1630,6 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     if(field->nativeInt()) {
                         expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
-                        cout << "smov222 " << pAst->line << endl;
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
@@ -1722,8 +1721,6 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     if(field->nativeInt()) {
                         expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
-
-                        cout << "smov-- " << pAst->line << endl;
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
@@ -2647,7 +2644,6 @@ void runtime::pushExpressionToRegisterNoInject(Expression& expr, Expression& out
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
                 out.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
 
-                cout << "smov11 " << expr.lnk->line << endl;
             } else if(reg != ebx) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, reg,0, ebx));
             }
@@ -4922,7 +4918,8 @@ Expression runtime::parseQuesExpression(ast* pAst) {
             condIfFalse(parseExpression(pAst->getsubast(2)));
 
     Expression expression;
-    expression.copy(condIfTrue);
+    expression = condIfTrue;
+
     expression.code.__asm64.free();
     pushExpressionToRegister(condition, expression, cmt);
 
@@ -6824,6 +6821,21 @@ string Expression::typeToString() {
 }
 
 void Expression::copy(Expression &expression) {
+    this->type=expression.type;
+    this->_new=expression._new;
+
+    this->code.free();
+    this->code.inject(0, expression.code);
+    this->dot=expression.dot;
+    this->func=expression.func;
+    this->intValue=expression.intValue;
+    this->literal=expression.literal;
+    this->lnk = expression.lnk;
+    this->utype  = expression.utype;
+    this->value = expression.value;
+}
+
+void Expression::operator=(Expression expression) {
     this->type=expression.type;
     this->_new=expression._new;
 

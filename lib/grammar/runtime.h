@@ -157,6 +157,8 @@ struct Expression {
         code.free();
     }
 
+    void operator=(Expression e);
+
     void copy(Expression &expression);
 };
 
