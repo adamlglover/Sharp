@@ -53,7 +53,7 @@ void runtime::interpret() {
             lst.free();
         }
 
-        long iter =0;
+        long iter =0;   // TODO: parse new var[] { 1, 2, 3, 4 }; and " hi " + 8 (string concatanation)
         for(parser* p : parsers) {
             errors = new Errors(p->lines, p->sourcefile, true, c_options.aggressive_errors);
             _current = p;
