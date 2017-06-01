@@ -120,7 +120,7 @@ int __vinit(string exe, List<nString>& pArgs) {
 void init_main(List <nString>& pArgs) {
     __rxs[sp] = 0;
     __rxs[fp] = 0;
-    Environment::init(Thread::threads[main_threadid]->__stack, STACK_SIZE);
+    Environment::init(Thread::threads[main_threadid]->__stack, Thread::threads[main_threadid]->stack_lmt);
     Thread::threads[main_threadid]->init_frame();
     Object* object = &Thread::threads[main_threadid]->__stack[(long)++__rxs[sp]].object;
 

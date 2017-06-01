@@ -662,7 +662,7 @@ bool parser::isexprsymbol(string token) {
            token == "-" || token == "+"||
            token == ">>" || token == "<<"||
            token == "<" || token == ">"||
-           token == "<=" || token == ">="||
+           token == "<=" || token == ">="|| // TODO: add more support for comparator operator overloads "<=" ">=" "<<" etc.
            token == "==" || token == "!="||
            token == "&" || token == "|"||
            token == "&&" || token == "||"||

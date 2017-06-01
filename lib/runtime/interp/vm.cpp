@@ -221,7 +221,7 @@ void SharpVM::interrupt(int32_t signal) {
             __rxs[cmt]=Thread::destroy((int32_t )__rxs[adx]);
             return;
         case 0xa8:
-            __rxs[cmt]=Thread::Create((int32_t )__rxs[adx]);
+            __rxs[cmt]=Thread::Create((int32_t )__rxs[adx], (unsigned long)__rxs[egx]);
             return;
         default:
             // unsupported

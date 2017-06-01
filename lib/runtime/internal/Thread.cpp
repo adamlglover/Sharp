@@ -34,12 +34,14 @@ void Thread::Startup() {
     main->Create("Main");
 }
 
-int32_t Thread::Create(int32_t method) {
+int32_t Thread::Create(int32_t method, unsigned long stack_size) {
     if(method < 0 || method >= manifest.addresses)
         return -1;
     sh_asp* asp = &env->__address_spaces[method];
     if(asp->param_size>0)
         return -2;
+    if(stack_size < (STACK_INIT_SIZE + (asp->frame_init+asp->self)))
+        return -3;
 
     Thread* thread = (Thread*)malloc(
             sizeof(Thread)*1);
@@ -57,6 +59,7 @@ int32_t Thread::Create(int32_t method) {
     thread->daemon = false;
     thread->state = thread_init;
     thread->exitVal = 0;
+    thread->stack_lmt = stack_size;
 
     push_thread(thread);
 
@@ -81,6 +84,7 @@ void Thread::Create(string name) {
     this->daemon = false;
     this->state = thread_init;
     this->exitVal = 0;
+    this->stack_lmt = STACK_SIZE;
 
     push_thread(this);
 }
@@ -100,6 +104,7 @@ void Thread::CreateDaemon(string) {
     this->throwable.init();
     this->state = thread_init;
     this->exitVal = 0;
+    this->stack_lmt=0;
 
     push_thread(this);
 }
@@ -362,7 +367,7 @@ void Thread::suspendThread(Thread *thread) {
 void Thread::term() {
     this->monitor.release();
     if(__stack != NULL)
-        GC::_insert_stack(__stack, STACK_SIZE);
+        GC::_insert_stack(__stack, this->stack_lmt);
     __stack = NULL;
     this->name.free();
 }
@@ -572,8 +577,8 @@ void Thread::run() {
     if(id != main_threadid) {
         __rxs[sp] = -1;
         __rxs[fp] = 0;
-        this->__stack = (data_stack*)memalloc(sizeof(data_stack)*STACK_SIZE);
-        Environment::init(__stack, STACK_SIZE);
+        this->__stack = (data_stack*)memalloc(sizeof(data_stack)*stack_lmt);
+        Environment::init(__stack, stack_lmt);
     }
 
     pc = 0;
@@ -1038,7 +1043,7 @@ void Thread::call_asp(int64_t id) {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if((__rxs[sp]+(asp->frame_init+asp->self)) < STACK_SIZE) {
+    if((__rxs[sp]+(asp->frame_init+asp->self)) < stack_lmt) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
         this->cache_size=asp->cache_size;
@@ -1058,7 +1063,7 @@ void Thread::init_frame() {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if(sp+frame_alloc < STACK_SIZE) {
+    if(__rxs[sp]+frame_alloc < stack_lmt) {
         __stack[(int64_t )++_SP].var = old_sp; // store sp
         __stack[(int64_t )++_SP].var = _FP; // store frame pointer
         ++_SP; // store pc later

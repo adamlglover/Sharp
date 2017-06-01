@@ -4205,6 +4205,7 @@ Expression runtime::parseAddExpression(ast* pAst) {
         case expression_var:
             if(right.type == expression_var) {
                 // add 2 vars
+                // check if values are both literals
             }else if(right.type == expression_field) {
                 if(right.utype.field->type == field_native) {
                     // add var

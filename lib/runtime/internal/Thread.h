@@ -32,6 +32,8 @@ private:
 
 #define STACK_SIZE 0xefba
 
+#define STACK_INIT_SIZE 5
+
 enum ThreadState {
     thread_init=0x000,
     thread_running=0x001,
@@ -86,7 +88,7 @@ public:
     (*threadFunc)(void*), Thread* thread);
 
 
-    static int32_t Create(int32_t);
+    static int32_t Create(int32_t, unsigned long);
     void Create(string);
     void CreateDaemon(string);
     void exit();
@@ -111,6 +113,7 @@ public:
     uint64_t pc, curr_adsp;
     int64_t cache_size;
     data_stack* __stack;
+    unsigned long stack_lmt;
     sharp_cache cache;
     Throwable throwable;
 #ifdef WIN32_
