@@ -95,15 +95,15 @@ void print_stack();
 
 #define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
-#define _iadd(r,x) __rxs[0x0008]=__rxs[r]+x; _brh
+#define _iadd(r,x) __rxs[r]+=x; _brh
 
-#define _isub(r,x) __rxs[0x0008]=__rxs[r]-x; _brh
+#define _isub(r,x) __rxs[r]-=x; _brh
 
-#define _imul(r,x) __rxs[0x0008]=__rxs[r]*x; _brh
+#define _imul(r,x) __rxs[r]*=x; _brh
 
-#define _idiv(r,x) __rxs[0x0008]=__rxs[r]/x; _brh
+#define _idiv(r,x) __rxs[r]/=x; _brh
 
-#define imod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)x; _brh
+#define imod(r,x) __rxs[r]=(int64_t)__rxs[r]%(int64_t)x; _brh
 
 #define _addl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=__rxs[r]; _brh
 
@@ -123,7 +123,7 @@ void print_stack();
 
 #define _idivl(r,x) __stack[(int64_t)__rxs[fp]+x].var/=r; _brh
 
-#define imodl(r,x)  (int64_t)__stack[(int64_t)__rxs[fp]+x].var%=r; _brh
+#define imodl(r,x)  __stack[(int64_t)__rxs[fp]+x].modul((int64_t)r); _brh
 
 #define _pop --__rxs[sp]; _brh
 
@@ -302,6 +302,11 @@ void print_stack();
         &&NOT,                                      \
         &&SKP,                                       \
         &&LOADF,                                      \
+        &&IADDL,                                       \
+        &&ISUBL,                                        \
+        &&IMULL,                                         \
+        &&IDIVL,                                          \
+        &&IMODL,                                           \
     };
 
 /*
@@ -390,6 +395,11 @@ enum OPCODE {
     op_NOT=0x4f,
     op_SKP=0x50,
     op_LOADF=0x51,
+    op_IADDL=0x52,
+    op_ISUBL=0x53,
+    op_IMULL=0x54,
+    op_IDIVL=0x55,
+    op_IMODL=0x56,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };

@@ -745,6 +745,16 @@ void Thread::run() {
                 skp(GET_Da(cache[pc]))
             LOADF:
                 loadf(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IADDL:
+                _iaddl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            ISUBL:
+                _isubl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IMULL:
+                _imull(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IDIVL:
+                _idivl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            IMODL:
+                imodl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         cout << "std::bad_alloc\n";

@@ -108,6 +108,7 @@ enum expression_type {
     expression_void=12,
     expression_unresolved=13,
     expression_null=14,
+    expression_var_math=0xff12,
     expression_unknown=0x900f
 };
 
@@ -158,6 +159,8 @@ struct Expression {
     }
 
     void operator=(Expression e);
+
+    void inject(Expression &expression);
 };
 
 struct Block {
@@ -876,6 +879,12 @@ private:
     void pushExpressionToRegisterNoInject(Expression &expr, Expression &out, int reg);
 
     void createLabel(string name, m64Assembler &code, int line, int col);
+
+    bool isDClassNumberEncodable(double var);
+
+    void pushExpressionToStackNoInject(Expression &expression, Expression &out);
+
+    void parseAddExpressionChain(Expression &out, int startpos, ast *pAst, token_entity operand);
 };
 
 #define progname "bootstrap"

@@ -771,6 +771,7 @@ bool parser::parse_array_expression(ast* pAst) {
 
 }
 
+int nestedExprs = 0;
 bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
     CHECK_ERRORS2(false)
@@ -979,8 +980,11 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
-        parse_expression(pAst);
+        nestedExprs++;
+        parse_expression(nestedExprs == 1 ? pAst : pAst->getparent());
+        if(nestedExprs == 1)
         pAst->encapsulate(ast_add_e);
+        nestedExprs--;
         return true;
     }
 

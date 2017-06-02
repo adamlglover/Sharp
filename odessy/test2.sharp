@@ -81,6 +81,10 @@ class Main base Base {
         printc(x ? 1 : 2);
         __asm("movi ' ',ebx" "_putc ebx");
         printc(+x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(-x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(5-6-7-8-9);
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(
