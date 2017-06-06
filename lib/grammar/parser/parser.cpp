@@ -1007,11 +1007,18 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
-        nestedExprs++;
-        parse_expression(nestedExprs == 1 ? pAst : pAst->getparent());
-        if(nestedExprs == 1)
+        if(parenExprs > 0) {
+
+            parse_expression(pAst);
             pAst->encapsulate(ast_mult_e);
-        nestedExprs--;
+            parenExprs--;
+        } else {
+            nestedExprs++;
+            parse_expression(nestedExprs == 1 ? pAst : pAst->getparent());
+            if(nestedExprs == 1)
+                pAst->encapsulate(ast_mult_e);
+            nestedExprs--;
+        }
         return true;
     }
 

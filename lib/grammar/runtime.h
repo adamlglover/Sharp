@@ -156,6 +156,7 @@ struct Expression {
     string typeToString();
     void free() {
         code.free();
+        *this=(Expression());
     }
 
     void operator=(Expression e);
@@ -891,6 +892,8 @@ private:
     OPCODE operandToLocalMathOp(token_entity operand);
 
     bool addExpressions(Expression &out, Expression &left, Expression &right, token_entity operand, double *varout);
+
+    bool isMathOp(token_entity entity);
 };
 
 #define progname "bootstrap"

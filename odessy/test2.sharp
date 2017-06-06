@@ -60,9 +60,15 @@ class Main base Base {
         x + 1;
     }
 
+    static fn operator+(var x) : var {
+        x = new Main();
+        return 1;
+    }
+
     static fn main(string[] args) : var {
         var[] str = "factorial of 8 is ";
         dynamic_object o = new Main();
+        Main m;
         base->print2(str);
         self->fact(8);
         foo(new Main[9][0]);
@@ -86,7 +92,7 @@ class Main base Base {
         __asm("movi ' ',ebx" "_putc ebx");
         printc(x);
         __asm("movi '~',ebx" "_putc ebx");
-        printc(2-(8+7+x)*9999);
+        printc(5*(x+3)*9999);
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(
