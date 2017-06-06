@@ -4416,6 +4416,7 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
                 }else if(rightExpr.type == expression_field) {
                     if(rightExpr.utype.field->type == field_native) {
                         // add var
+                        leftEval:
                         if(leftExpr.literal && (i-1) >= 0) {
                             peekExpr = pAst->getsubast(i-1)->gettype() == ast_expression ?
                                        parseExpression(pAst->getsubast(i-1)) : parseIntermExpression(pAst->getsubast(i-1));
@@ -4426,7 +4427,7 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
                                     i--;
                                     leftExpr=outtmp;
                                     leftExpr.type=expression_var;
-
+                                    goto leftEval;
                                 }
                             }
                         }
