@@ -894,6 +894,24 @@ private:
     bool addExpressions(Expression &out, Expression &left, Expression &right, token_entity operand, double *varout);
 
     bool isMathOp(token_entity entity);
+
+    bool shiftLiteralExpressions(Expression &out, Expression &leftExpr, Expression &rightExpr, token_entity operand);
+
+    OPCODE operandToShftOp(token_entity operand);
+
+    void shiftNative(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
+
+    OPCODE operandToLessOp(token_entity operand);
+
+    void lessThanLiteralExpressions(Expression &out, Expression &leftExpr, Expression &rightExpr, token_entity operand);
+
+    void lessThanNative(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
+
+    void assignNative(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
+
+    OPCODE operandToCompareOp(token_entity operand);
+
+    void assignValue(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
 };
 
 #define progname "bootstrap"

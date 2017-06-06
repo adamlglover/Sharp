@@ -757,6 +757,12 @@ void Thread::run() {
                 imodl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             POPR:
                 popr(GET_Da(cache[pc]))
+            SHL:
+                shl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            SHR:
+                shr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            TNE:
+                tne(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         cout << "std::bad_alloc\n";

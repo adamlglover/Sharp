@@ -196,6 +196,8 @@ void print_stack();
 
 #define test(r,x) __rxs[0x0002]=__rxs[r]==__rxs[x]; _brh
 
+#define tne(r,x) __rxs[0x0002]=__rxs[r]!=__rxs[x]; _brh
+
 #define __lock(r) CHK_NULL(ptr->monitor.acquire((int64_t)__rxs[r]);) _brh
 
 #define __ulock() CHK_NULL(ptr->monitor.release();) _brh
@@ -219,6 +221,10 @@ void print_stack();
 #define loadf(r, x) __rxs[r]=pc+x; _brh
 
 #define popr(r) __rxs[r]=__stack[(int64_t)__rxs[sp]--].var; _brh
+
+#define shl(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]<<(int64_t)__rxs[x]; pc++; _brh
+
+#define shr(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]>>(int64_t)__rxs[x]; pc++; _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \
@@ -310,6 +316,9 @@ void print_stack();
         &&IDIVL,                                          \
         &&IMODL,                                           \
         &&POPR,                                             \
+        &&SHL,                                               \
+        &&SHR,                                                \
+        &&TNE,                                                 \
     };
 
 /*
@@ -404,8 +413,11 @@ enum OPCODE {
     op_IDIVL=0x55,
     op_IMODL=0x56,
     op_POPR=0x57,
+    op_SHL=0x58,
+    op_SHR=0x59,
+    op_TNE=0x5a,
 
-    op_OPT=0xff, /* unused special instruction for compiler */
+    MAX_OPCODE=0x59
 };
 
 #endif //SHARP_OPCODE_H

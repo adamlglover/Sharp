@@ -662,7 +662,7 @@ bool parser::isexprsymbol(string token) {
            token == "-" || token == "+"||
            token == ">>" || token == "<<"||
            token == "<" || token == ">"||
-           token == "<=" || token == ">="|| // TODO: add more support for comparator operator overloads "<=" ">=" "<<" etc.
+           token == "<=" || token == ">="||
            token == "==" || token == "!="||
            token == "&" || token == "|"||
            token == "&&" || token == "||"||
@@ -675,7 +675,14 @@ bool parser::isoverride_operator(string token) {
             token == "++" ||token == "--" ||
             token == "*" || token == "/" ||
             token == "%" || token == "-" ||
-            token == "+" || token == "==";
+            token == "+" || token == "==" ||
+
+            token == "&&" || token == "||" ||
+            token == ">>" || token == "<<"||
+            token == "<" || token == ">"||
+            token == "<=" || token == ">="||
+            token == "!="
+            ;
 }
 
 bool parser::parse_dot_notation_call_expr(ast *pAst) {

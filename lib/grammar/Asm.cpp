@@ -116,7 +116,7 @@ bool Asm::hex_int(string s) {
 
 void Asm::expect_int() {
     bool hash = false;
-    if(current() == "#") {
+    if(current() == "#" && current().getid() != CHAR_LITERAL) {
         hash = true;
         npos++;
     }

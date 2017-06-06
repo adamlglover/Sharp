@@ -65,6 +65,11 @@ class Main base Base {
         return 1;
     }
 
+    static fn operator<<(var x) : var {
+        x = new Main();
+        return 1;
+    }
+
     static fn main(string[] args) : var {
         var[] str = "factorial of 8 is ";
         dynamic_object o = new Main();
@@ -93,6 +98,16 @@ class Main base Base {
         printc(x);
         __asm("movi '~',ebx" "_putc ebx");
         printc(5*(x+3)*9999);
+//        __asm("movi ' ',ebx" "_putc ebx");
+//        printc((main << x) + 5);            // this will crash lol
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x <= 5);
+        __asm("movi '#',ebx" "_putc ebx");
+        printc(x == 5);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x != 5);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x += 5 >> 0xfb);
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(

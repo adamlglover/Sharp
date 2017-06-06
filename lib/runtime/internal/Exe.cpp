@@ -368,6 +368,8 @@ int Process_Exe(std::string exe)
                         adsp->bytecode = (int64_t*)malloc(sizeof(int64_t)*adsp->cache_size);
                         for(int64_t i = 0; i < adsp->cache_size; i++) {
                             adsp->bytecode[i] = getmi64(buffer);
+                            if(GET_OP(adsp->bytecode[i]) > MAX_OPCODE || GET_OP(adsp->bytecode[i]) < 0)
+                                throw std::runtime_error("assembly found in file `" + exe + "` may be corrupt");
                         }
                     }
                     break;
