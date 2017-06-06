@@ -11,6 +11,7 @@
 #include "BytecodeStream.h"
 #include "../runtime/oo/string.h"
 #include "m64Assembler.h"
+#include "../runtime/interp/Opcode.h"
 
 class ref_ptr;
 class ResolvedReference;
@@ -108,7 +109,6 @@ enum expression_type {
     expression_void=12,
     expression_unresolved=13,
     expression_null=14,
-    expression_var_math=0xff12,
     expression_unknown=0x900f
 };
 
@@ -884,7 +884,13 @@ private:
 
     void pushExpressionToStackNoInject(Expression &expression, Expression &out);
 
-    void parseAddExpressionChain(Expression &out, int startpos, ast *pAst, token_entity operand);
+    void parseAddExpressionChain(Expression &out, ast *pAst);
+
+    OPCODE operandToOp(token_entity operand);
+
+    OPCODE operandToLocalMathOp(token_entity operand);
+
+    bool addExpressions(Expression &out, Expression &left, Expression &right, token_entity operand, double *varout);
 };
 
 #define progname "bootstrap"

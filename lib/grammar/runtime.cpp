@@ -4173,15 +4173,42 @@ void runtime::addClass(token_entity operand, ClassObject* klass, Expression& exp
     __freeList(eList);
 }
 
-void runtime::addNative(token_entity operand, NativeField nf, Expression& expression, Expression& left, Expression& right, ast* pAst) {
-    expression.type = expression_var;
+OPCODE runtime::operandToLocalMathOp(token_entity operand)
+{
+    if(operand == "+")
+        return op_ADDL;
+    else if(operand == "-")
+        return op_SUBL;
+    else if(operand == "*")
+        return op_MULL;
+    else if(operand == "/")
+        return op_DIVL;
+    else if(operand == "%")
+        return op_MODL;
+    else
+        return op_NOP;
+}
 
-    if(right.type == expression_var) {
-        // add 2 vars
-    } else if(right.type == expression_field) {
-        if(right.utype.field->nativeInt()) {
-            // add 2 vars
-        } else {
+void runtime::addNative(token_entity operand, NativeField nf, Expression& out, Expression& left, Expression& right, ast* pAst) {
+    out.type = expression_var;
+    right.type = expression_var;
+    Expression expr;
+
+    if(left.type == expression_var) {
+        pushExpressionToRegister(right, out, egx);
+        pushExpressionToRegister(left, out, ebx);
+        out.code.push_i64(SET_Ci(i64, operandToOp(operand), ebx,0, egx), ebx);
+        // TODO: check if type is compatible right expr
+        right.code.free();
+    } else if(left.type == expression_field) {
+        if(left.utype.field->nativeInt()) {
+            pushExpressionToRegisterNoInject(right, out, egx);
+            pushExpressionToRegister(left, out, ebx);
+            out.code.push_i64(SET_Ci(i64, operandToOp(operand), ebx,0, egx), ebx);
+        } else if (left.utype.field->type == field_class) {
+
+        }
+        else {
             errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
         }
     } else {
@@ -4285,60 +4312,132 @@ Expression runtime::parseUnary(token_entity operand, Expression& right, ast* pAs
     return expression;
 }
 
-void runtime::parseAddExpressionChain(Expression& out, int startpos, ast* pAst, token_entity operand) {
-    ast* astExpr;
-    Expression rightExpr;
-    for(unsigned int i = startpos; i < pAst->getsubastcount(); i++) {
-        astExpr = pAst->getsubast(i);
-        rightExpr = parseExpression(astExpr);
+OPCODE runtime::operandToOp(token_entity operand)
+{
+    if(operand == "+")
+        return op_ADD;
+    else if(operand == "-")
+        return op_SUB;
+    else if(operand == "*")
+        return op_MUL;
+    else if(operand == "/")
+        return op_DIV;
+    else if(operand == "%")
+        return op_MOD;
+    else
+        return op_NOP;
+}
 
-        out.type = expression_var;
-        switch(out.type) {
+bool runtime::addExpressions(Expression &out, Expression &leftExpr, Expression &rightExpr, token_entity operand, double* varout) {
+    if(operand == "+")
+        *varout = leftExpr.intValue + rightExpr.intValue;
+    else if(operand == "-")
+        *varout = leftExpr.intValue - rightExpr.intValue;
+    else if(operand == "*")
+        *varout = leftExpr.intValue * rightExpr.intValue;
+    else if(operand == "/")
+        *varout = leftExpr.intValue / rightExpr.intValue;
+    else if(operand == "%")
+        *varout = (int64_t)leftExpr.intValue % (int64_t)rightExpr.intValue;
+
+    if(isDClassNumberEncodable(*varout)) {
+        return false;
+    } else {
+        if(out.code.size() >= 2 && (GET_OP(out.code.__asm64.get(out.code.size()-2)) == op_MOVI
+                                    || GET_OP(out.code.__asm64.get(out.code.size()-2)) == op_MOVBI)){
+            out.code.__asm64.pop_back();
+            out.code.__asm64.pop_back();
+        }
+
+        if((((int64_t)abs(*varout)) - abs(*varout)) > 0) {
+            // movbi
+            out.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)*varout)), abs(get_low_bytes(*varout)));
+        } else {
+            // movi
+            out.code.push_i64(SET_Di(i64, op_MOVI, *varout), ebx);
+        }
+
+        rightExpr.literal = true;
+        rightExpr.intValue = *varout;
+    }
+
+    out.literal = true;
+    out.intValue = *varout;
+    return true;
+}
+
+void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
+    Expression leftExpr, rightExpr, peekExpr;
+    int operandPtr = 0;
+    double value=0;
+    bool firstEval=true;
+    token_entity operand;
+    List<token_entity> operands;
+    operands.add(pAst->getentity(0));
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        if(pAst->getsubast(i)->getentitycount() > 0)
+            operands.add(pAst->getsubast(i)->getentity(0));
+    }
+
+    operandPtr=operands.size()-1;
+    for(long int i = pAst->getsubastcount()-1; i >= 0; i--) {
+        if(firstEval) {
+            rightExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i))
+                                                                        : parseIntermExpression(pAst->getsubast(i));
+            i--;
+            firstEval= false;
+        }
+        leftExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i)) : parseIntermExpression(pAst->getsubast(i));
+        operand = operands.get(operandPtr--);
+        double var = 0;
+
+        switch(leftExpr.type) {
             case expression_var:
                 if(rightExpr.type == expression_var) {
-                    if(out.literal && rightExpr.literal) {
-                        if(out.code.size() >= 2 && (GET_OP(out.code.__asm64.get(out.code.size()-2)) == op_MOVI
-                                                    || GET_OP(out.code.__asm64.get(out.code.size()-2)) == op_MOVBI)){
-                            out.code.__asm64.pop_back();
-                            out.code.__asm64.pop_back();
-                        }
+                    if(leftExpr.literal && rightExpr.literal) {
 
-                        double var = operand == "+" ? out.intValue + rightExpr.intValue : out.intValue - rightExpr.intValue;
-                        if(isDClassNumberEncodable(var)) {
+                        if(!addExpressions(out, leftExpr, rightExpr, operand, &var)) {
                             goto calculate;
-                        } else {
-                            if((((int64_t)abs(rightExpr.intValue)) - abs(rightExpr.intValue)) > 0) {
-                                // movbi
-                                out.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
-                            } else {
-                                // movi
-                                out.code.push_i64(SET_Di(i64, op_MOVI, var), ebx);
-                            }
-
-                            out.literal = true;
-                            out.intValue = var;
                         }
                     } else {
                         calculate:
-                        pushExpressionToRegisterNoInject(out, out, ecx);
-                        pushExpressionToRegisterNoInject(rightExpr, out, ebx);
-                        out.code.push_i64(SET_Ci(i64, (operand == "" ? op_ADD : op_SUB), ecx,0, ebx));
-                        out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
+                        // is left leftexpr a literal?
+                        pushExpressionToStack(rightExpr, out);
+                        pushExpressionToRegister(leftExpr, out, ebx);
+                        out.code.push_i64(SET_Di(i64, op_POPR, ecx));
+                        out.code.push_i64(SET_Ci(i64, operandToOp(operand), ebx,0, ecx), ebx);
 
+                        rightExpr.literal = false;
+                        rightExpr.code.free();
+                        var=0;
                     }
-                    // add 2 vars
-                    // check if values are both literals
+
+                    out.type = expression_var;
                 }else if(rightExpr.type == expression_field) {
                     if(rightExpr.utype.field->type == field_native) {
                         // add var
-                        addNative(operand, rightExpr.utype.field->nf, out, out, rightExpr, pAst);
+                        if(leftExpr.literal && (i-1) >= 0) {
+                            peekExpr = pAst->getsubast(i-1)->gettype() == ast_expression ?
+                                       parseExpression(pAst->getsubast(i-1)) : parseIntermExpression(pAst->getsubast(i-1));
+                            Expression outtmp;
+
+                            if(peekExpr.literal) {
+                                if(addExpressions(outtmp, peekExpr, leftExpr, operand, &var)) {
+                                    i--;
+                                    leftExpr=outtmp;
+                                    leftExpr.type=expression_var;
+
+                                }
+                            }
+                        }
+
+                        addNative(operand, rightExpr.utype.field->nf, out, leftExpr, rightExpr, pAst);
                     } else if(rightExpr.utype.field->type == field_class) {
-                        addClass(operand, rightExpr.utype.field->klass, out, out, rightExpr, pAst);
+                        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                          "` cannot be applied to expression of type `" + out.typeToString() + "` and `" + rightExpr.typeToString() + "`");
                     } else {
                         // do nothing field unresolved
                     }
-                } else if(rightExpr.type == expression_lclass) {
-                    addClass(operand, out.utype.klass, out, out, rightExpr, pAst);
                 } else {
                     errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
                                                                       "` cannot be applied to expression of type `" + out.typeToString() + "` and `" + rightExpr.typeToString() + "`");
@@ -4349,11 +4448,11 @@ void runtime::parseAddExpressionChain(Expression& out, int startpos, ast* pAst, 
                                                                   "` cannot be applied to expression of type `" + out.typeToString() + "` and `" + rightExpr.typeToString() + "`");
                 break;
             case expression_field:
-                if(out.utype.field->type == field_native) {
+                if(leftExpr.utype.field->type == field_native) {
                     // add var
-                    addNative(operand, out.utype.field->nf, out, out, rightExpr, pAst);
-                } else if(out.utype.field->type == field_class) {
-                    addClass(operand, out.utype.field->klass, out, out, rightExpr, pAst);
+                    addNative(operand, leftExpr.utype.field->nf, out, leftExpr, rightExpr, pAst);
+                } else if(leftExpr.utype.field->type == field_class) {
+                    addClass(operand, leftExpr.utype.field->klass, out, leftExpr, rightExpr, pAst);
                 } else {
                     // do nothing field unresolved
                 }
@@ -4386,7 +4485,7 @@ void runtime::parseAddExpressionChain(Expression& out, int startpos, ast* pAst, 
 }
 
 Expression runtime::parseAddExpression(ast* pAst) {
-    Expression expression, left, right;
+    Expression expression, right;
     token_entity operand = pAst->hasentity(PLUS) ? pAst->getentity(PLUS) : pAst->getentity(MINUS);
 
     if(operand.gettokentype() == PLUS && pAst->getsubastcount() == 1) {
@@ -4399,98 +4498,7 @@ Expression runtime::parseAddExpression(ast* pAst) {
         return parseUnary(operand, right, pAst);
     }
 
-    left = parseIntermExpression(pAst->getsubast(0));
-    right = parseExpression(pAst->getsubast(1));
-
-
-    expression.type = expression_var;
-    switch(left.type) {
-        case expression_var:
-            if(right.type == expression_var) {
-                if(left.literal && right.literal) {
-                    double var = operand == "+" ? left.intValue + right.intValue : left.intValue - right.intValue;
-                    if(isDClassNumberEncodable(var)) {
-                        goto calculate;
-                    } else {
-                        if((((int64_t)abs(right.intValue)) - abs(right.intValue)) > 0) {
-                            // movbi
-                            expression.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
-                        } else {
-                            // movi
-                            expression.code.push_i64(SET_Di(i64, op_MOVI, var), ebx);
-                        }
-
-                        expression.literal = true;
-                        expression.intValue = var;
-                    }
-                } else {
-                    calculate:
-                    pushExpressionToRegister(left, expression, ecx);
-                    pushExpressionToRegister(right, expression, ebx);
-                    expression.code.push_i64(SET_Ci(i64, (operand == "" ? op_ADD : op_SUB), ecx,0, ebx));
-                    expression.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
-
-                }
-                // add 2 vars
-                // check if values are both literals
-            }else if(right.type == expression_field) {
-                if(right.utype.field->type == field_native) {
-                    // add var
-                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
-                } else if(right.utype.field->type == field_class) {
-                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
-                } else {
-                    // do nothing field unresolved
-                }
-            } else if(right.type == expression_lclass) {
-                addClass(operand, left.utype.klass, expression, left, right, pAst);
-            } else {
-                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            }
-            break;
-        case expression_null:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            break;
-        case expression_field:
-            if(left.utype.field->type == field_native) {
-                // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
-            } else if(left.utype.field->type == field_class) {
-                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
-            } else {
-                // do nothing field unresolved
-            }
-            break;
-        case expression_native:
-            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
-            break;
-        case expression_lclass:
-            addClass(operand, left.utype.klass, expression, left, right, pAst);
-            break;
-        case expression_class:
-            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
-            break;
-        case expression_void:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            break;
-        case expression_dynamicclass:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
-                                                                                                                                                                               "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
-            break;
-        case expression_string:
-            // TODO: construct new string(<string>) and use that to concatonate strings
-            break;
-        default:
-            break;
-    }
-
-    if(pAst->getsubastcount() > 2) {
-        parseAddExpressionChain(expression, 2, pAst, operand);
-    }
+    parseAddExpressionChain(expression, pAst);
 
     expression.lnk = pAst;
     return expression;
@@ -4598,7 +4606,7 @@ Expression runtime::parseShiftExpression(ast* pAst) {
             else if(right.type == expression_field) {
                 if(right.utype.field->type == field_native) {
                     // add var
-                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                    //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
                 } else if(right.utype.field->type == field_class) {
                     addClass(operand, right.utype.field->klass, expression, left, right, pAst);
                 } else {
@@ -4618,7 +4626,7 @@ Expression runtime::parseShiftExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
                 addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
@@ -4677,7 +4685,7 @@ Expression runtime::parseLessExpression(ast* pAst) {
             else if(right.type == expression_field) {
                 if(right.utype.field->type == field_native) {
                     // add var
-                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                    //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
                 } else if(right.utype.field->type == field_class) {
                     addClass(operand, right.utype.field->klass, expression, left, right, pAst);
                 } else {
@@ -4697,7 +4705,7 @@ Expression runtime::parseLessExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
                 addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
@@ -4765,7 +4773,7 @@ Expression runtime::parseEqualExpression(ast* pAst) {
                 else if(right.type == expression_field) {
                     if(right.utype.field->type == field_native) {
                         // add var
-                        addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                        //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
                     } else if(right.utype.field->type == field_class) {
                         addClass(operand, right.utype.field->klass, expression, left, right, pAst);
                     } else {
@@ -4785,7 +4793,7 @@ Expression runtime::parseEqualExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
                 addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
@@ -4842,7 +4850,7 @@ Expression runtime::parseAndExpression(ast* pAst) {
             else if(right.type == expression_field) {
                 if(right.utype.field->type == field_native) {
                     // add var
-                    addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                    //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
                 } else if(right.utype.field->type == field_class) {
                     addClass(operand, right.utype.field->klass, expression, left, right, pAst);
                 } else {
@@ -4862,7 +4870,7 @@ Expression runtime::parseAndExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
                 addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
@@ -4928,7 +4936,7 @@ Expression runtime::parseAssignExpression(ast* pAst) {
                 else if(right.type == expression_field) {
                     if(right.utype.field->type == field_native) {
                         // add var
-                        addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                        //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
                     } else if(right.utype.field->type == field_class) {
                         addClass(operand, right.utype.field->klass, expression, left, right, pAst);
                     } else {
@@ -4948,7 +4956,7 @@ Expression runtime::parseAssignExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
                 addClass(operand, left.utype.field->klass, expression, left, right, pAst);
             } else {
@@ -7591,6 +7599,8 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    ss<< " -> ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x));
                     _ostream << ss.str();
                     break;
                 }
@@ -7600,6 +7610,8 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    ss<< " -> ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x));
                     _ostream << ss.str();
                     break;
                 }
@@ -7609,6 +7621,8 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    ss<< " -> ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x));
                     _ostream << ss.str();
                     break;
                 }
@@ -7618,6 +7632,8 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    ss<< " -> ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x));
                     _ostream << ss.str();
                     break;
                 }
@@ -7627,6 +7643,8 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    ss<< " -> ";
+                    ss<< Asm::registrerToString(method->code.__asm64.get(++x));
                     _ostream << ss.str();
                     break;
                 }
@@ -8126,6 +8144,13 @@ void runtime::createDumpFile() {
                     ss<<"imodl #";
                     ss<< GET_Ca(x64) << ", @";
                     ss<<GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_POPR:// d
+                {
+                    ss<<"popr ";
+                    ss<< Asm::registrerToString(GET_Da(x64));
                     _ostream << ss.str();
                     break;
                 }

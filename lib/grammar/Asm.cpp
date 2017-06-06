@@ -561,6 +561,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_ADD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+
+                expect(",");
+                expect_register();
+                assembler.push_i64(i2.high_bytes);
             } else if(instruction_is("sub")) {
                 expect_register();
                 itmp = i2;
@@ -568,6 +572,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_SUB, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+
+                expect(",");
+                expect_register();
+                assembler.push_i64(i2.high_bytes);
             } else if(instruction_is("mul")) {
                 expect_register();
                 itmp = i2;
@@ -575,6 +583,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MUL, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+
+                expect(",");
+                expect_register();
+                assembler.push_i64(i2.high_bytes);
             } else if(instruction_is("div")) {
                 expect_register();
                 itmp = i2;
@@ -582,6 +594,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_DIV, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+
+                expect(",");
+                expect_register();
+                assembler.push_i64(i2.high_bytes);
             } else if(instruction_is("mod")) {
                 expect_register();
                 itmp = i2;
@@ -589,6 +605,10 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Ci(i64, op_MOD, abs(itmp.high_bytes), (itmp.high_bytes<0), i2.high_bytes));
+
+                expect(",");
+                expect_register();
+                assembler.push_i64(i2.high_bytes);
             } else if(instruction_is("pop")) {
                 assembler.push_i64(SET_Ei(i64, op_POP));
             } else if(instruction_is("inc")) {

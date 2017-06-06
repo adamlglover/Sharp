@@ -24,7 +24,7 @@ class Main base Base {
     }
 
     static fn fact(var x) : var {
-        return (x == 1 ? x : x * fact(x - 1));
+       // return (x == 1 ? x : x * fact(x - 1));
         try {
         __asm(
             "movr %adx,%fp"
@@ -47,7 +47,7 @@ class Main base Base {
             "smov %ebx"
             "movr %adx,%fp"
             "smov %ecx"
-            "mul %ecx,%ebx"
+            "mul %ecx,%ebx, %bmr"
             "smovr %bmr-0x5"
             "ret"
         );
@@ -84,7 +84,9 @@ class Main base Base {
         __asm("movi ' ',ebx" "_putc ebx");
         printc(-x);
         __asm("movi ' ',ebx" "_putc ebx");
-        printc(5-6-7-8-9);
+        printc(x);
+        __asm("movi '~',ebx" "_putc ebx");
+        printc(2-(8+7+x)*9999);
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(

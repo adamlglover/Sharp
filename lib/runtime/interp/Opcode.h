@@ -85,15 +85,15 @@ void print_stack();
 
 #define pushr(r) __stack[(int64_t)++__rxs[sp]].var = __rxs[r]; _brh
 
-#define _add(r,x) __rxs[0x0008]=__rxs[r]+__rxs[x]; _brh
+#define _add(r,x) __rxs[cache[pc+1]]=__rxs[r]+__rxs[x]; pc++; _brh
 
-#define _sub(r,x) __rxs[0x0008]=__rxs[r]-__rxs[x]; _brh
+#define _sub(r,x) __rxs[cache[pc+1]]=__rxs[r]-__rxs[x]; pc++; _brh
 
-#define _mul(r,x) __rxs[0x0008]=__rxs[r]*__rxs[x]; _brh
+#define _mul(r,x) __rxs[cache[pc+1]]=__rxs[r]*__rxs[x]; pc++; _brh
 
-#define _div(r,x) __rxs[0x0008]=__rxs[r]/__rxs[x]; _brh
+#define _div(r,x) __rxs[cache[pc+1]]=__rxs[r]/__rxs[x]; pc++; _brh
 
-#define mod(r,x) __rxs[0x0008]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
+#define mod(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
 
 #define _iadd(r,x) __rxs[r]+=x; _brh
 
@@ -218,6 +218,8 @@ void print_stack();
 
 #define loadf(r, x) __rxs[r]=pc+x; _brh
 
+#define popr(r) __rxs[r]=__stack[(int64_t)__rxs[sp]--].var; _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -307,6 +309,7 @@ void print_stack();
         &&IMULL,                                         \
         &&IDIVL,                                          \
         &&IMODL,                                           \
+        &&POPR,                                             \
     };
 
 /*
@@ -400,6 +403,7 @@ enum OPCODE {
     op_IMULL=0x54,
     op_IDIVL=0x55,
     op_IMODL=0x56,
+    op_POPR=0x57,
 
     op_OPT=0xff, /* unused special instruction for compiler */
 };
