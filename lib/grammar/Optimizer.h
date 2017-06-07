@@ -53,6 +53,10 @@ private:
     void optimizeRegisterOverride();
 
     register_state &get_register(int id);
+
+    void optimizeUnusedReferences();
+
+    bool referenceUsed(unsigned int);
 };
 
 enum register_assignes

@@ -10,6 +10,68 @@ register_state& Optimizer::get_register(int id) {
     return register_map.get(id);
 }
 
+bool Optimizer::referenceUsed(unsigned int start) {
+    int64_t x64;
+    for(unsigned int i = start; i < assembler->size(); i++) {
+        x64 = assembler->__asm64.get(i);
+
+        switch(GET_OP(x64)) {
+            case op_MOVL:
+            case op_MOVSL:
+            case op_MOVG:
+            {
+                return false;
+            }
+            case op_DEL:
+            case op_MOVND:
+            case op_NEW_OBJ_ARRY:
+            case op_LOCK:
+            case op_ULOCK:
+            case op_MOVN:
+            case op_NEW_CLASS:
+            case op_DELREF:
+            case op_PUSHREF:
+            case op_CHECKLEN:
+            case op_SIZEOF:
+            case op_NEWi:
+            case op_NEWSTR:
+            case op_CHECK_CAST:
+            case op_POPREF:
+            case op_MUTL:
+            {
+                return true;
+            }
+            default:
+                break;
+        }
+    }
+
+    return false;
+}
+
+void Optimizer::optimizeUnusedReferences() {
+    int64_t x64;
+    for(unsigned int i = 0; i < assembler->size(); i++) {
+        x64 = assembler->__asm64.get(i);
+
+        switch(GET_OP(x64)) {
+            case op_MOVL:
+            case op_MOVSL:
+            case op_MOVN:
+            case op_MOVG:
+            case op_MOVND:
+            {
+                if(!referenceUsed(i+1)) {
+                    assembler->__asm64.remove(i);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
 void Optimizer::optimizeRegisterOverride() {
     int64_t x64;
     for(unsigned int i = 0; i < assembler->size(); i++) {
@@ -130,4 +192,5 @@ void Optimizer::optimize(m64Assembler &code) {
     }
 
     optimizeRegisterOverride();
+    optimizeUnusedReferences();
 }

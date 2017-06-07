@@ -34,10 +34,10 @@ public:
         __expand();
     }
 
-    void insert(long long _X, T& data) {
-        if(_X>len || _X < 0){
+    void insert(long long pos, T& data) {
+        if(pos>len || pos < 0) {
             stringstream ss;
-            ss << "index out of bounds list::insert() _X: " << _X
+            ss << "index out of bounds list::insert() _X: " << pos
                << " length: " << len << endl;
             throw std::runtime_error(ss.str());
         }
@@ -45,17 +45,17 @@ public:
         if(len == 0) {
             push_back(data);
         } else {
-            __expand();
-            int64_t iter = _X;
-            T tmp = _Data[iter++];
-            _Data[_X] = data;
-            for(unsigned long i = _X; i < len-1; i++) {
-                if(i == _X) {
-                    // insert data
-                    _Data[i] = tmp;
-                } else
-                    _Data[i] = _Data[i+1];
-            }
+            T* result = new T[len+1];
+            long long newLen=len+1;
+            for(long long i = 0; i < pos; i++)
+                result[i] = _Data[i];
+            result[pos] = data;
+            for(long long i = pos + 1; i < newLen; i++)
+                result[i] = _Data[i - 1];
+
+            free();
+            len=newLen;
+            _Data=result;
         }
 
     }

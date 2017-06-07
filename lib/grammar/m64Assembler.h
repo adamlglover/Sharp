@@ -79,8 +79,7 @@ public:
             if(iter >= assembler.__asm64.size())
                 break;
 
-            __asm64.insert(start, assembler.__asm64.get(iter++));
-            start++;
+            __asm64.insert(start++, assembler.__asm64.get(iter++));
         }
     }
 

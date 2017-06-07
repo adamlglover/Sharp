@@ -78,6 +78,11 @@ public:
         return this->tok == s;
     }
 
+    bool operator!=(const string& s)
+    {
+        return this->tok != s;
+    }
+
     token_entity_id getid();
     void setid(token_entity_id id);
     string gettoken();

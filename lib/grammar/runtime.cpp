@@ -1386,6 +1386,10 @@ void runtime::resolveBaseUtype(Scope* scope, ref_ptr& reference, Expression& exp
             if(ref.type == ResolvedReference::FIELD) {
                 // field!
             } else {
+                if(scope->type == scope_static_block) {
+                    errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + ref.klass->getName() + "` from self in static context");
+                }
+
                 if(scope->klass->hasBaseClass(ref.klass)) {
                     // base class
                     expression.utype.type = ResolvedReference::CLASS;
@@ -1568,7 +1572,7 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
 
         if(scope->type == scope_global) {
             /* cannot get self from global refrence */
-            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + reference.refname + "` from self at global scope");
+            errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + starter_name + "` from self at global scope");
 
             expression.utype.type = ResolvedReference::NOTRESOLVED;
             expression.utype.refrenceName = reference.refname;
@@ -1585,12 +1589,13 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
             }
 
             if(scope->type == scope_static_block) {
-                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + reference.refname + "` from self in static context");
+                errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + starter_name + "` from self in static context");
 
                 expression.utype.type = ResolvedReference::NOTRESOLVED;
                 expression.utype.refrenceName = reference.refname;
                 expression.type = expression_unresolved;
             } else {
+
                 if((field = scope->klass->getField(starter_name)) != NULL) {
                     expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
                     expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
@@ -1649,14 +1654,22 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     expression.type = expression_field;
 
                     if(field->nativeInt()) {
-                        expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                        expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
+                        if(field->isObjectInMemory()) {
+                            expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
+                        } else {
+                            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
+                            expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx, 0, field_offset(scope, field->vaddr)));
+                        }
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
                 }
                 else if((field = scope->klass->getField(refrence.refname)) != NULL) {
                     // field?
+                    if(scope->type == scope_static_block) {
+                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + refrence.refname + "` from self in static context");
+                    }
+
                     expression.utype.type = ResolvedReference::FIELD;
                     expression.utype.field = field;
                     expression.type = expression_field;
@@ -1740,8 +1753,12 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     field = &scope->getLocalField(refrence.refname)->value;
 
                     if(field->nativeInt()) {
-                        expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                        expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, field_offset(scope, field->vaddr)));
+                        if(field->isObjectInMemory()) {
+                            expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
+                        } else {
+                            expression.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
+                            expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx, 0, field_offset(scope, field->vaddr)));
+                        }
                     }
                     else
                         expression.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field->vaddr)));
@@ -1749,6 +1766,10 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     return;
                 }
                 else if((field = scope->klass->getField(starter_name)) != NULL) {
+                    if(scope->type == scope_static_block) {
+                        errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "cannot get object `" + starter_name + "` from self in static context");
+                    }
+
                     expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
                     expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
                     resolveFieldHeiarchy(field, refrence, expression, pAst);
@@ -1967,9 +1988,15 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
 
     switch(expression.type) {
         case expression_var:
-            if(expression.func) {
-            } else
-                out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            if(expression._new) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                out.code.inject(out.code.__asm64.size(), expression.code);
+            } else {
+                if (expression.func) {
+                } else
+                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            }
             break;
         case expression_field:
             if(expression.utype.field->nativeInt() && !expression.utype.field->array) {
@@ -2123,7 +2150,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
                     if((fn = scope->klass->getMacros(ptr.refname, params, true)) != NULL){}
                     else if((fn = scope->klass->getFunction(ptr.refname, params, true)) != NULL){}
                     else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params, true)) != NULL){}
-                    else if((fn = scope->klass->getConstructor(params)) != NULL) {}
+                    else if(ptr.refname == scope->klass->getName() && (fn = scope->klass->getConstructor(params)) != NULL) {}
                     else if(scope->klass->getField(methodName, true) != NULL) {
                         errors->newerror(GENERIC, pAst2->line, pAst2->col, " symbol `" + methodName + "` is a field");
                     }
@@ -2333,7 +2360,7 @@ Method* runtime::resolveSelfMethodUtype(ast* pAst, ast* pAst2, Expression& out) 
             if((fn = klass->getMacros(methodName, params, true)) != NULL){}
             else if((fn = klass->getFunction(methodName, params, true)) != NULL){}
             else if((fn = klass->getOverload(string_toop(methodName), params, true)) != NULL){}
-            else if((fn = klass->getConstructor(params)) != NULL) {}
+            else if(methodName == klass->getName() && (fn = klass->getConstructor(params)) != NULL) {}
             else {
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
@@ -2356,7 +2383,7 @@ Method* runtime::resolveSelfMethodUtype(ast* pAst, ast* pAst2, Expression& out) 
                 if((fn = scope->klass->getMacros(ptr.refname, params, true)) != NULL){}
                 else if((fn = scope->klass->getFunction(ptr.refname, params, true)) != NULL){}
                 else if((fn = scope->klass->getOverload(string_toop(ptr.refname), params, true)) != NULL){}
-                else if((fn = scope->klass->getConstructor(params)) != NULL) {}
+                else if(ptr.refname == scope->klass->getName() && (fn = scope->klass->getConstructor(params)) != NULL) {}
                 else {
                     if(string_toop(methodName) != oper_NO) methodName = "operator" + ptr.refname;
                     else methodName = ptr.refname;
@@ -2473,7 +2500,7 @@ Method* runtime::resolveBaseMethodUtype(ast* pAst, ast* pAst2, Expression& out) 
             if((fn = klass->getMacros(methodName, params)) != NULL){}
             else if((fn = klass->getFunction(methodName, params)) != NULL){}
             else if((fn = klass->getOverload(string_toop(methodName), params)) != NULL){}
-            else if((fn = klass->getConstructor(params)) != NULL) {}
+            else if(methodName == klass->getName() && (fn = klass->getConstructor(params)) != NULL) {}
             else {
                 if(string_toop(methodName) != oper_NO) methodName = "operator" + methodName;
 
@@ -2514,7 +2541,7 @@ Method* runtime::resolveBaseMethodUtype(ast* pAst, ast* pAst2, Expression& out) 
                     if((fn = base->getMacros(ptr.refname, params)) != NULL){ break; }
                     else if((fn = base->getFunction(ptr.refname, params)) != NULL){ break; }
                     else if((fn = base->getOverload(string_toop(ptr.refname), params)) != NULL){ break; }
-                    else if((fn = base->getConstructor(params)) != NULL) { break; }
+                    else if(ptr.refname == base->getName() && (fn = base->getConstructor(params)) != NULL) { break; }
                     else {
                         start = base->getBaseClass(); // recursivley assign klass to new base
                     }
@@ -3195,6 +3222,7 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
     expression._new=false;
     expression.utype.array = false;
     expression.utype.array = false;
+    expression.arrayElement=true;
     expression.lnk = pAst;
     bool referenceAffected = currentRefrenceAffected(indexExpr);
 
@@ -3420,6 +3448,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
     expression.utype = interm.utype;
     expression.utype.array = false;
     expression._new=false;
+    expression.arrayElement=true;
     expression.lnk = pAst;
     bool referenceAffected = currentRefrenceAffected(indexExpr);
 
@@ -4741,47 +4770,70 @@ void runtime::assignNative(token_entity operand, Expression& out, Expression &le
 }
 
 void runtime::assignValue(token_entity operand, Expression& out, Expression &left, Expression &right, ast* pAst) {
-    out.type=left.type;
-    out.utype=left.utype; // TODo: see if we can just return the value from expression instead of having to reget the value on the other side
+    out.type=expression_var;
+    out.literal=false;
 
     /*
      * We know when this is called the operand is going to be =
      */
-    if(left.type == expression_var && left.literal) {
+    if((left.type == expression_var && !left.arrayElement) || left.literal) {
         errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable, expression must be of lvalue");
     } else if(left.type == expression_field) {
-        if(left.utype.field->nativeInt()) {
+        if(left.utype.field->isObjectInMemory()) {
+            memassign:
+            if(left.utype.field->array && operand != "=") {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
+                                                                  + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
 
-            if(left.utype.field->local) {
-                if(left.utype.field->array) {
-                    if(operand == "=") {
-                        equals(left, right);
-
-                        // TODO: perform shallow copy
-                    } else {
-                        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
-                                                                          + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-                    }
-                } else {
-                    pushExpressionToRegister(right, out, ecx);
-
-                    if(operand == "=") {
-                        out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                        out.code.push_i64(SET_Ci(i64, op_SMOVR, ecx,0, left.utype.field->vaddr));
-                    } else if(operand == "+=") {
-                        out.code.push_i64(SET_Ci(i64, op_ADDL, ecx,0, left.utype.field->vaddr));
-                    } else if(operand == "-=") {
-                        out.code.push_i64(SET_Ci(i64, op_SUBL, ecx,0, left.utype.field->vaddr));
-                    } else if(operand == "*=") {
-                        out.code.push_i64(SET_Ci(i64, op_MULL, ecx,0, left.utype.field->vaddr));
-                    } else if(operand == "/=") {
-                        out.code.push_i64(SET_Ci(i64, op_DIVL, ecx,0, left.utype.field->vaddr));
-                    } else if(operand == "%=") {
-                        out.code.push_i64(SET_Ci(i64, op_MODL, ecx,0, left.utype.field->vaddr));
-                    }
-
-                    out.inject(left);
+            if(equalsNoErr(left, right)) {
+                if(left.utype.field->nativeInt()) {}
+                else if(left.utype.field->dynamicObject()) {
+                    out.type=expression_dynamicclass;
+                }else if(left.utype.field->type == field_class) {
+                    out.type=expression_lclass;
+                    out.utype.klass=left.utype.field->klass;
                 }
+
+                if(c_options.optimize && right.utype.type == ResolvedReference::FIELD
+                        && right.utype.field->local) {
+                    out.inject(left);
+                    out.code.push_i64(SET_Di(i64, op_MUTL, right.utype.field->vaddr));
+                } else {
+                    pushExpressionToStack(right, out);
+                    out.inject(left);
+                    out.code.push_i64(SET_Ei(i64, op_POPREF));
+                }
+            } else {
+                if(left.type == expression_lclass) {
+                    addClass(operand, left.utype.klass, out, left, right, pAst);
+                } else if(left.utype.type == ResolvedReference::FIELD && left.utype.field->type == field_class) {
+                    addClass(operand, left.utype.field->klass, out, left, right, pAst);
+                } else {
+                    errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
+                                                                      + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+                }
+            }
+        } else {
+            // this will b easy...
+            if(left.utype.field->local) {
+                pushExpressionToRegister(right, out, ecx);
+
+                if(operand == "=") {
+                    out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    out.code.push_i64(SET_Ci(i64, op_SMOVR, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "+=") {
+                    out.code.push_i64(SET_Ci(i64, op_ADDL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "-=") {
+                    out.code.push_i64(SET_Ci(i64, op_SUBL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "*=") {
+                    out.code.push_i64(SET_Ci(i64, op_MULL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "/=") {
+                    out.code.push_i64(SET_Ci(i64, op_DIVL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "%=") {
+                    out.code.push_i64(SET_Ci(i64, op_MODL, ecx,0, left.utype.field->vaddr));
+                }
+
             } else {
                 pushExpressionToStack(right, out);
                 if(operand == "=")
@@ -4812,33 +4864,29 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                     out.code.push_i64(SET_Ci(i64, op_RMOV, adx,0, ecx));
                 }
             }
-        } else if(left.utype.field->type == field_class) {
-            if(right.type == expression_class) {
-                if(right.utype.klass->match(left.utype.field->klass)) {
-
-                } else {
-                    addClass(operand, left.utype.klass, out, left, right, pAst);
-                }
-            } else if(right.type == expression_field) {
-                if(right.utype.field->klass->match(left.utype.field->klass)) {
-
-                } else {
-                    addClass(operand, left.utype.klass, out, left, right, pAst);
-                }
-            } else {
-                addClass(operand, left.utype.klass, out, left, right, pAst);
-            }
-        } else if(left.utype.field->dynamicObject()) {
-            if(left.utype.field->local) {
-
-            } else {
-
-            }
         }
     } else if(left.type == expression_lclass) {
-
+        goto memassign;
     } else if(left.type == expression_var) {
+        // this must be an array element
+        if(left.arrayElement) {
+            Expression e;
+            for(unsigned int i = 0; i < left.code.size(); i++)
+            {
+                if(GET_OP(left.code.__asm64.get(i)) == op_MOVX) {
+                    left.code.__asm64.remove(i);
+                    pushExpressionToStack(right, e);
 
+                    left.code.inject(0, e.code); // add the code to get the value to set
+                    i+=e.code.size();
+
+                    left.code.__asm64.insert(i++, SET_Di(i64, op_POPR, egx));
+                    left.code.__asm64.insert(i, SET_Ci(i64, op_RMOV, ebx,0, egx));
+                    break;
+                }
+            }
+            out.inject(left);
+        }
     } else {
         errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
                                                           + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
@@ -5207,7 +5255,7 @@ Expression runtime::parseAndExpression(ast* pAst) {
 }
 
 Expression runtime::parseAssignExpression(ast* pAst) {
-    Expression expression, left, right;
+    Expression out, left, right;
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubastcount() == 1) {
@@ -5219,30 +5267,26 @@ Expression runtime::parseAssignExpression(ast* pAst) {
     left = parseIntermExpression(pAst->getsubast(0));
     right = parseExpression(pAst->getsubast(1));
 
-    expression.type = expression_var;
-    if(equals(left, right)) {
-        return expression;
-    }
-
+    out.type = expression_var;
     switch(left.type) {
         case expression_var:
             if(operand.gettokentype() == ASSIGN) {
                 errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable");
             } else {
                 if(right.type == expression_var) {
-                    // add 2 vars
+                    assignNative(operand, out, left, right, pAst);
                 }
                 else if(right.type == expression_field) {
                     if(right.utype.field->type == field_native) {
                         // add var
-                        //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
+                        assignValue(operand, out, left, right, pAst);
                     } else if(right.utype.field->type == field_class) {
-                        addClass(operand, right.utype.field->klass, expression, left, right, pAst);
+                        addClass(operand, right.utype.field->klass, out, left, right, pAst);
                     } else {
                         // do nothing field unresolved
                     }
                 } else if(right.type == expression_lclass) {
-                    addClass(operand, left.utype.klass, expression, left, right, pAst);
+                    addClass(operand, left.utype.klass, out, left, right, pAst);
                 } else {
                     errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
                                                                       "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
@@ -5255,9 +5299,9 @@ Expression runtime::parseAssignExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
+                assignValue(operand, out, left, right, pAst);
             } else if(left.utype.field->type == field_class) {
-                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
+                addClass(operand, left.utype.field->klass, out, left, right, pAst);
             } else {
                 // do nothing field unresolved
             }
@@ -5266,7 +5310,7 @@ Expression runtime::parseAssignExpression(ast* pAst) {
             errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
             break;
         case expression_lclass:
-            addClass(operand, left.utype.klass, expression, left, right, pAst);
+            addClass(operand, left.utype.klass, out, left, right, pAst);
             break;
         case expression_class:
             errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
@@ -5279,15 +5323,15 @@ Expression runtime::parseAssignExpression(ast* pAst) {
                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
             break;
         case expression_string:
-            // TODO: construct new string(<string>) and use that to concatonate strings
-            expression.type = expression_string;
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
             break;
         default:
             break;
     }
 
-    expression.lnk = pAst;
-    return expression;
+    out.lnk = pAst;
+    return out;
 }
 
 Expression runtime::parseBinaryExpression(ast* pAst) {
@@ -5450,6 +5494,135 @@ bool runtime::equals(Expression& left, Expression& right, string msg) {
     }
 
     errors->newerror(GENERIC, right.lnk->line,  right.lnk->col, "Expressions of type `" + left.typeToString() + "` and `" + right.typeToString() + "` are not compatible" + msg);
+    return false;
+}
+
+bool runtime::equalsNoErr(Expression& left, Expression& right) {
+
+    if(left.type == expression_native) {
+        return false;
+    }
+    if(right.type == expression_native) {
+        return false;
+    }
+
+    switch(left.type) {
+        case expression_var:
+            if(right.type == expression_var) {
+                // add 2 vars
+                return true;
+            }
+            else if(right.type == expression_field) {
+                if(right.utype.field->type == field_native) {
+                    if(right.utype.field->nativeInt()) {
+                        return !right.utype.field->array;
+                    }
+                }
+            }
+            break;
+        case expression_null:
+            if(right.type == expression_lclass || right.type == expression_dynamicclass) {
+                return true;
+            } else if(right.type == expression_class) {
+                return false;
+            }
+            break;
+        case expression_field:
+            if(left.utype.field->type == field_native) {
+                // add var
+                if(right.type == expression_var) {
+                    if(left.utype.field->nativeInt()) {
+                        return !left.utype.array;
+                    }
+                } else if(right.type == expression_dynamicclass) {
+                    if(left.utype.field->dynamicObject()) {
+                        return true;
+                    }
+                } else if(right.type == expression_field) {
+                    if(right.utype.field->nativeInt()) {
+                        return left.utype.field->nativeInt() && left.utype.field->array==right.utype.field->array;
+                    }
+                    else if(right.utype.field->dynamicObject()) {
+                        return left.utype.field->dynamicObject();
+                    }
+                } else if(right.type == expression_string) {
+                    return right.utype.field->nativeInt() && left.utype.field->array;
+                } else if(right.type == expression_lclass) {
+                    return left.utype.field->dynamicObject();
+                }
+            } else if(left.utype.field->type == field_class) {
+                if(right.type == expression_lclass) {
+                    if(left.utype.field->klass->match(right.utype.klass)) {
+                        return true;
+                    }
+                } else if(right.type == expression_class) {
+                    if(left.utype.field->klass->match(right.utype.klass)) {
+                        return false;
+                    }
+                } else if(right.type == expression_field && right.utype.field->type == field_class) {
+                    if(right.utype.field->klass->match(left.utype.field->klass)) {
+                        return true;
+                    }
+                }
+            } else {
+                // do nothing field unresolved
+            }
+            break;
+        case expression_lclass:
+            if(right.type == expression_lclass) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    return true;
+                }
+            } else if(right.type == expression_field) {
+                if(left.utype.klass->match(right.utype.field->klass)) {
+                    return true;
+                }
+            } else if(right.type == expression_class) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    return false;
+                }
+            }
+            break;
+        case expression_class:
+            if(right.type == expression_class) {
+                if(left.utype.klass->match(right.utype.klass)) {
+                    return true;
+                }
+            }
+            break;
+        case expression_void:
+            if(right.type == expression_void) {
+                return true;
+            }
+            break;
+        case expression_dynamicclass:
+            if(right.type == expression_dynamicclass || right.type == expression_lclass) {
+                return true;
+            } else if(right.type == expression_field) {
+                if(right.utype.field->nf == fdynamic || right.utype.field->type == field_class) {
+                    return true;
+                }
+            }
+            break;
+        case expression_string:
+            if(right.type == expression_field) {
+                if(right.utype.field->nativeInt() && right.utype.field->array) {
+                    return true;
+                }
+            }
+            else if(right.type == expression_var) {
+                if(right.utype.array) {
+                    return true;
+                }
+            }
+            else if(right.type == expression_string) {
+                return true;
+            }
+            break;
+        default:
+            break;
+    }
+
     return false;
 }
 
@@ -7301,6 +7474,18 @@ _operator string_toop(string op) {
         return oper_MOD_EQ;
     if(op=="!")
         return oper_NOT;
+    if(op=="<<")
+        return oper_SHL;
+    if(op==">>")
+        return oper_SHR;
+    if(op=="<")
+        return oper_LESSTHAN;
+    if(op==">")
+        return oper_GREATERTHAN;
+    if(op=="<=")
+        return oper_LTEQ;
+    if(op==">=")
+        return oper_GTEQ;
     return oper_NO;
 }
 
@@ -7374,6 +7559,7 @@ void Expression::operator=(Expression expression) {
     this->lnk = expression.lnk;
     this->utype  = expression.utype;
     this->value = expression.value;
+    this->arrayElement = expression.arrayElement;
 }
 
 void Expression::inject(Expression &expression) {
@@ -8295,7 +8481,7 @@ void runtime::createDumpFile() {
                     _ostream << ss.str();
                     break;
                 }
-                case op_UlOCK:
+                case op_ULOCK:
                 {
                     ss<<"ulck";
                     _ostream << ss.str();
@@ -8481,6 +8667,19 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_POPREF:
+                {
+                    ss<<"popref";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_MUTL:
+                {
+                    ss<<"mutl ";
+                    ss<<GET_Da(x64);
                     _ostream << ss.str();
                     break;
                 }

@@ -116,6 +116,10 @@ public:
         return nf >= fi8 && nf <= fvar;
     }
 
+    bool isObjectInMemory() {
+        return !nativeInt() || array;
+    }
+
     bool dynamicObject() {
         return nf == fdynamic;
     }

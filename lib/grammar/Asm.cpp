@@ -869,7 +869,7 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
 
                 assembler.push_i64(SET_Di(i64, op_LOCK, i2.high_bytes));
             } else if(instruction_is("ulck")) {
-                assembler.push_i64(SET_Ei(i64, op_UlOCK));
+                assembler.push_i64(SET_Ei(i64, op_ULOCK));
             } else if(instruction_is("exp")) {
                 expect_register();
 

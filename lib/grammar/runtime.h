@@ -124,7 +124,8 @@ struct Expression {
             func(false),
             intValue(0),
             value(""),
-            literal(false)
+            literal(false),
+            arrayElement(false)
     {
     }
 
@@ -139,7 +140,8 @@ struct Expression {
             func(false),
             intValue(0),
             value(""),
-            literal(false)
+            literal(false),
+            arrayElement(false)
     {
     }
 
@@ -149,7 +151,7 @@ struct Expression {
     ResolvedReference utype;
     m64Assembler code;
     ast* lnk;
-    bool dot, _new, func, literal;
+    bool dot, _new, func, literal, arrayElement;
     string value;
     double intValue;
 
@@ -912,6 +914,8 @@ private:
     OPCODE operandToCompareOp(token_entity operand);
 
     void assignValue(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
+
+    bool equalsNoErr(Expression &left, Expression &right);
 };
 
 #define progname "bootstrap"

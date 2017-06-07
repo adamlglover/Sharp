@@ -226,6 +226,10 @@ void print_stack();
 
 #define shr(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]>>(int64_t)__rxs[x]; pc++; _brh
 
+#define popref() CHK_NULL(__stack[(int64_t)__rxs[sp]--].object.mutate(ptr);) _brh
+
+#define mutl(x) CHK_NULL(__stack[(int64_t)__rxs[fp]+x].object.inc_ref(ptr);) _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -319,6 +323,8 @@ void print_stack();
         &&SHL,                                               \
         &&SHR,                                                \
         &&TNE,                                                 \
+        &&POPREF,                                               \
+        &&MUTL,                                                  \
     };
 
 /*
@@ -392,7 +398,7 @@ enum OPCODE {
 	op_SLEEP=0x40,
     op_TEST=0x41,
     op_LOCK=0x42,
-    op_UlOCK=0x43,
+    op_ULOCK=0x43,
     op_EXP=0x44,
     op_ADDL=0x45,
     op_SUBL=0x46,
@@ -416,6 +422,8 @@ enum OPCODE {
     op_SHL=0x58,
     op_SHR=0x59,
     op_TNE=0x5a,
+    op_POPREF=0x5b,
+    op_MUTL=0x5c,
 
     MAX_OPCODE=0x59
 };

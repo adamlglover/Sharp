@@ -26,6 +26,12 @@ enum _operator {
     oper_NOT_EQ,
     oper_MOD_EQ,
     oper_NOT,
+    oper_SHL,
+    oper_SHR,
+    oper_LESSTHAN,
+    oper_GREATERTHAN,
+    oper_LTEQ,
+    oper_GTEQ,
 
     oper_NO
 };
