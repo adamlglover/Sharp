@@ -2789,7 +2789,6 @@ void runtime::parseNewArrayExpression(Expression& out, Expression& utype, ast* p
         out.code.push_i64(SET_Di(i64, op_NEWi, ebx));
     else
         out.code.push_i64(SET_Di(i64, op_NEW_OBJ_ARRY, ebx));
-    out.code.push_i64(SET_Ei(i64, op_POP));
 }
 
 Expression runtime::parseNewExpression(ast* pAst) {
@@ -4836,6 +4835,12 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                     out.code.push_i64(SET_Ci(i64, op_DIVL, ecx,0, left.utype.field->vaddr));
                 } else if(operand == "%=") {
                     out.code.push_i64(SET_Ci(i64, op_MODL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "&=") {
+                    out.code.push_i64(SET_Ci(i64, op_ANDL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "|=") {
+                    out.code.push_i64(SET_Ci(i64, op_ORL, ecx,0, left.utype.field->vaddr));
+                } else if(operand == "^=") {
+                    out.code.push_i64(SET_Ci(i64, op_NOTL, ecx,0, left.utype.field->vaddr));
                 }
 
             } else {
@@ -5180,9 +5185,207 @@ Expression runtime::parseEqualExpression(ast* pAst) {
     return out;
 }
 
+long long andExprs=0;
+void runtime::parseAndExpressionChain(Expression& out, ast* pAst) {
+    Expression leftExpr, rightExpr, peekExpr;
+    int operandPtr = 0;
+    bool firstEval=true;
+    token_entity operand;
+    List<token_entity> operands;
+    operands.add(pAst->getentity(0));
+    bool value=0;
+    for(unsigned int i = 0; i < pAst->getsubastcount(); i++) {
+        if(pAst->getsubast(i)->getentitycount() > 0 && isMathOp(pAst->getsubast(i)->getentity(0)))
+            operands.add(pAst->getsubast(i)->getentity(0));
+    }
+
+    operandPtr=operands.size()-1;
+    for(long int i = pAst->getsubastcount()-1; i >= 0; i--) {
+        if(firstEval) {
+            rightExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i))
+                                                                        : parseIntermExpression(pAst->getsubast(i));
+            i--;
+            firstEval= false;
+        }
+        leftExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i)) : parseIntermExpression(pAst->getsubast(i));
+        operand = operands.get(operandPtr--);
+
+        out.boolExpressions.appendAll(rightExpr.boolExpressions);
+        out.boolExpressions.appendAll(leftExpr.boolExpressions);
+
+        out.type=expression_var;
+        switch(leftExpr.type) {
+            case expression_var:
+                if(rightExpr.type == expression_var) {
+                    if(leftExpr.literal && rightExpr.literal) {
+                        if(operand == "&&") {
+                            value=leftExpr.intValue&&rightExpr.intValue;
+                            out.code.push_i64(SET_Di(i64, op_MOVI, value), ebx);
+                        } else if(operand == "||") {
+                            value=leftExpr.intValue||rightExpr.intValue;
+                            out.code.push_i64(SET_Di(i64, op_MOVI, value), ebx);
+                        } else if(operand == "&") {
+                            out.code.push_i64(SET_Di(i64, op_MOVI, leftExpr.intValue&(int64_t)rightExpr.intValue), ebx);
+                        } else if(operand == "|") {
+                            out.code.push_i64(SET_Di(i64, op_MOVI, leftExpr.intValue|(int64_t)rightExpr.intValue), ebx);
+                        } else if(operand == "^") {
+                            out.code.push_i64(SET_Di(i64, op_MOVI, leftExpr.intValue^(int64_t)rightExpr.intValue), ebx);
+                        }
+
+                    } else {
+                        evaluate:
+                        if((leftExpr.literal || rightExpr.literal) && operand == "||") {
+                            if(leftExpr.literal) {
+                                out.code.push_i64(SET_Di(i64, op_MOVI, leftExpr.intValue==0), ebx);
+                            } else {
+                                out.code.push_i64(SET_Di(i64, op_MOVI, rightExpr.intValue==0), ebx);
+                            }
+                        } else {
+                            // is left leftexpr a literal?
+                            if(operand == "&&") {
+                                pushExpressionToRegister(leftExpr, out, ebx);
+
+                                if(andExprs==1) {
+                                    out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
+                                    out.boolExpressions.add(out.code.size()-1);
+                                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+                                } else {
+                                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+                                }
+
+                                pushExpressionToRegister(rightExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_POPR, ecx));
+                                out.code.push_i64(SET_Ci(i64, op_AND, ebx,0, ecx)); // the oder in which we eval each side dosent freakn matter!
+
+                                if(andExprs==1) {
+                                    out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                                    out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
+                                    out.boolExpressions.add(out.code.size()-1);
+                                } else {
+                                    out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                                }
+                            } else if(operand == "||") {
+                                pushExpressionToRegister(leftExpr, out, ebx);
+
+                                if(andExprs==1) {
+                                    out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
+                                    out.boolExpressions.add(out.code.size()-1);
+                                } else {
+                                    out.code.push_i64(SET_Di(i64, op_SKPE, rightExpr.code.size()));
+                                    pushExpressionToRegister(rightExpr, out, ebx);
+                                    if(andExprs==1) {
+                                        out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
+                                        out.boolExpressions.add(out.code.size()-1);
+                                    }
+                                }
+                            } else if(operand == "|") {
+                                pushExpressionToRegister(leftExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+
+                                pushExpressionToRegister(rightExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_POPR, ecx));
+                                out.code.push_i64(SET_Ci(i64, op_OR, ecx,0, ebx));
+                                out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                            } else if(operand == "&") {
+                                pushExpressionToRegister(leftExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+
+                                pushExpressionToRegister(rightExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_POPR, ecx));
+                                out.code.push_i64(SET_Ci(i64, op_uAND, ecx,0, ebx));
+                                out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                            } else if(operand == "^") {
+                                pushExpressionToRegister(leftExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+
+                                pushExpressionToRegister(rightExpr, out, ebx);
+                                out.code.push_i64(SET_Di(i64, op_POPR, ecx));
+                                out.code.push_i64(SET_Ci(i64, op_uNOT, ecx,0, ebx));
+                                out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                            }
+                        }
+
+                        rightExpr.func=false;
+                        rightExpr.literal = false;
+                        rightExpr.code.free();
+                        rightExpr.type=expression_var;
+                    }
+
+                }else if(rightExpr.type == expression_field) {
+                    if(rightExpr.utype.field->type == field_native) {
+                        // add var
+                        goto evaluate;
+                    } else if(rightExpr.utype.field->type == field_class) {
+                        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                          "` cannot be applied to expression of type `" + leftExpr.typeToString() + "` and `" + rightExpr.typeToString() + "`");
+                    } else {
+                        // do nothing field unresolved
+                    }
+                } else {
+                    errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                      "` cannot be applied to expression of type `" + leftExpr.typeToString() + "` and `" + rightExpr.typeToString() + "`");
+                }
+                break;
+            case expression_null:
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + leftExpr.typeToString() + "` and `" + rightExpr.typeToString() + "`");
+                break;
+            case expression_field:
+                if(leftExpr.utype.field->type == field_native) {
+                    // add var
+                    goto evaluate;
+                } else if(leftExpr.utype.field->type == field_class) {
+                    addClass(operand, leftExpr.utype.field->klass, out, leftExpr, rightExpr, pAst);
+                } else {
+                    // do nothing field unresolved
+                }
+                break;
+            case expression_native:
+                errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + leftExpr.typeToString() + "`");
+                break;
+            case expression_lclass:
+                addClass(operand, out.utype.klass, out, out, rightExpr, pAst);
+                break;
+            case expression_class:
+                errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + leftExpr.typeToString() + "`");
+                break;
+            case expression_void:
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + leftExpr.typeToString() + "` and `" + rightExpr.typeToString() + "`");
+                break;
+            case expression_dynamicclass:
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+                                                                  "` cannot be applied to expression of type `" + leftExpr.typeToString() + "` and `" + rightExpr.typeToString() + "`. Did you forget to apply a cast? "
+                                                                          "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+                break;
+            case expression_string:
+                // TODO: construct new string(<string>) and use that to concatonate strings
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    /*
+     * So we dont missinterpret the value returned from the expr :)
+     */
+    out.func=rightExpr.func;
+    out.literal=rightExpr.literal=false;
+    if(--andExprs == 0) {
+        for(unsigned int i = 0; i < out.boolExpressions.size(); i++) {
+            long index=out.boolExpressions.get(i);
+            int op = GET_OP(out.code.__asm64.get(index));
+
+            out.code.__asm64.replace(index, SET_Di(i64, op, (out.code.size()-1)-index));
+        }
+    }
+}
+
 Expression runtime::parseAndExpression(ast* pAst) {
-    Expression expression, left, right;
+    Expression out, left, right;
     token_entity operand = pAst->getentity(0);
+    andExprs++;
 
     if(pAst->getsubastcount() == 1) {
         // cannot compute unary << <expression>
@@ -5190,73 +5393,76 @@ Expression runtime::parseAndExpression(ast* pAst) {
         return Expression(pAst);
     }
 
-    left = parseIntermExpression(pAst->getsubast(0));
-    right = parseExpression(pAst->getsubast(1));
+    parseAndExpressionChain(out, pAst);
 
-    expression.type = expression_var;
-    switch(left.type) {
-        case expression_var:
-            if(right.type == expression_var) {
-                // add 2 vars
-            }
-            else if(right.type == expression_field) {
-                if(right.utype.field->type == field_native) {
-                    // add var
-                    //addNative(operand, right.utype.field->nf, expression, left, right, pAst);
-                } else if(right.utype.field->type == field_class) {
-                    addClass(operand, right.utype.field->klass, expression, left, right, pAst);
-                } else {
-                    // do nothing field unresolved
-                }
-            } else if(right.type == expression_lclass) {
-                addClass(operand, left.utype.klass, expression, left, right, pAst);
-            } else {
-                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            }
-            break;
-        case expression_null:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            break;
-        case expression_field:
-            if(left.utype.field->type == field_native) {
-                // add var
-                //addNative(operand, left.utype.field->nf, expression, left, right, pAst);
-            } else if(left.utype.field->type == field_class) {
-                addClass(operand, left.utype.field->klass, expression, left, right, pAst);
-            } else {
-                // do nothing field unresolved
-            }
-            break;
-        case expression_native:
-            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
-            break;
-        case expression_lclass:
-            addClass(operand, left.utype.klass, expression, left, right, pAst);
-            break;
-        case expression_class:
-            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
-            break;
-        case expression_void:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
-            break;
-        case expression_dynamicclass:
-            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
-                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
-                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
-            break;
-        case expression_string:
-            // TODO: construct new string(<string>) and use that to concatonate strings
-            expression.type = expression_string;
-            break;
-        default:
-            break;
-    }
+//    left = parseIntermExpression(pAst->getsubast(0));
+//    right = parseExpression(pAst->getsubast(1));
+//
+//    out.type = expression_var;
+//    switch(left.type) {
+//        case expression_var:
+//            if(right.type == expression_var) {
+//                compareValue(operand, out, left, right, pAst);
+//            }
+//            else if(right.type == expression_field) {
+//                if(right.utype.field->type == field_native) {
+//                    // add var
+//
+//                    compareValue(operand, out, left, right, pAst);
+//                } else if(right.utype.field->type == field_class) {
+//                    addClass(operand, right.utype.field->klass, out, left, right, pAst);
+//                } else {
+//                    // do nothing field unresolved
+//                }
+//            } else if(right.type == expression_lclass) {
+//                addClass(operand, left.utype.klass, out, left, right, pAst);
+//            } else {
+//                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+//                                                                  "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+//            }
+//            break;
+//        case expression_null:
+//            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+//                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+//            break;
+//        case expression_field:
+//            if(left.utype.field->type == field_native) {
+//                // add var
+//                compareValue(operand, out, left, right, pAst);
+//            } else if(left.utype.field->type == field_class) {
+//                addClass(operand, left.utype.field->klass, out, left, right, pAst);
+//            } else {
+//                // do nothing field unresolved
+//            }
+//            break;
+//        case expression_native:
+//            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+//            break;
+//        case expression_lclass:
+//            addClass(operand, left.utype.klass, out, left, right, pAst);
+//            break;
+//        case expression_class:
+//            errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
+//            break;
+//        case expression_void:
+//            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+//                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+//            break;
+//        case expression_dynamicclass:
+//            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() +
+//                                                              "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`. Did you forget to apply a cast? "
+//                                                                      "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
+//            break;
+//        case expression_string:
+//            // TODO: construct new string(<string>) and use that to concatonate strings
+//            out.type = expression_string;
+//            break;
+//        default:
+//            break;
+//    }
 
-    expression.lnk = pAst;
-    return expression;
+    out.lnk = pAst;
+    return out;
 }
 
 Expression runtime::parseAssignExpression(ast* pAst) {
@@ -7565,6 +7771,7 @@ void Expression::operator=(Expression expression) {
     this->utype  = expression.utype;
     this->value = expression.value;
     this->arrayElement = expression.arrayElement;
+    this->boolExpressions.addAll(expression.boolExpressions);
 }
 
 void Expression::inject(Expression &expression) {
@@ -8685,6 +8892,85 @@ void runtime::createDumpFile() {
                 {
                     ss<<"mutl ";
                     ss<<GET_Da(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SKPE:
+                {
+                    ss<<"skpe ";
+                    ss<<GET_Da(x64);
+                    ss << " // pc = " << (x + GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SKPNE:
+                {
+                    ss<<"skpne ";
+                    ss<<GET_Da(x64);
+                    ss << " // pc = " << (x + GET_Da(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_AND:
+                {
+                    ss<<"and ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_uAND:
+                {
+                    ss<<"uand ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_OR:
+                {
+                    ss<<"or ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_uNOT:
+                {
+                    ss<<"unot ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< Asm::registrerToString(GET_Cb(x64));
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_ANDL:
+                {
+                    ss<<"andl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_ORL:
+                {
+                    ss<<"orl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_NOTL:
+                {
+                    ss<<"notl ";
+                    ss<< Asm::registrerToString(GET_Ca(x64));
+                    ss<< ", ";
+                    ss<< GET_Cb(x64);
                     _ostream << ss.str();
                     break;
                 }

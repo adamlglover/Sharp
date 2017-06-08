@@ -767,6 +767,20 @@ void Thread::run() {
                 popref()
             MUTL:
                 mutl(GET_Da(cache[pc]))
+            AND:
+                _and(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            uAND:
+                uand(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            OR:
+                _or(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            uNOT:
+                _unot(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            ANDL:
+                _andl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            ORL:
+                _orl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+            NOTL:
+                _notl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
         }
     } catch (std::bad_alloc &e) {
         cout << "std::bad_alloc\n";

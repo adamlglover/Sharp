@@ -125,7 +125,8 @@ struct Expression {
             intValue(0),
             value(""),
             literal(false),
-            arrayElement(false)
+            arrayElement(false),
+            boolExpressions()
     {
     }
 
@@ -141,7 +142,8 @@ struct Expression {
             intValue(0),
             value(""),
             literal(false),
-            arrayElement(false)
+            arrayElement(false),
+            boolExpressions()
     {
     }
 
@@ -154,9 +156,11 @@ struct Expression {
     bool dot, _new, func, literal, arrayElement;
     string value;
     double intValue;
+    List<long> boolExpressions;
 
     string typeToString();
     void free() {
+        boolExpressions.free();
         code.free();
         *this=(Expression());
     }
@@ -916,6 +920,8 @@ private:
     void assignValue(token_entity operand, Expression &out, Expression &left, Expression &right, ast *pAst);
 
     bool equalsNoErr(Expression &left, Expression &right);
+
+    void parseAndExpressionChain(Expression &expr, ast *pAst);
 };
 
 #define progname "bootstrap"

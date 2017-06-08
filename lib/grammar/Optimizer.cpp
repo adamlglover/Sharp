@@ -63,6 +63,7 @@ void Optimizer::optimizeUnusedReferences() {
             {
                 if(!referenceUsed(i+1)) {
                     assembler->__asm64.remove(i);
+                    optimizedOpcodes++;
                 }
                 break;
             }
@@ -84,6 +85,7 @@ void Optimizer::optimizeRegisterOverride() {
                 if(left.assign_type == assign_register && right.id != sp) {
                     if(left.value==right.id) {
                         assembler->__asm64.remove(i);
+                        optimizedOpcodes++;
                         i--;
                     }
                 }
@@ -175,6 +177,7 @@ void Optimizer::optimizeRegisterOverride() {
 
 void Optimizer::optimize(m64Assembler &code) {
     this->assembler = &code;
+    optimizedOpcodes=0;
 
     if(code.size()==0)
         return;

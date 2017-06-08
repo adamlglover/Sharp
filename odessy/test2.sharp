@@ -2,6 +2,9 @@ mod application;
 
 class Base {
 
+    static fn print2(var[] message) {
+        __asm("odessy/x64/print.asm");
+    }
 }
 
 class Main base Base {
@@ -80,18 +83,50 @@ class Main base Base {
 
 
     static fn main(string[] args) : var {
+var[] str = "factorial of 8 is ";
+        dynamic_object o = new Main();
+        Main m;
+        Main mainVar;
+        base->print2(str);
+        self->fact(8);
+        foo(new Main[9][0]);
+        Main main = new Main();
+        var x = 9;
+        __asm("movi #1,ecx" "new_i ecx");
+        //main++;
+        //(Main)o;
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(++x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc((__int8)x++);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(++x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x ? 1 : 2);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(+x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(-x);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x);
+        __asm("movi '~',ebx" "_putc ebx");
+        printc(5*(x+3)*9999);
+        __asm("movi '~',ebx" "_putc ebx");
+        printc(str[0]);
 //        __asm("movi ' ',ebx" "_putc ebx");
 //        printc((main << x) + 5);            // this will crash lol
-//        __asm("movi ' ',ebx" "_putc ebx");
-//        printc(x <= 5);
-//        __asm("movi '#',ebx" "_putc ebx");
-//        printc(x == 5);
-//        __asm("movi ' ',ebx" "_putc ebx");
-//        printc(x != 5);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x <= 5);
+        __asm("movi '#',ebx" "_putc ebx");
+        printc(x == 5);
+        __asm("movi ' ',ebx" "_putc ebx");
+        printc(x != 5);
         var[] arry;
 
         arry = new var[9];
         printc((arry[0] = 112));
+        __asm("movi '@',ebx" "_putc ebx");
+        printc((x & 5) && x|=99);
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(

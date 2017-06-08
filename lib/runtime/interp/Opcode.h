@@ -115,6 +115,12 @@ void print_stack();
 
 #define modl(r,x)  __stack[(int64_t)__rxs[fp]+x].modul((int64_t)__rxs[r]); _brh
 
+#define _andl(r,x) __stack[(int64_t)__rxs[fp]+x].var&=__rxs[r]; _brh
+
+#define _orl(r,x) __stack[(int64_t)__rxs[fp]+x].var|=__rxs[r]; _brh
+
+#define _notl(r,x) __stack[(int64_t)__rxs[fp]+x].var^=__rxs[r]; _brh
+
 #define _iaddl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=r; _brh
 
 #define _isubl(r,x) __stack[(int64_t)__rxs[fp]+x].var-=r; _brh
@@ -145,7 +151,7 @@ void print_stack();
 
 #define brh pc=__rxs[0x0000]; _brh_NOINCREMENT
 
-#define bre if(__rxs[0x0002]){ pc=__rxs[0x0000]; _brh_NOINCREMENT }else _brh
+#define bre if(__rxs[0x0002]){ pc=__rxs[0x0000]; _brh_NOINCREMENT }else _brh // TODO: remove this legacy instruction
 
 #define ife if(__rxs[0x0002]){ pc=__rxs[0x0000]; _brh_NOINCREMENT }else  _brh
 
@@ -229,6 +235,18 @@ void print_stack();
 #define popref() CHK_NULL(ptr->mutate(&__stack[(int64_t)__rxs[sp]--].object);) _brh
 
 #define mutl(x) CHK_NULL(__stack[(int64_t)__rxs[fp]+x].object.inc_ref(ptr);) _brh
+
+#define skpe(x) if(__rxs[0x0002]){ pc+=x; _brh_NOINCREMENT }else  _brh
+
+#define skpne(x) if(__rxs[0x0002]==0){ pc+=x; _brh_NOINCREMENT }else _brh
+
+#define _and(r,x) __rxs[0x0002]=__rxs[r]&&__rxs[x];  _brh
+
+#define uand(r,x) __rxs[0x0002]=__rxs[r]&__rxs[x];  _brh
+
+#define _or(r,x) __rxs[0x0002]=__rxs[r]|__rxs[x];  _brh
+
+#define _unot(r,x) __rxs[0x0002]=__rxs[r]^__rxs[x];  _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \
@@ -325,6 +343,15 @@ void print_stack();
         &&TNE,                                                 \
         &&POPREF,                                               \
         &&MUTL,                                                  \
+        &&SKPE,                                                   \
+        &&SKPNE,                                                   \
+        &&AND,                                                      \
+        &&uAND,                                                      \
+        &&OR,                                                         \
+        &&uNOT,                                                        \
+        &&ANDL,                                                        \
+        &&ORL,                                                        \
+        &&NOTL,                                                        \
     };
 
 /*
@@ -424,6 +451,15 @@ enum OPCODE {
     op_TNE=0x5a,
     op_POPREF=0x5b,
     op_MUTL=0x5c,
+    op_SKPE=0x5d,
+    op_SKPNE=0x5e,
+    op_AND=0x5f,
+    op_uAND=0x60,
+    op_OR=0x61,
+    op_uNOT=0x62,
+    op_ANDL=0x63,
+    op_ORL=0x64,
+    op_NOTL=0x65,
 
     MAX_OPCODE=0x59
 };

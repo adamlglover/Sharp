@@ -778,7 +778,7 @@ bool parser::parse_array_expression(ast* pAst) {
 
 }
 
-int nestedExprs = 0, parenExprs=0;
+int nestedAddExprs = 0, parenExprs=0, nestedAndExprs=0;
 bool parser::parse_expression(ast *pAst) {
     pAst = get_ast(pAst, ast_expression);
     CHECK_ERRORS2(false)
@@ -847,10 +847,10 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
-        int oldNestedExprs=nestedExprs;
-        nestedExprs=0;
+        int oldNestedExprs=nestedAddExprs;
+        nestedAddExprs=0;
         parse_expression(pAst);
-        nestedExprs=oldNestedExprs;
+        nestedAddExprs=oldNestedExprs;
 
         expect(RIGHTPAREN, pAst, "`)`");
 
@@ -996,11 +996,11 @@ bool parser::parse_expression(ast *pAst) {
             pAst->encapsulate(ast_add_e);
             parenExprs--;
         } else {
-            nestedExprs++;
-            parse_expression(nestedExprs == 1 ? pAst : pAst->getparent());
-            if(nestedExprs == 1)
+            nestedAddExprs++;
+            parse_expression(nestedAddExprs == 1 ? pAst : pAst->getparent());
+            if(nestedAddExprs == 1)
                 pAst->encapsulate(ast_add_e);
-            nestedExprs--;
+            nestedAddExprs--;
         }
 
 
@@ -1020,11 +1020,11 @@ bool parser::parse_expression(ast *pAst) {
             pAst->encapsulate(ast_mult_e);
             parenExprs--;
         } else {
-            nestedExprs++;
-            parse_expression(nestedExprs == 1 ? pAst : pAst->getparent());
-            if(nestedExprs == 1)
+            nestedAddExprs++;
+            parse_expression(nestedAddExprs == 1 ? pAst : pAst->getparent());
+            if(nestedAddExprs == 1)
                 pAst->encapsulate(ast_mult_e);
-            nestedExprs--;
+            nestedAddExprs--;
         }
         return true;
     }
@@ -1073,8 +1073,18 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
-        parse_expression(pAst);
-        pAst->encapsulate(ast_and_e);
+        if(parenExprs > 0) {
+
+            parse_expression(pAst);
+            pAst->encapsulate(ast_and_e);
+            parenExprs--;
+        } else {
+            nestedAndExprs++;
+            parse_expression(nestedAndExprs == 1 ? pAst : pAst->getparent());
+            if(nestedAndExprs == 1)
+                pAst->encapsulate(ast_and_e);
+            nestedAndExprs--;
+        }
         return true;
     }
 

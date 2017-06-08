@@ -47,6 +47,7 @@ public:
     }
 
 private:
+    long optimizedOpcodes;
     m64Assembler* assembler;
     List <register_state> register_map;
 

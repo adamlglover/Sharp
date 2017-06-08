@@ -190,6 +190,12 @@ public:
         }
     }
 
+    void appendAll(List<T>& list) {
+        for(unsigned int i = 0; i < list.size(); i++) {
+            push_back(list.get(i));
+        }
+    }
+
     void addAll(list<T> &list) {
         free();
         for(T& t : list) {
