@@ -226,7 +226,7 @@ void print_stack();
 
 #define shr(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]>>(int64_t)__rxs[x]; pc++; _brh
 
-#define popref() CHK_NULL(__stack[(int64_t)__rxs[sp]--].object.mutate(ptr);) _brh
+#define popref() CHK_NULL(ptr->mutate(&__stack[(int64_t)__rxs[sp]--].object);) _brh
 
 #define mutl(x) CHK_NULL(__stack[(int64_t)__rxs[fp]+x].object.inc_ref(ptr);) _brh
 

@@ -2785,7 +2785,11 @@ void runtime::parseNewArrayExpression(Expression& out, Expression& utype, ast* p
     Expression sizeExpr = parseExpression(pAst->getsubast(ast_expression));
 
     pushExpressionToRegister(sizeExpr, out, ebx);
-    out.code.push_i64(SET_Di(i64, op_NEW_OBJ_ARRY, ebx));
+    if(out.type == expression_var)
+        out.code.push_i64(SET_Di(i64, op_NEWi, ebx));
+    else
+        out.code.push_i64(SET_Di(i64, op_NEW_OBJ_ARRY, ebx));
+    out.code.push_i64(SET_Ei(i64, op_POP));
 }
 
 Expression runtime::parseNewExpression(ast* pAst) {
@@ -4875,13 +4879,14 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
             {
                 if(GET_OP(left.code.__asm64.get(i)) == op_MOVX) {
                     left.code.__asm64.remove(i);
-                    pushExpressionToStack(right, e);
+                    pushExpressionToRegister(right, e, ebx);
 
-                    left.code.inject(0, e.code); // add the code to get the value to set
+                    left.code.__asm64.insert(i++, SET_Di(i64, op_PUSHR, ebx));
+                    left.code.inject(i, e.code); // add the code to get the value to set
                     i+=e.code.size();
 
                     left.code.__asm64.insert(i++, SET_Di(i64, op_POPR, egx));
-                    left.code.__asm64.insert(i, SET_Ci(i64, op_RMOV, ebx,0, egx));
+                    left.code.__asm64.insert(i, SET_Ci(i64, op_RMOV, egx,0, ebx));
                     break;
                 }
             }

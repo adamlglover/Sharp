@@ -790,7 +790,8 @@ void Thread::send_panic_message(ThreadPanic& err) {
         cout << "*** ";
     cout << endl;
 
-    cout << "Revision: '" << manifest.version.str() << "'" << endl;
+    cout << "Revision: '" << manifest.version.str() << "' address space: "
+         << (env->__address_spaces+curr_adsp)->name.str() << endl;
     cout << "platform: " << mvers << " thread-name: " << name.str()
        << " >>> " << manifest.application.str() << endl;
     cout << "adx "; printf("%08x",(int64_t)__rxs[adx]);
