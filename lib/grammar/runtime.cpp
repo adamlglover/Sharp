@@ -5259,8 +5259,11 @@ void runtime::parseAndExpressionChain(Expression& out, ast* pAst) {
 
                                 if(andExprs==1) {
                                     out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
-                                    out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
-                                    out.boolExpressions.add(out.code.size()-1);
+
+                                    if((i-1) >= 0) {
+                                        out.code.push_i64(SET_Di(i64, op_SKPNE, 8));
+                                        out.boolExpressions.add(out.code.size()-1);
+                                    }
                                 } else {
                                     out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
                                 }
