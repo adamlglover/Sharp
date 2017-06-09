@@ -126,7 +126,7 @@ var[] str = "factorial of 8 is ";
         arry = new var[9];
         printc((arry[0] = 112));
         __asm("movi '@',ebx" "_putc ebx");
-        printc((x & 5) && x|=99);
+        printc(x && x|=99 && fact(8));
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(

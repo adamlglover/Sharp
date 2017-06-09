@@ -36,13 +36,15 @@ public:
     Optimizer()
     {
         register_map.init();
+        unique_addr_lst.init();
     }
 
-    void optimize(m64Assembler &code);
+    void optimize(m64Assembler &code, List<long>& unique_addrs);
 
     ~Optimizer()
     {
         register_map.free();
+        unique_addr_lst.free();
         assembler=NULL;
     }
 
@@ -50,6 +52,7 @@ private:
     long optimizedOpcodes;
     m64Assembler* assembler;
     List <register_state> register_map;
+    List <long> unique_addr_lst;
 
     void optimizeRegisterOverride();
 
@@ -58,6 +61,8 @@ private:
     void optimizeUnusedReferences();
 
     bool referenceUsed(unsigned int);
+
+    void readjustAddresses(unsigned int);
 };
 
 enum register_assignes

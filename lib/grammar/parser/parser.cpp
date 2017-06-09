@@ -1109,7 +1109,10 @@ bool parser::parse_expression(ast *pAst) {
         advance();
         pAst->add_entity(current());
 
+        int oldAndExprs=nestedAndExprs;
+        parenExprs++;
         parse_expression(pAst);
+        nestedAddExprs=oldAndExprs;
         pAst->encapsulate(ast_assign_e);
         return true;
     }

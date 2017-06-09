@@ -87,6 +87,18 @@ struct data_stack {
     void modul(int64_t v) {
         var = (int64_t)var&v;
     }
+
+    void andl(int64_t v) {
+        var = (int64_t)var&v;
+    }
+
+    void orl(int64_t v) {
+        var = (int64_t)var|v;
+    }
+
+    void notl(int64_t v) {
+        var = (int64_t)var^v;
+    }
 };
 
 #define ret_frame(x) \

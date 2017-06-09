@@ -767,6 +767,10 @@ void Thread::run() {
                 popref()
             MUTL:
                 mutl(GET_Da(cache[pc]))
+            SKPE:
+                skpe(GET_Da(cache[pc]))
+            SKPNE:
+                skpne(GET_Da(cache[pc]))
             AND:
                 _and(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             uAND:

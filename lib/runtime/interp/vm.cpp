@@ -154,6 +154,9 @@ void*
         } catch (Exception &e) {
             if(thread_self->state != thread_panicked)
             {
+//                if(thread_self->exceptionThrown) {
+//                    cout << thread_self->throwable.stackTrace.str();
+//                }
                 thread_self->throwable = e.getThrowable();
                 thread_self->exceptionThrown = true;
                 cout << e.throwable.message.str();

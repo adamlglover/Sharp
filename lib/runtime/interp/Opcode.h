@@ -115,11 +115,11 @@ void print_stack();
 
 #define modl(r,x)  __stack[(int64_t)__rxs[fp]+x].modul((int64_t)__rxs[r]); _brh
 
-#define _andl(r,x) __stack[(int64_t)__rxs[fp]+x].var&=__rxs[r]; _brh
+#define _andl(r,x) __stack[(int64_t)__rxs[fp]+x].andl((int64_t)__rxs[r]); _brh
 
-#define _orl(r,x) __stack[(int64_t)__rxs[fp]+x].var|=__rxs[r]; _brh
+#define _orl(r,x) __stack[(int64_t)__rxs[fp]+x].orl((int64_t)__rxs[r]); _brh
 
-#define _notl(r,x) __stack[(int64_t)__rxs[fp]+x].var^=__rxs[r]; _brh
+#define _notl(r,x) __stack[(int64_t)__rxs[fp]+x].notl((int64_t)__rxs[r]); _brh
 
 #define _iaddl(r,x) __stack[(int64_t)__rxs[fp]+x].var+=r; _brh
 
@@ -242,11 +242,11 @@ void print_stack();
 
 #define _and(r,x) __rxs[0x0002]=__rxs[r]&&__rxs[x];  _brh
 
-#define uand(r,x) __rxs[0x0002]=__rxs[r]&__rxs[x];  _brh
+#define uand(r,x) __rxs[0x0002]=(int64_t)__rxs[r]&(int64_t)__rxs[x];  _brh
 
-#define _or(r,x) __rxs[0x0002]=__rxs[r]|__rxs[x];  _brh
+#define _or(r,x) __rxs[0x0002]=(int64_t)__rxs[r]|(int64_t)__rxs[x];  _brh
 
-#define _unot(r,x) __rxs[0x0002]=__rxs[r]^__rxs[x];  _brh
+#define _unot(r,x) __rxs[0x0002]=(int64_t)__rxs[r]^(int64_t)__rxs[x];  _brh
 
 #define _init_opcode_table \
     static void* opcode_table[] = { \

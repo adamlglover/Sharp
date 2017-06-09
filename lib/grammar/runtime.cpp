@@ -831,6 +831,10 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             break;
         case ast_expression: {
             Expression expr =parseExpression(pAst);
+            if(expr.func && expr.type != expression_void) {
+                expr.code.push_i64(SET_Ei(i64, op_POP));
+            }
+
             block.code.inject(block.code.size(), expr.code);
         }
             break;
@@ -946,6 +950,8 @@ void runtime::resolveAllBranches(Block& block) {
         if((address = scope->getLabel(bt->label.str())) != -1) {
 
             if(bt->store) {
+                scope->function->unique_address_table.add(bt->branch_pc); // add indirect address store for optimizer
+
                 block.code.__asm64.replace(bt->branch_pc, SET_Di(i64, op_MOVI, (bt->__offset+address)));
                 block.code.__asm64.replace(bt->branch_pc+1, bt->_register);
             } else {
@@ -3271,7 +3277,6 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
             }
-            expression.code.push_i64(SET_Ei(i64, op_POP));
             break;
         case expression_string:
             errors->newerror(GENERIC, indexExpr.lnk->line, indexExpr.lnk->col, "expression of type `" + interm.typeToString() + "` must evaluate to array");
@@ -3307,11 +3312,9 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_lclass:
@@ -3345,11 +3348,9 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_null:
@@ -3386,11 +3387,9 @@ Expression runtime::parseArrayExpression(Expression& interm, ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_void:
@@ -3493,11 +3492,9 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
 
             break;
@@ -3535,11 +3532,9 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_lclass:
@@ -3579,13 +3574,11 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 } else {
                     expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_null:
@@ -3622,11 +3615,9 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             if(c_options.optimize) {
                 if(referenceAffected) {
                     expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
                 }
             } else {
                 expression.code.push_i64(SET_Ei(i64, op_SDELREF));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_void:
@@ -5380,7 +5371,7 @@ void runtime::parseAndExpressionChain(Expression& out, ast* pAst) {
             long index=out.boolExpressions.get(i);
             int op = GET_OP(out.code.__asm64.get(index));
 
-            out.code.__asm64.replace(index, SET_Di(i64, op, (out.code.size()-1)-index));
+            out.code.__asm64.replace(index, SET_Di(i64, op, ((out.code.size()-1)-index)-1));
         }
     }
 }
@@ -8139,7 +8130,7 @@ void runtime::generate() {
         for(unsigned int i = 0; i < allMethods.size(); i++)
         {
             Method* method = allMethods.get(i);
-            optimizer.optimize(method->code);
+            optimizer.optimize(method->code, method->unique_address_table);
         }
     }
 

@@ -63,11 +63,52 @@ void Optimizer::optimizeUnusedReferences() {
             {
                 if(!referenceUsed(i+1)) {
                     assembler->__asm64.remove(i);
+                    readjustAddresses(i);
                     optimizedOpcodes++;
                 }
                 break;
             }
             default:
+                break;
+        }
+    }
+}
+
+void Optimizer::readjustAddresses(unsigned int stopAddr) {
+    int64_t x64, op, addr;
+    for(unsigned int i = 0; i < stopAddr; i++) {
+        x64 = assembler->__asm64.get(i);
+
+        switch (GET_OP(x64)) {
+            case op_SKP:
+            case op_SKPE:
+            case op_SKPNE:
+            case op_GOTO:
+                op=GET_OP(x64);
+                addr=GET_Da(x64);
+
+                /*
+                 * We only want to update data which is referencing data below us
+                 */
+                if(addr > stopAddr)
+                {
+                    // update address
+                    assembler->__asm64.replace(i, SET_Di(x64, op, --addr));
+                }
+                break;
+            case op_MOVI:
+                if(unique_addr_lst.find(i)) {
+                    addr=GET_Da(x64);
+
+                    /*
+                     * We only want to update data which is referencing data below us
+                     */
+                    if(addr > stopAddr)
+                    {
+                        // update address
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, --addr));
+                    }
+                }
                 break;
         }
     }
@@ -85,6 +126,7 @@ void Optimizer::optimizeRegisterOverride() {
                 if(left.assign_type == assign_register && right.id != sp) {
                     if(left.value==right.id) {
                         assembler->__asm64.remove(i);
+                        readjustAddresses(i);
                         optimizedOpcodes++;
                         i--;
                     }
@@ -175,8 +217,9 @@ void Optimizer::optimizeRegisterOverride() {
     }
 }
 
-void Optimizer::optimize(m64Assembler &code) {
+void Optimizer::optimize(m64Assembler &code, List<long>& unique_addrs) {
     this->assembler = &code;
+    this->unique_addr_lst.addAll(unique_addrs);
     optimizedOpcodes=0;
 
     if(code.size()==0)
