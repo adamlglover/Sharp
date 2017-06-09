@@ -96,7 +96,7 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
                 }
                 break;
             case op_MOVI:
-                if(unique_addr_lst.find(i)) {
+                if(unique_addr_lst.find(i+1)) {
                     addr=GET_Da(x64);
 
                     /*
@@ -106,6 +106,7 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
                     {
                         // update address
                         assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, --addr));
+                        i++;
                     }
                 }
                 break;
@@ -132,7 +133,7 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
                 }
                 break;
             case op_MOVI:
-                if(unique_addr_lst.find(i)) {
+                if(unique_addr_lst.find(i+1)) {
                     addr=GET_Da(x64);
 
                     /*

@@ -1064,6 +1064,7 @@ void print_stack() {
     cout << "[[" << "sp:" << SP64 << " fp:" << FP64 << endl;
     for(unsigned int i = 0; i < SP64+4; i++) {
         if(i==FP64) cout << "#FP: ";
+        if(i==SP64) cout << "#SP: ";
         cout << "{@" << i << " v:" << thread_self->__stack[i].var << ":"
              << thread_self->__stack[i].object.toString() << endl;
     }

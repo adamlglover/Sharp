@@ -432,7 +432,7 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
 
             keypair<int, Field> local;
             local.set(scope->blocks, utypeArgToField(utypeArg));
-            local.value.vaddr = scope->locals.size() - 1;
+            local.value.vaddr = scope->function->local_count++;;
             local.value.local=true;
             scope->locals.push_back(local);
 
