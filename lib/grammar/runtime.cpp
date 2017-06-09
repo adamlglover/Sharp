@@ -341,43 +341,44 @@ void runtime::removeForLabels(Scope* scope) {
 
 void runtime::parseForStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    Expression cond, iter, init;
+    Expression cond, iter;
     scope->blocks++;
     scope->loops++;
-    int64_t conditionAddress, i64;
     stringstream ss;
+    string forEndLabel, forBeginLabel;
 
-    init=parseUtypeArg(pAst, scope, block);
-    //block.code.inject(block.code.__asm64.size(), init.code);
-
-   // conditionAddress=__init_label_address;
-    if(pAst->hassubast(ast_for_expresion_cond)) {
-        cond = parseExpression(pAst->getsubast(ast_for_expresion_cond));
-      //  block.code.inject(block.code.__asm64.size(), cond.code);
-
-//        checkExpressionTypeVar(cond);
-//
-//        ss << for_label_end_id << scope->loops;
-//        scope->addStore(ss.str(), adx, 0, block.code, pAst->getsubast(ast_for_expresion_cond)->line,
-//                         pAst->getsubast(ast_for_expresion_cond)->col);
-//        block.code.push_i64(SET_Ei(i64, op_IFNE));
-    }
-
-    if(pAst->hassubast(ast_for_expresion_iter)) {
-        iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
-    }
+    parseUtypeArg(pAst, scope, block);
 
     ss.str("");
     ss << for_label_begin_id << scope->loops;
-
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address(block.code)));
-
-    parseBlock(pAst->getsubast(ast_block), block);
-   //block.code.inject(block.code.__asm64.size(), iter.code);
+    forBeginLabel=ss.str();
+    scope->label_map.add(keypair<std::string, int64_t>(forBeginLabel,__init_label_address(block.code)));
 
     ss.str("");
     ss << for_label_end_id << scope->loops;
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),__init_label_address(block.code)));
+    forEndLabel=ss.str();
+
+    if(pAst->hassubast(ast_for_expresion_cond)) {
+        Expression out;
+        cond = parseExpression(pAst->getsubast(ast_for_expresion_cond));
+
+        pushExpressionToRegister(cond, out, ebx);
+        block.code.inject(block.code.size(), out.code);
+
+        scope->addStore(forEndLabel, adx, 1, block.code, pAst->line, pAst->col);
+        block.code.push_i64(SET_Ei(i64, op_IFNE));
+    }
+
+    parseBlock(pAst->getsubast(ast_block), block);
+
+    if(pAst->hassubast(ast_for_expresion_iter)) {
+        iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
+        block.code.inject(block.code.size(), iter.code);
+    }
+
+    block.code.push_i64(SET_Di(i64, op_GOTO, (get_label(forBeginLabel)+1)));
+    scope->label_map.add(keypair<std::string, int64_t>(forEndLabel,__init_label_address(block.code)));
+    scope->remove_labels(scope->blocks);
     scope->blocks--;
     scope->loops--;
 }
@@ -413,13 +414,15 @@ void runtime::initVariable(Field& field, Expression& outExpr) {
     }
 }
 
-Expression runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
+void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
     if(pAst->hassubast(ast_utype_arg)) {
         keypair<string, ResolvedReference> utypeArg = parseUtypeArg(pAst->getsubast(ast_utype_arg));
-        Expression expression, result;
+        Expression value, out;
 
         if(pAst->hassubast(ast_value)) {
-            expression = parse_value(pAst->getsubast(ast_value));
+            if(comparator != NULL)
+                errors->newerror(UNEXPECTED_SYMBOL, pAst->getsubast(ast_value), " `;` expected");
+            value = parse_value(pAst->getsubast(ast_value));
         }
 
         if(validateLocalField(utypeArg.key, pAst->getsubast(ast_utype_arg))) {
@@ -430,28 +433,39 @@ Expression runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Express
             keypair<int, Field> local;
             local.set(scope->blocks, utypeArgToField(utypeArg));
             local.value.vaddr = scope->locals.size() - 1;
+            local.value.local=true;
             scope->locals.push_back(local);
 
-            initVariable(local.value, result);
-
-            Expression assignee = fieldToExpression(pAst, local.value);
+            Expression fieldExpr = fieldToExpression(pAst, local.value);
 
 
-            assignVariable(local.value, expression, pAst->getentity(0), result);
             if(comparator != NULL) {
-                equals(assignee, *comparator);
+                equals(fieldExpr, *comparator);
             }
 
-            if(pAst->hassubast(ast_value)) {
-                // todo: ASSIGN VALUE TO VARIABLE
-                equals(assignee, expression);
+            if(value.type != expression_unknown) {
+                equals(fieldExpr, value);
+
+                token_entity operand("=", SINGLE, 0,0, ASSIGN);
+                assignValue(operand, out, fieldExpr, value, pAst);
+                block.code.inject(block.code.size(), out.code);
             }
         }
-
-        return result;
     }
+}
 
-    return Expression();
+void runtime::assignUtypeForeach(ast *pAst, Scope *scope, Block &block, Expression& assignExpr) {
+    if(pAst->hassubast(ast_utype_arg)) {
+        keypair<string, ResolvedReference> utypeArg = parseUtypeArg(pAst->getsubast(ast_utype_arg));
+        Expression out;
+
+        keypair<int, Field>* local = scope->getLocalField(utypeArg.key);
+        Expression fieldExpr = fieldToExpression(pAst, local->value);
+
+        token_entity operand("=", SINGLE, 0,0, ASSIGN);
+        assignValue(operand, out, fieldExpr, assignExpr, pAst);
+        block.code.inject(block.code.size(), out.code);
+    }
 }
 
 Expression runtime::fieldToExpression(ast *pAst, string name) {
@@ -477,32 +491,99 @@ Expression runtime::fieldToExpression(ast *pAst, Field& field) {
     fieldExpr.utype.field = &field;
     fieldExpr.utype.type = ResolvedReference::FIELD;
     fieldExpr.utype.refrenceName = field.name;
+
+    if(field.isObjectInMemory()) {
+        fieldExpr.code.push_i64(SET_Di(i64, op_MOVL, field_offset(scope, field.vaddr)));
+    } else {
+        fieldExpr.code.push_i64(SET_Ci(i64, op_MOVR, adx, 0, fp));
+        fieldExpr.code.push_i64(SET_Ci(i64, op_SMOV, ebx, 0, field_offset(scope, field.vaddr)));
+    }
     return fieldExpr;
+}
+
+void runtime::getArrayValueOfExpression(Expression& expr, Expression& out) {
+    switch(expr.type) {
+        case expression_var:
+            out.type=expression_var;
+            out.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, ebx));
+            break;
+        case expression_lclass:
+            out.type=expression_lclass;
+            out.utype.klass = expr.utype.klass;
+            out.code.push_i64(SET_Di(i64, op_MOVND, ebx));
+            break;
+        case expression_field:
+            if(expr.utype.field->nativeInt()) {
+                out.type=expression_var;
+                out.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, ebx));
+            }
+            else {
+                out.type=expression_lclass;
+                out.utype.klass = expr.utype.field->klass;
+                out.code.push_i64(SET_Di(i64, op_MOVND, ebx));
+            }
+            break;
+        default:
+            out=expr;
+            out.code.push_i64(SET_Di(i64, op_MOVND, ebx));
+            break;
+    }
 }
 
 void runtime::parseForEachStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
     scope->loops++;
+    string forBeginLabel, forEndLabel;
 
-    Expression arryExpression = parseExpression(pAst->getsubast(ast_expression));
+    Expression arryExpression = parseExpression(pAst->getsubast(ast_expression)), out;
     parseUtypeArg(pAst, scope, block, &arryExpression);
 
-    if(!arryExpression.utype.array) {
+    /*
+     * This is stupid but we do this so we dont mess up the refrence with out local array expression variable
+     */
+    arryExpression = parseExpression(pAst->getsubast(ast_expression));
+
+    block.code.push_i64(SET_Di(i64, op_MOVI, 0), ebx);
+    block.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+
+    if(!arryExpression.arrayObject()) {
         errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must evaluate to type array");
     }
 
     stringstream ss;
     ss << for_label_begin_id << scope->loops;
+    forBeginLabel=ss.str();
 
-    scope->label_map.add(keypair<std::string, int64_t>(ss.str(),0));
+    ss.str("");
+    ss << for_label_end_id << scope->loops;
+    forEndLabel=ss.str();
+
+    scope->label_map.add(keypair<std::string, int64_t>(forBeginLabel,__init_label_address(block.code)));
+
+    block.code.inject(block.code.size(), arryExpression.code);
+
+    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+    block.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
+    block.code.push_i64(SET_Di(i64, op_SIZEOF, egx));
+    block.code.push_i64(SET_Ci(i64, op_LT, ebx,0, egx));
+    scope->addStore(forEndLabel, adx, 1, block.code,
+                    pAst->getsubast(ast_block)->line, pAst->getsubast(ast_block)->col);
+    block.code.push_i64(SET_Ei(i64, op_IFNE));
+    getArrayValueOfExpression(arryExpression, out);
+    assignUtypeForeach(pAst, scope, block, out);
 
     parseBlock(pAst->getsubast(ast_block), block);
 
-    stringstream ss2;
-    ss2 << for_label_end_id << scope->loops;
-    scope->label_map.add(keypair<std::string, int64_t>(ss2.str(),0));
+    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+    block.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
+    block.code.push_i64(SET_Di(i64, op_INC, ebx));
+    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, 0));
+    block.code.push_i64(SET_Di(i64, op_GOTO, (get_label(forBeginLabel)+1)));
+    scope->label_map.add(keypair<std::string, int64_t>(forEndLabel,__init_label_address(block.code)));
+    block.code.push_i64(SET_Ei(i64, op_POP));
 
+    scope->remove_labels(scope->blocks);
     scope->loops--;
     scope->blocks--;
 }
@@ -899,6 +980,8 @@ void runtime::parseBlock(ast* pAst, Block& block) {
 
         parseStatement(block, trunk);
     }
+
+    scope->remove_labels(scope->blocks);
 
     scope->blocks--;
 }
@@ -2000,9 +2083,6 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
                 out.code.inject(out.code.__asm64.size(), expression.code);
             } else {
                 if (expression.func) {
-                    out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                    out.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
-                    out.code.push_i64(SET_Ei(i64, op_POP));
                 } else
                     out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
             }
@@ -5462,7 +5542,7 @@ Expression runtime::parseAssignExpression(ast* pAst) {
     token_entity operand = pAst->getentity(0);
 
     if(pAst->getsubastcount() == 1) {
-        // cannot compute unary << <expression>
+        // cannot compute unary = <expression>
         errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + operand.gettoken() + "`");
         return Expression(pAst);
     }

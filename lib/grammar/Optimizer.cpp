@@ -79,12 +79,47 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
     for(unsigned int i = 0; i < stopAddr; i++) {
         x64 = assembler->__asm64.get(i);
 
-        switch (GET_OP(x64)) {
+        switch (op=GET_OP(x64)) {
             case op_SKP:
             case op_SKPE:
             case op_SKPNE:
             case op_GOTO:
-                op=GET_OP(x64);
+                addr=GET_Da(x64);
+
+                /*
+                 * We only want to update data which is referencing data below us
+                 */
+                if(addr > stopAddr)
+                {
+                    // update address
+                    assembler->__asm64.replace(i, SET_Di(x64, op, --addr));
+                }
+                break;
+            case op_MOVI:
+                if(unique_addr_lst.find(i)) {
+                    addr=GET_Da(x64);
+
+                    /*
+                     * We only want to update data which is referencing data below us
+                     */
+                    if(addr > stopAddr)
+                    {
+                        // update address
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, --addr));
+                    }
+                }
+                break;
+        }
+    }
+
+    for(long long i = stopAddr; i < assembler->__asm64.size(); i++) {
+        x64 = assembler->__asm64.get(i);
+
+        switch (op=GET_OP(x64)) {
+            case op_SKP:
+            case op_SKPE:
+            case op_SKPNE:
+            case op_GOTO:
                 addr=GET_Da(x64);
 
                 /*

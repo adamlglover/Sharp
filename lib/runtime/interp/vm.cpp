@@ -112,7 +112,7 @@ int CreateSharpVM(std::string exe)
     fields=(Field*)malloc(sizeof(Field)*2);
     fields[0].init("message", 0, nativeint, false, false, &env->Throwable);
     fields[1].init("stackTrace", 0, nativeint, false, false, &env->Throwable);
-    env->NullptrException = ClassObject(
+    env->ClassCastException = ClassObject(
             "std.err#ClassCastException",
             fields,
             2,

@@ -159,11 +159,16 @@ void Object::mutate(Object *object) {
         GC::_insert(this);
     }
 
-    std::memcpy(this, object, sizeof(Object));
-
     if(object->_rNode != NULL) {
         object->_rNode->refs.replace(object, this);
     }
+    this->mark = object->mark;
+    this->_rNode = object->_rNode;
+    this->_Node = object->_Node;
+    this->HEAD = object->HEAD;
+    this->klass=object->klass;
+    this->size = object->size;
+    this->refs.addAll(object->refs);
     object->refs.free();
 
     for(unsigned int i = 0; i < refs.size(); i++) {

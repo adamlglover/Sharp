@@ -58,7 +58,7 @@ public:
 
     double *HEAD;
 
-    gc_mark mark;
+    int mark;
     int64_t size;
     ClassObject* klass;
     Object *_Node;
@@ -94,7 +94,8 @@ public:
             ss << " data:[";
             for(unsigned int i=0; i < size; i++) {
                 if(klass==NULL) {
-                    ss << HEAD[i] << ",";
+                    if(HEAD != NULL)
+                        ss << HEAD[i] << ",";
                 } else {
                     ss << _Node[i].toString() << ",";
                 }

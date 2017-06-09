@@ -1062,7 +1062,7 @@ void print_stack() {
     cout << "@" << thread_self->curr_adsp << ":"
          << (thread_self->curr_adsp+env->__address_spaces)->name.str() << " ";
     cout << "[[" << "sp:" << SP64 << " fp:" << FP64 << endl;
-    for(unsigned int i = 0; i < SP64; i++) {
+    for(unsigned int i = 0; i < SP64+4; i++) {
         if(i==FP64) cout << "#FP: ";
         cout << "{@" << i << " v:" << thread_self->__stack[i].var << ":"
              << thread_self->__stack[i].object.toString() << endl;

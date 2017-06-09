@@ -158,6 +158,14 @@ struct Expression {
     double intValue;
     List<long> boolExpressions;
 
+    bool arrayObject() {
+        switch(type) {
+            case expression_field:
+                return utype.field->array;
+            default:
+                return utype.array;
+        }
+    }
     string typeToString();
     void free() {
         boolExpressions.free();
@@ -336,6 +344,30 @@ struct Scope {
     void free() {
         locals.free();
         label_map.free();
+    }
+
+    void remove_labels(int block) {
+        if(locals.size() == 0) return;
+
+        readjust:
+        for(long long i = locals.size()-1; i >= 0; i--) {
+            if(locals.at(i).key==block) {
+                locals.remove(i);
+                goto readjust;
+            }
+        }
+    }
+
+    void remove_labels(string name) {
+        if(locals.size() == 0) return;
+
+        readjust:
+        for(long long i = locals.size()-1; i >= 0; i--) {
+            if(locals.at(i).value.name==name) {
+                locals.remove(i);
+                return;
+            }
+        }
     }
 };
 
@@ -789,7 +821,7 @@ private:
 
     void parseForEachStatement(Block &block, ast *trunk);
 
-    Expression parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
+    void parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator = NULL);
 
     void parseWhileStatement(Block &block, ast *pAst);
 
@@ -922,6 +954,10 @@ private:
     bool equalsNoErr(Expression &left, Expression &right);
 
     void parseAndExpressionChain(Expression &expr, ast *pAst);
+
+    void getArrayValueOfExpression(Expression &expr, Expression &out);
+
+    void assignUtypeForeach(ast *pAst, Scope *scope, Block &block, Expression &arrayExpr);
 };
 
 #define progname "bootstrap"

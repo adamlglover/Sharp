@@ -79,10 +79,8 @@ struct line_table {
 };
 
 struct data_stack {
-    union {
-        double var;
-        Object object;
-    };
+    double var;
+    Object object;
 
     void modul(int64_t v) {
         var = (int64_t)var&v;
