@@ -2000,6 +2000,9 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
                 out.code.inject(out.code.__asm64.size(), expression.code);
             } else {
                 if (expression.func) {
+                    out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                    out.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
+                    out.code.push_i64(SET_Ei(i64, op_POP));
                 } else
                     out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
             }
@@ -2043,7 +2046,17 @@ void runtime::pushExpressionToStack(Expression& expression, Expression& out) {
             out.code.push_i64(SET_Ei(i64, op_DEL));
             break;
         case expression_dynamicclass:
-            // ToDO: implement
+            if(expression._new) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                out.code.inject(out.code.__asm64.size(), expression.code);
+            } else {
+                if(expression.func) {
+                    /* I think we do nothing? */
+                } else {
+                    out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+                }
+            }
             break;
     }
 }
@@ -2230,14 +2243,6 @@ Expression runtime::parseDotNotationCall(ast* pAst) {
 
             expression.func = true;
             expression.utype.array = fn->array;
-
-            if(fn->type == lnative_object) {
-                if(fn->nobj != fdynamic) {
-                    expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                    expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
-                }
-            }
 
             if(pAst->hasentity(_INC) || pAst->hasentity(_DEC)) {
                 token_entity entity = pAst->hasentity(_INC) ? pAst->getentity(_INC) : pAst->getentity(_DEC);
@@ -2748,6 +2753,7 @@ void runtime::pushExpressionToRegisterNoInject(Expression& expr, Expression& out
             if(expr.func) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
                 out.code.push_i64(SET_Ci(i64, op_SMOV, reg,0, 0));
+                out.code.push_i64(SET_Ei(i64, op_POP));
 
             } else if(reg != ebx) {
                 out.code.push_i64(SET_Ci(i64, op_MOVR, reg,0, ebx));
@@ -3513,12 +3519,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             } else
                 expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
 
-            expression.code.inject(expression.code.__asm64.size(), indexExpr.code);
-            if(indexExpr.func || indexExpr.type != expression_var) {
-                expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
-            }
+            pushExpressionToRegister(indexExpr, expression, ebx);
 
             if(c_options.optimize) {
                 if(referenceAffected)
@@ -3549,36 +3550,38 @@ Expression runtime::parseArrayExpression(ast* pAst) {
                 expression.code.inject(expression.code.__asm64.size(), interm.code);
             }
 
-            if(c_options.optimize) {
-                if(referenceAffected)
+            if(!interm._new) {
+                if(c_options.optimize) {
+                    if(referenceAffected)
+                        expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
+                } else
                     expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
-            } else
-                expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
-
-            expression.code.inject(expression.code.__asm64.size(), indexExpr.code);
-            if(indexExpr.func || indexExpr.type != expression_var) {
-                expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
 
-            if(c_options.optimize) {
-                if(referenceAffected)
+
+            pushExpressionToRegister(indexExpr, expression, ebx);
+
+            if(!interm._new) {
+                if (c_options.optimize) {
+                    if (referenceAffected)
+                        expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                } else
                     expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-            } else
-                expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            }
 
             expression.code.push_i64(SET_Di(i64, op_CHECKLEN, ebx));
             expression.code.push_i64(SET_Di(i64, op_MOVND, ebx));
 
-            if(c_options.optimize) {
-                if(referenceAffected) {
-                    expression.code.push_i64(SET_Ei(i64, op_SDELREF));
+            if(!interm._new) {
+                if (c_options.optimize) {
+                    if (referenceAffected) {
+                        expression.code.push_i64(SET_Ei(i64, op_SDELREF));
+                    }
                 } else {
-                    expression.code.push_i64(SET_Ei(i64, op_POP));
+                    expression.code.push_i64(SET_Ei(i64, op_SDELREF));
                 }
             } else {
-                expression.code.push_i64(SET_Ei(i64, op_SDELREF));
+                expression.code.push_i64(SET_Ei(i64, op_POP));
             }
             break;
         case expression_null:
@@ -3596,12 +3599,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             } else
                 expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
 
-            expression.code.inject(expression.code.__asm64.size(), indexExpr.code);
-            if(indexExpr.func || indexExpr.type != expression_var) {
-                expression.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                expression.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
-                expression.code.push_i64(SET_Ei(i64, op_POP));
-            }
+            pushExpressionToRegister(indexExpr, expression, ebx);
 
             if(c_options.optimize) {
                 if(referenceAffected)
