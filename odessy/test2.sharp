@@ -85,6 +85,15 @@ class Main base Base {
     static fn main(string[] args) : var {
 var[] str = "factorial of 8 is ";
 
+        var[] arry;
+        arry = new var[10];
+        foreach(var x : arry) {
+            printc(fact(1));
+            __asm("movi ' ',ebx" "_putc ebx");
+            printc(x);
+            __asm("movi ' ',ebx" "_putc ebx");
+        }
+
         for(var i = 0; i < 10; i++) {
         }
         print("done");

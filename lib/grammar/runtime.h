@@ -236,7 +236,8 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0)
+            uniqueLabelId(0),
+            ulid(0)
     {
         locals.init();
         label_map.init();
@@ -253,7 +254,8 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0)
+            uniqueLabelId(0),
+            ulid(0)
     {
         locals.init();
         label_map.init();
@@ -270,7 +272,8 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0)
+            uniqueLabelId(0),
+            ulid(0)
     {
         locals.init();
         label_map.init();
@@ -337,7 +340,7 @@ struct Scope {
     List<keypair<std::string, int64_t>> label_map;
     List<BranchTable> branches;
     int blocks;
-    int loops, trys;
+    int loops, trys, ulid;
     bool self, base;
     long uniqueLabelId;
 

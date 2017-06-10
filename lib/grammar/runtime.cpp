@@ -344,18 +344,19 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     Expression cond, iter;
     scope->blocks++;
     scope->loops++;
+    scope->ulid++;
     stringstream ss;
     string forEndLabel, forBeginLabel;
 
     parseUtypeArg(pAst, scope, block);
 
     ss.str("");
-    ss << for_label_begin_id << scope->loops;
+    ss << for_label_begin_id << scope->ulid;
     forBeginLabel=ss.str();
     scope->label_map.add(keypair<std::string, int64_t>(forBeginLabel,__init_label_address(block.code)));
 
     ss.str("");
-    ss << for_label_end_id << scope->loops;
+    ss << for_label_end_id << scope->ulid;
     forEndLabel=ss.str();
 
     if(pAst->hassubast(ast_for_expresion_cond)) {
@@ -534,6 +535,7 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     scope->blocks++;
     scope->loops++;
+    scope->ulid++;
     string forBeginLabel, forEndLabel;
 
     Expression arryExpression = parseExpression(pAst->getsubast(ast_expression)), out;
@@ -552,11 +554,11 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     }
 
     stringstream ss;
-    ss << for_label_begin_id << scope->loops;
+    ss << for_label_begin_id << scope->ulid;
     forBeginLabel=ss.str();
 
     ss.str("");
-    ss << for_label_end_id << scope->loops;
+    ss << for_label_end_id << scope->ulid;
     forEndLabel=ss.str();
 
     scope->label_map.add(keypair<std::string, int64_t>(forBeginLabel,__init_label_address(block.code)));
