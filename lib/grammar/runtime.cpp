@@ -193,8 +193,6 @@ void runtime::parse_class_decl(ast *pAst) {
     }
 
     add_scope(Scope(scope_class, klass));
-    klass->setBaseClass(parse_base_class(pAst, ++startpos));
-
     for(long i = 0; i < trunk->getsubastcount(); i++) {
         pAst = trunk->getsubast(i);
 
@@ -591,15 +589,52 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
 }
 
 void runtime::parseWhileStatement(Block& block, ast* pAst) {
-    Expression cond = parseExpression(pAst->getsubast(ast_expression));
-    // TODO: process condition with asm
+    Scope* scope = current_scope();
+    string whileBeginLabel, whileEndLabel;
+
+    Expression cond = parseExpression(pAst->getsubast(ast_expression)), out;
+
+    stringstream ss;
+    ss << generic_label_id << ++scope->ulid;
+    whileBeginLabel=ss.str();
+
+    ss.str("");
+    ss << generic_label_id << ++scope->ulid;
+    whileEndLabel=ss.str();
+
+    scope->label_map.add(keypair<std::string, int64_t>(whileBeginLabel,__init_label_address(block.code)));
+    pushExpressionToRegister(cond, out, cmt);
+    block.code.inject(block.code.size(), out.code);
+
+    scope->addStore(whileEndLabel, adx, 1, block.code,
+                    pAst->getsubast(ast_expression)->line, pAst->getsubast(ast_expression)->col);
+    block.code.push_i64(SET_Ei(i64, op_IFNE));
+
     parseBlock(pAst->getsubast(ast_block), block);
+
+    block.code.push_i64(SET_Di(i64, op_GOTO, (get_label(whileBeginLabel)+1)));
+    scope->label_map.add(keypair<std::string, int64_t>(whileEndLabel,__init_label_address(block.code)));
 }
 
 void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
+    Scope* scope = current_scope();
+    string whileBeginLabel;
+
+    stringstream ss;
+    ss << generic_label_id << ++scope->ulid;
+    whileBeginLabel=ss.str();
+    scope->label_map.add(keypair<std::string, int64_t>(whileBeginLabel,__init_label_address(block.code)));
+
     parseBlock(pAst->getsubast(ast_block), block);
 
-    Expression cond = parseExpression(pAst);
+    Expression cond = parseExpression(pAst->getsubast(ast_expression)), out;
+    pushExpressionToRegister(cond, out, cmt);
+    block.code.inject(block.code.size(), out.code);
+
+
+    scope->addStore(whileBeginLabel, adx, 1, block.code,
+                    pAst->getsubast(ast_expression)->line, pAst->getsubast(ast_expression)->col);
+    block.code.push_i64(SET_Ei(i64, op_IFE));
 }
 
 void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
@@ -607,7 +642,6 @@ void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
 
     keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
 
-    int64_t i64;
     string name =  catcher.key;
     keypair<int, Field>* field;
     List<AccessModifier> modCompat;
@@ -640,13 +674,10 @@ void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
 
         scope->locals.add(keypair<int, Field>(scope->blocks, f));
         field = scope->getLocalField(name);
-        et.local = scope->getLocalFieldIndex(name);
+        et.local = f.vaddr;
         et.klass = f.klass == NULL ? "" : f.klass->getFullName();
-        et.handler_pc = __init_label_address(block.code);
+        et.handler_pc = __init_label_address(block.code)+1;
         scope->function->exceptions.push_back(et);
-
-        if(!(f.nativeInt() && !f.array))
-            block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
     }
 
     // TODO: add goto to finally block
@@ -690,15 +721,38 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
 }
 
 void runtime::parseThrowStatement(Block& block, ast* pAst) {
-    Expression clause = parseExpression(pAst->getsubast(ast_expression));
+    Expression clause = parseExpression(pAst->getsubast(ast_expression)), out;
 
     if(clause.type == expression_lclass) {
         ClassObject* throwable = getClass("std.err", "Throwable");
-        // TODO: do some further checking in here
-        // check if class maybe is child of class RuntimeErr
-    } else {
+
+        if(throwable != NULL) {
+            if(clause.utype.klass->hasBaseClass(throwable)) {
+                pushExpressionToStack(clause, out);
+
+                out.code.push_i64(SET_Ei(i64, op_THROW));
+                block.code.inject(block.code.size(), out.code);
+            } else {
+                errors->newerror(GENERIC, pAst->getsubast(ast_expression), "class `" + clause.utype.klass->getFullName() +
+                    "` does not inherit `std.err#Throwable`");
+            }
+        } else {
+            errors->newerror(GENERIC, pAst->getsubast(ast_expression), "missing core class `std.err#Throwable` for exception handling");
+        }
+    } else if(clause.type == expression_field) {
+        if(clause.utype.field->type == field_class) {
+            pushExpressionToStack(clause, out);
+
+            out.code.push_i64(SET_Ei(i64, op_THROW));
+            block.code.inject(block.code.size(), out.code);
+        } else {
+            errors->newerror(GENERIC, pAst->getsubast(ast_expression), "field `" + clause.utype.field->name +
+                                                                       "` is not a class");
+        }
+    } else
+     {
         errors->newerror(GENERIC, pAst->getsubast(ast_expression), "expression must be of type lclass");
-    }
+     }
 }
 
 int64_t runtime::getLastLoopBeginAddress() {
@@ -918,23 +972,23 @@ void runtime::parseStatement(Block& block, ast* pAst) {
                 expr.code.push_i64(SET_Ei(i64, op_POP));
             }
 
-            block.code.inject(block.code.size(), expr.code);
+            block.code.inject(block.code.size(), expr.code); // done
         }
             break;
         case ast_assembly_statement:
-            parseAssemblyStatement(block, pAst);
+            parseAssemblyStatement(block, pAst); // done
             break;
         case ast_for_statement:
-            parseForStatement(block, pAst);
+            parseForStatement(block, pAst); // done
             break;
         case ast_foreach_statement:
-            parseForEachStatement(block, pAst);
+            parseForEachStatement(block, pAst); // done
             break;
         case ast_while_statement:
-            parseWhileStatement(block, pAst);
+            parseWhileStatement(block, pAst); // done
             break;
         case ast_do_while_statement:
-            parseDoWhileStatement(block, pAst);
+            parseDoWhileStatement(block, pAst); // done
             break;
         case ast_trycatch_statement:
             parseTryCatchStatement(block, pAst);
@@ -943,16 +997,16 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseThrowStatement(block, pAst);
             break;
         case ast_continue_statement:
-            parseContinueStatement(block, pAst);
+            parseContinueStatement(block, pAst); // done
             break;
         case ast_break_statement:
-            parseBreakStatement(block, pAst);
+            parseBreakStatement(block, pAst); // done
             break;
         case ast_goto_statement:
-            parseGotoStatement(block, pAst);
+            parseGotoStatement(block, pAst); // done
             break;
         case ast_label_decl:
-            parseLabelDecl(block, pAst);
+            parseLabelDecl(block, pAst); // done
             break;
         case ast_var_decl:
             parseVarDecl(block, pAst);
@@ -1356,7 +1410,7 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
         if((k = klass->getChildClass(object_name)) == NULL) {
 
             // field?
-            if((field = klass->getField(object_name)) != NULL) {
+            if((field = klass->getField(object_name, true)) != NULL) {
                 // is static?
                 if(!lastRefrence && field->array) {
                     errors->newerror(INVALID_ACCESS, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " field array");
@@ -1840,8 +1894,8 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     }
                 }
 
-                if(scope->type != scope_class && scope->getLocalField(refrence.refname) != NULL) {
-                    field = &scope->getLocalField(refrence.refname)->value;
+                if(scope->type != scope_class && scope->getLocalField(starter_name) != NULL) {
+                    field = &scope->getLocalField(starter_name)->value;
 
                     if(field->nativeInt()) {
                         if(field->isObjectInMemory()) {
@@ -6501,6 +6555,7 @@ void runtime::resolveClassDecl(ast* pAst) {
         klass->vaddr = class_size++;
 
     add_scope(Scope(scope_class, klass));
+    klass->setBaseClass(parse_base_class(pAst, ++startpos));
     for(long i = 0; i < astBlock->getsubastcount(); i++) {
         trunk = astBlock->getsubast(i);
 
@@ -9045,6 +9100,12 @@ void runtime::createDumpFile() {
                     ss<< Asm::registrerToString(GET_Ca(x64));
                     ss<< ", ";
                     ss<< GET_Cb(x64);
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_THROW:
+                {
+                    ss<<"throw ";
                     _ostream << ss.str();
                     break;
                 }

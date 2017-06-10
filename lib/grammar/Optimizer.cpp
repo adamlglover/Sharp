@@ -275,4 +275,15 @@ void Optimizer::optimize(m64Assembler &code, List<long>& unique_addrs) {
 
     optimizeRegisterOverride();
     optimizeUnusedReferences();
+    // todo: optimize this redundancy
+    /*
+     *
+        [0x32] 50:	movi #0, ebx
+        [0x34] 52:	movr ecx, ebx
+        to: movi #0, ecx
+
+        todo: remove this circular crap too
+        [0x56] 86:	movr ebx, cmt
+        [0x57] 87:	movr cmt, ebx
+     */
 }

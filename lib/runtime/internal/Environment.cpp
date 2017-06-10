@@ -104,6 +104,7 @@ void Environment::init(Object* objects, int64_t size) {
             ptr->HEAD=NULL;
             ptr->_Node = NULL;
             ptr->_rNode = NULL;
+            ptr->klass=NULL;
             ptr->mark = gc_orange;
             ptr->size = 0;
             ptr->monitor = Monitor();

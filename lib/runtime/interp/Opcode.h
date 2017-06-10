@@ -248,6 +248,8 @@ void print_stack();
 
 #define _unot(r,x) __rxs[0x0002]=(int64_t)__rxs[r]^(int64_t)__rxs[x];  _brh
 
+#define _throw() throw Exception("", false);  _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -352,6 +354,7 @@ void print_stack();
         &&ANDL,                                                        \
         &&ORL,                                                        \
         &&NOTL,                                                        \
+        &&_THROW,                                                        \
     };
 
 /*
@@ -460,6 +463,7 @@ enum OPCODE {
     op_ANDL=0x63,
     op_ORL=0x64,
     op_NOTL=0x65,
+    op_THROW=0x66,
 
     MAX_OPCODE=0x59
 };

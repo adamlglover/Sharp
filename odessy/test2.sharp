@@ -96,7 +96,28 @@ var[] str = "factorial of 8 is ";
 
         for(var i = 0; i < 10; i++) {
         }
+
+        var x;
+        x = 5;
+        while((--x) > 0) {
+            printc(x);
+            __asm("movi ' ',ebx" "_putc ebx");
+        }
+        print("done1\n");
+
+        try {
+            do {
+                x++;
+            }while(x < 10);
+            throw new RuntimeErr("Hello first error");
+        } catch(RuntimeErr e) {
+            print("caught error ");
+            print(e.message);
+            print("\n");
+        }
+
         print("done");
+
 
         __asm("movi ' ',ebx" "_putc ebx");
         __asm(

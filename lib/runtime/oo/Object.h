@@ -97,7 +97,8 @@ public:
                     if(HEAD != NULL)
                         ss << HEAD[i] << ",";
                 } else {
-                    ss << _Node[i].toString() << ",";
+                    if(_Node !=NULL)
+                        ss << _Node[i].toString() << ",";
                 }
             }
             ss << "]";

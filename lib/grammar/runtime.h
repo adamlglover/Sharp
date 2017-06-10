@@ -340,7 +340,7 @@ struct Scope {
     List<keypair<std::string, int64_t>> label_map;
     List<BranchTable> branches;
     int blocks;
-    int loops, trys, ulid;
+    long loops, trys, ulid;
     bool self, base;
     long uniqueLabelId;
 
@@ -441,6 +441,8 @@ public:
 #define for_label_end_id "$$for_end"
 
 #define try_label_end_id "$$try_end"
+
+#define generic_label_id "$$L"
 
 #define __init_label_address(code) (code.__asm64.size() == 0 ? 0 : code.__asm64.size() - 1)
 
@@ -964,7 +966,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.81"
+#define progvers "0.1.83"
 
 struct options {
     ~options()
