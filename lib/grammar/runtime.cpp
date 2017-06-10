@@ -994,7 +994,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseTryCatchStatement(block, pAst);
             break;
         case ast_throw_statement:
-            parseThrowStatement(block, pAst);
+            parseThrowStatement(block, pAst); // done
             break;
         case ast_continue_statement:
             parseContinueStatement(block, pAst); // done
