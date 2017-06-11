@@ -959,10 +959,12 @@ private:
     void getArrayValueOfExpression(Expression &expr, Expression &out);
 
     void assignUtypeForeach(ast *pAst, Scope *scope, Block &block, Expression &arrayExpr);
+
+    void pushExpressionToPtr(Expression &expression, Expression &out);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.85"
+#define progvers "0.1.86"
 
 struct options {
     ~options()

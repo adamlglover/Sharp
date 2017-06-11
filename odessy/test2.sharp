@@ -119,12 +119,15 @@ class Main base Base {
 
         print2("doing if statements\n");
         x = 11;
-        arry = null;
         __asm("nop nop");
-        if(arry == null) {
+        if(x == 6) {
             print("x == 6");
         } else if(x == 10) {
             print("x == 10");
+        } else if(arry == null) {
+            print2("arry == null");
+        } else if(arry != null) {
+            print2("arry != null");
         } else {
             print("im not sure what x is?");
         }

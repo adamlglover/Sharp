@@ -2324,6 +2324,58 @@ void runtime::pushExpressionToStackNoInject(Expression& expression, Expression& 
     }
 }
 
+
+void runtime::pushExpressionToPtr(Expression& expression, Expression& out) {
+    if(!expression._new)
+        out.code.inject(out.code.__asm64.size(), expression.code);
+
+    switch(expression.type) {
+        case expression_var:
+            if(expression._new) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                out.code.inject(out.code.__asm64.size(), expression.code);
+            }
+            break;
+        case expression_field:
+            break;
+        case expression_lclass:
+            if(expression._new) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                out.code.inject(out.code.__asm64.size(), expression.code);
+            } else {
+                if(expression.func) {
+                    /* I think we do nothing? */
+                    out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                }
+            }
+            break;
+        case expression_string:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Di(i64, op_NEWSTR, expression.intValue));
+            break;
+        case expression_null:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Ei(i64, op_DEL));
+            break;
+        case expression_dynamicclass:
+            if(expression._new) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                out.code.inject(out.code.__asm64.size(), expression.code);
+            } else {
+                if(expression.func) {
+                    /* I think we do nothing? */
+                    out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                }
+            }
+            break;
+    }
+}
+
 Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
     Scope* scope = current_scope();
     Method* fn = NULL;
@@ -4987,12 +5039,12 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
     } else if(left.type == expression_field) {
         if(left.utype.field->isObjectInMemory()) {
             memassign:
-            if(left.utype.field->array && operand != "=" && !(operand == "==" && right.type == expression_null)) {
+            if(left.utype.field->array && operand != "=" && right.type != expression_null) {
                 errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
                                                                   + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
             }
 
-            if(right.type == expression_null) {
+            if(operand == "=" && right.type == expression_null) {
                 out.code.inject(out.code.__asm64.size(), left.code);
                 out.code.push_i64(SET_Ei(i64, op_DEL));
                 return;
@@ -5003,10 +5055,21 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                 out.code.push_i64(SET_Ei(i64, op_POPREF));
                 return;
             } else if(operand == "==" && right.type == expression_null) {
-                out.code.inject(out.code.__asm64.size(), left.code);
+                pushExpressionToPtr(left, out);
+
                 out.code.push_i64(SET_Ei(i64, op_CHKNULL));
                 out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
                 return;
+            } else if(operand == "!=" && right.type == expression_null) {
+                pushExpressionToPtr(left, out);
+
+                out.code.push_i64(SET_Ei(i64, op_CHKNULL));
+                out.code.push_i64(SET_Ci(i64, op_NOT, cmt,0, cmt));
+                out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                return;
+            } else if(right.type == expression_null) {
+                errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
+                                                                  + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
             }
 
             if(equalsNoErr(left, right)) {
@@ -9201,6 +9264,12 @@ void runtime::createDumpFile() {
                 case op_THROW:
                 {
                     ss<<"throw ";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_CHKNULL:
+                {
+                    ss<<"chknull";
                     _ostream << ss.str();
                     break;
                 }

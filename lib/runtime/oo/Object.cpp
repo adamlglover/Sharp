@@ -155,6 +155,8 @@ void Object::del_ref() {
  * they can only be mutated
  */
 void Object::mutate(Object *object) {
+    if(object == this) return;
+
     if(mark == gc_green) {
         GC::_insert(this);
     }
