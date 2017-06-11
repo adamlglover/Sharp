@@ -236,7 +236,6 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0),
             ulid(0)
     {
         locals.init();
@@ -254,7 +253,6 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0),
             ulid(0)
     {
         locals.init();
@@ -272,7 +270,6 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            uniqueLabelId(0),
             ulid(0)
     {
         locals.init();
@@ -342,14 +339,13 @@ struct Scope {
     int blocks;
     long loops, trys, ulid;
     bool self, base;
-    long uniqueLabelId;
 
     void free() {
         locals.free();
         label_map.free();
     }
 
-    void remove_labels(int block) {
+    void remove_locals(int block) {
         if(locals.size() == 0) return;
 
         readjust:
@@ -834,7 +830,7 @@ private:
 
     void parseTryCatchStatement(Block &block, ast *pAst);
 
-    void parseCachClause(Block &block, ast *pAst, ExceptionTable table);
+    ClassObject* parseCatchClause(Block &block, ast *pAst, ExceptionTable table);
 
     void parseFinallyBlock(Block &block, ast *pAst);
 
@@ -966,7 +962,7 @@ private:
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.83"
+#define progvers "0.1.84"
 
 struct options {
     ~options()

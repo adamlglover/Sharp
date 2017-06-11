@@ -39,7 +39,7 @@ public:
         unique_addr_lst.init();
     }
 
-    void optimize(m64Assembler &code, List<long>& unique_addrs);
+    void optimize(Method* method);
 
     ~Optimizer()
     {
@@ -48,7 +48,10 @@ public:
         assembler=NULL;
     }
 
+    long getOptimizedOpcodes() { return optimizedOpcodes; }
+
 private:
+    Method* func;
     long optimizedOpcodes;
     m64Assembler* assembler;
     List <register_state> register_map;

@@ -239,25 +239,67 @@ void runtime::parseReturnStatement(Block& block, ast* pAst) {
 }
 
 void runtime::parseIfStatement(Block& block, ast* pAst) {
-    int i = 0;
-    Expression cond = parseExpression(pAst->getsubast(0));
-    parseBlock(pAst->getsubast(1), block);
+    Scope* scope = current_scope();
+    Expression cond = parseExpression(pAst->getsubast(ast_expression)), out;
+
+    string ifEndLabel;
+    stringstream ss;
+    ss << for_label_end_id << scope->ulid;
+    ifEndLabel=ss.str();
+
+    pushExpressionToRegister(cond, out, cmt);
+    block.code.inject(block.code.size(), out.code);
+
 
     if(pAst->getsubastcount() > 2) {
+        int64_t insertAddr, difference;
+        block.code.push_i64(SET_Di(i64, op_LOADX, adx));
+        insertAddr=block.code.size();
+        parseBlock(pAst->getsubast(ast_block), block);
+        difference = block.code.size()-insertAddr;
+
+        block.code.__asm64.insert(insertAddr++, SET_Ci(i64, op_IADD, adx,0, (difference+4)));
+        block.code.__asm64.insert(insertAddr, SET_Ei(i64, op_IFNE));
+
+        scope->addBranch(ifEndLabel, 1, block.code, pAst->getsubast(ast_expression)->line,
+                         pAst->getsubast(ast_expression)->col);
+
         ast* trunk;
         for(unsigned int i = 2; i < pAst->getsubastcount(); i++) {
             trunk = pAst->getsubast(i);
             switch(trunk->gettype()) {
                 case ast_elseif_statement:
                     cond = parseExpression(trunk->getsubast(ast_expression));
+
+                    out.free();
+                    pushExpressionToRegister(cond, out, cmt);
+                    block.code.inject(block.code.size(), out.code);
+
+                    block.code.push_i64(SET_Di(i64, op_LOADX, adx));
+                    insertAddr=block.code.size();
                     parseBlock(trunk->getsubast(ast_block), block);
+                    difference = block.code.size()-insertAddr;
+
+                    block.code.__asm64.insert(insertAddr++, SET_Ci(i64, op_IADD, adx,0, (difference+4)));
+                    block.code.__asm64.insert(insertAddr, SET_Ei(i64, op_IFNE));
+
+                    scope->addBranch(ifEndLabel, 1, block.code, trunk->getsubast(ast_expression)->line,
+                                     trunk->getsubast(ast_expression)->col);
                     break;
                 case ast_else_statement:
                     parseBlock(trunk->getsubast(ast_block), block);
                     break;
             }
         }
+    } else {
+        scope->addStore(ifEndLabel, adx, 1, block.code, pAst->getsubast(ast_expression)->line,
+                        pAst->getsubast(ast_expression)->col);
+        block.code.push_i64(SET_Ei(i64, op_IFNE));
+        parseBlock(pAst->getsubast(ast_block), block);
     }
+
+
+    scope->label_map.add(keypair<string,int64_t>(ifEndLabel, __init_label_address(block.code)));
 }
 
 void runtime::parseAssemblyBlock(Block& block, ast* pAst) {
@@ -377,7 +419,7 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
 
     block.code.push_i64(SET_Di(i64, op_GOTO, (get_label(forBeginLabel)+1)));
     scope->label_map.add(keypair<std::string, int64_t>(forEndLabel,__init_label_address(block.code)));
-    scope->remove_labels(scope->blocks);
+    scope->remove_locals(scope->blocks);
     scope->blocks--;
     scope->loops--;
 }
@@ -436,11 +478,6 @@ void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* c
             scope->locals.push_back(local);
 
             Expression fieldExpr = fieldToExpression(pAst, local.value);
-
-
-            if(comparator != NULL) {
-                equals(fieldExpr, *comparator);
-            }
 
             if(value.type != expression_unknown) {
                 equals(fieldExpr, value);
@@ -536,7 +573,7 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     scope->ulid++;
     string forBeginLabel, forEndLabel;
 
-    Expression arryExpression = parseExpression(pAst->getsubast(ast_expression)), out;
+    Expression arryExpression(parseExpression(pAst->getsubast(ast_expression))), out;
     parseUtypeArg(pAst, scope, block, &arryExpression);
 
     /*
@@ -583,7 +620,7 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
     scope->label_map.add(keypair<std::string, int64_t>(forEndLabel,__init_label_address(block.code)));
     block.code.push_i64(SET_Ei(i64, op_POP));
 
-    scope->remove_labels(scope->blocks);
+    scope->remove_locals(scope->blocks);
     scope->loops--;
     scope->blocks--;
 }
@@ -637,8 +674,9 @@ void runtime::parseDoWhileStatement(Block& block, ast* pAst) {
     block.code.push_i64(SET_Ei(i64, op_IFE));
 }
 
-void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
+ClassObject* runtime::parseCatchClause(Block &block, ast *pAst, ExceptionTable et) {
     Scope* scope = current_scope();
+    ClassObject* klass = NULL;
 
     keypair<string, ResolvedReference> catcher = parseUtypeArg(pAst->getsubast(ast_utype_arg_opt));
 
@@ -676,12 +714,14 @@ void runtime::parseCachClause(Block &block, ast *pAst, ExceptionTable et) {
         field = scope->getLocalField(name);
         et.local = f.vaddr;
         et.klass = f.klass == NULL ? "" : f.klass->getFullName();
+        klass=f.klass;
         et.handler_pc = __init_label_address(block.code)+1;
         scope->function->exceptions.push_back(et);
     }
 
     // TODO: add goto to finally block
     parseBlock(pAst->getsubast(ast_block), block);
+    return klass;
 }
 
 void runtime::parseFinallyBlock(Block& block, ast* pAst) {
@@ -692,10 +732,18 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     ExceptionTable et;
     scope->trys++;
+    string catchEndLabel;
+    List<ClassObject*> klasses;
+    ClassObject* klass;
 
     et.start_pc = block.code.__asm64.size();
     parseBlock(pAst->getsubast(ast_block), block);
     et.end_pc = block.code.__asm64.size();
+
+
+    stringstream ss;
+    ss << try_label_end_id << ++scope->ulid;
+    catchEndLabel = ss.str();
 
     ast* sub;
     for(unsigned int i = 1; i < pAst->getsubastcount(); i++) {
@@ -703,16 +751,27 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
 
         switch(sub->gettype()) {
             case ast_catch_clause:
-                parseCachClause(block, sub, et);
+                scope->blocks++;
+                klass = parseCatchClause(block, sub, et);
+                scope->addBranch(catchEndLabel, 1, block.code, sub->line, sub->col);
+
+                if(klass != NULL) {
+                    if(klasses.find(klass)) {
+                        errors->newerror(GENERIC, sub, "exception `" + klass->getName() + "` has already been caught");
+                    } else
+                        klasses.add(klass);
+                }
+
+                scope->remove_locals(scope->blocks);
+                scope->blocks--;
                 break;
             case ast_finally_block:
                 break;
         }
     }
 
-    stringstream ss;
-    ss << try_label_end_id << scope->trys;
-    scope->label_map.add(keypair<string,int64_t>(ss.str(), __init_label_address(block.code)));
+    klasses.free();
+    scope->label_map.add(keypair<string,int64_t>(catchEndLabel, __init_label_address(block.code)));
 
     if(pAst->hassubast(ast_finally_block)) {
         parseFinallyBlock(block, pAst->getsubast(ast_finally_block));
@@ -1037,7 +1096,7 @@ void runtime::parseBlock(ast* pAst, Block& block) {
         parseStatement(block, trunk);
     }
 
-    scope->remove_labels(scope->blocks);
+    scope->remove_locals(scope->blocks);
 
     scope->blocks--;
 }
@@ -4926,7 +4985,7 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                 if(c_options.optimize && right.utype.type == ResolvedReference::FIELD
                         && right.utype.field->local) {
                     out.inject(left);
-                    out.code.push_i64(SET_Di(i64, op_MUTL, right.utype.field->vaddr));
+                    out.code.push_i64(SET_Di(i64, op_MUTL, field_offset(current_scope(), right.utype.field->vaddr)));
                 } else {
                     pushExpressionToStack(right, out);
                     out.inject(left);
@@ -4949,23 +5008,23 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
 
                 if(operand == "=") {
                     out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    out.code.push_i64(SET_Ci(i64, op_SMOVR, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_SMOVR, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "+=") {
-                    out.code.push_i64(SET_Ci(i64, op_ADDL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_ADDL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "-=") {
-                    out.code.push_i64(SET_Ci(i64, op_SUBL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_SUBL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "*=") {
-                    out.code.push_i64(SET_Ci(i64, op_MULL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_MULL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "/=") {
-                    out.code.push_i64(SET_Ci(i64, op_DIVL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_DIVL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "%=") {
-                    out.code.push_i64(SET_Ci(i64, op_MODL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_MODL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "&=") {
-                    out.code.push_i64(SET_Ci(i64, op_ANDL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_ANDL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "|=") {
-                    out.code.push_i64(SET_Ci(i64, op_ORL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_ORL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 } else if(operand == "^=") {
-                    out.code.push_i64(SET_Ci(i64, op_NOTL, ecx,0, left.utype.field->vaddr));
+                    out.code.push_i64(SET_Ci(i64, op_NOTL, ecx,0, field_offset(current_scope(), left.utype.field->vaddr)));
                 }
 
             } else {
@@ -5012,7 +5071,7 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                     pushExpressionToRegister(right, e, ebx);
 
                     left.code.__asm64.insert(i++, SET_Di(i64, op_PUSHR, ebx));
-                    left.code.inject(i, e.code); // add the code to get the value to set
+                                                                                                            left.code.inject(i, e.code); // add the code to get the value to set
                     i+=e.code.size();
 
                     left.code.__asm64.insert(i++, SET_Di(i64, op_POPR, egx));
@@ -8265,7 +8324,7 @@ void runtime::generate() {
         for(unsigned int i = 0; i < allMethods.size(); i++)
         {
             Method* method = allMethods.get(i);
-            optimizer.optimize(method->code, method->unique_address_table);
+            optimizer.optimize(method);
         }
     }
 

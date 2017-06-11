@@ -5,6 +5,7 @@
 #include "Optimizer.h"
 #include "../runtime/interp/register.h"
 #include "../runtime/interp/Opcode.h"
+#include "Method.h"
 
 register_state& Optimizer::get_register(int id) {
     return register_map.get(id);
@@ -75,6 +76,17 @@ void Optimizer::optimizeUnusedReferences() {
 }
 
 void Optimizer::readjustAddresses(unsigned int stopAddr) {
+    for(unsigned int i = 0; i < func->exceptions.size(); i++) {
+        ExceptionTable &et = func->exceptions.get(i);
+
+        if(stopAddr <= et.start_pc)
+            et.start_pc--;
+        if(stopAddr <= et.end_pc)
+            et.end_pc--;
+        if(stopAddr <= et.handler_pc)
+            et.handler_pc--;
+    }
+
     int64_t x64, op, addr;
     for(unsigned int i = 0; i < stopAddr; i++) {
         x64 = assembler->__asm64.get(i);
@@ -96,18 +108,20 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
                 }
                 break;
             case op_MOVI:
-                if(unique_addr_lst.find(i+1)) {
+                if(unique_addr_lst.find(i-1)) {
                     addr=GET_Da(x64);
+                    unique_addr_lst.replace(unique_addr_lst.indexof(i-1), i);
 
                     /*
                      * We only want to update data which is referencing data below us
                      */
-                    if(addr > stopAddr)
-                    {
-                        // update address
-                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, --addr));
-                        i++;
+                    if(addr <= stopAddr)
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, addr));
+                    else {
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, addr-1));
                     }
+
+                    i++;
                 }
                 break;
         }
@@ -129,21 +143,22 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
                 if(addr > stopAddr)
                 {
                     // update address
-                    assembler->__asm64.replace(i, SET_Di(x64, op, --addr));
+                    assembler->__asm64.replace(i, SET_Di(x64, op, addr-1));
                 }
                 break;
             case op_MOVI:
                 if(unique_addr_lst.find(i+1)) {
                     addr=GET_Da(x64);
+                    unique_addr_lst.replace(unique_addr_lst.indexof(i+1), i);
 
                     /*
                      * We only want to update data which is referencing data below us
                      */
-                    if(addr > stopAddr)
-                    {
-                        // update address
-                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, --addr));
-                    }
+                    if(addr <= stopAddr) {
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, addr - 2));
+                    } else
+                        assembler->__asm64.replace(i, SET_Di(x64, op_MOVI, addr-1));
+                    i++;
                 }
                 break;
         }
@@ -159,7 +174,7 @@ void Optimizer::optimizeRegisterOverride() {
             case op_MOVR:
             {
                 register_state &left=get_register(GET_Ca(x64)), &right=get_register(GET_Cb(x64));
-                if(left.assign_type == assign_register && right.id != sp) {
+                if(left.assign_type == assign_register && right.id != sp && right.id != fp) {
                     if(left.value==right.id) {
                         assembler->__asm64.remove(i);
                         readjustAddresses(i);
@@ -253,12 +268,13 @@ void Optimizer::optimizeRegisterOverride() {
     }
 }
 
-void Optimizer::optimize(m64Assembler &code, List<long>& unique_addrs) {
-    this->assembler = &code;
-    this->unique_addr_lst.addAll(unique_addrs);
+void Optimizer::optimize(Method* method) {
+    this->assembler = &method->code;
+    this->unique_addr_lst.addAll(method->unique_address_table);
+    this->func=method;
     optimizedOpcodes=0;
 
-    if(code.size()==0)
+    if(method->code.size()==0)
         return;
 
     /* initally set all registers to be unusable at start */
@@ -285,5 +301,10 @@ void Optimizer::optimize(m64Assembler &code, List<long>& unique_addrs) {
         todo: remove this circular crap too
         [0x56] 86:	movr ebx, cmt
         [0x57] 87:	movr cmt, ebx
+
+        [0xa0] 160:	loadx adx
+        [0xa1] 161:	iadd adx, #7
+        todo: make this into 1 instruction clean:
+            movi #<addr>, adx
      */
 }
