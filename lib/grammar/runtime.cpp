@@ -1023,7 +1023,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseReturnStatement(block, pAst);
             break;
         case ast_if_statement:
-            parseIfStatement(block, pAst);
+            parseIfStatement(block, pAst); // done
             break;
         case ast_expression: {
             Expression expr =parseExpression(pAst);
