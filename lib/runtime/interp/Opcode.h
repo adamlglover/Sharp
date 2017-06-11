@@ -250,6 +250,8 @@ void print_stack();
 
 #define _throw() throw Exception("", false);  _brh
 
+#define _chknull() CHK_NULL(__rxs[0x0002]=ptr->isnull();) _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -355,6 +357,7 @@ void print_stack();
         &&ORL,                                                        \
         &&NOTL,                                                        \
         &&_THROW,                                                        \
+        &&CHKNULL,                                                        \
     };
 
 /*
@@ -464,6 +467,7 @@ enum OPCODE {
     op_ORL=0x64,
     op_NOTL=0x65,
     op_THROW=0x66,
+    op_CHKNULL=0x67,
 
     MAX_OPCODE=0x59
 };

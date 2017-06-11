@@ -787,6 +787,8 @@ void Thread::run() {
                 _notl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
             _THROW:
                 _throw()
+            CHKNULL:
+                _chknull()
         }
     } catch (std::bad_alloc &e) {
         cout << "std::bad_alloc\n";

@@ -83,10 +83,9 @@ class Main base Base {
 
 
     static fn main(string[] args) : var {
-var[] str = "factorial of 8 is ";
+        var[] str = "factorial of 8 is ";
 
-        var[] arry;
-        arry = new var[10];
+        var[] arry = new var[10];
         foreach(var x : arry) {
             printc(fact(1));
             __asm("movi ' ',ebx" "_putc ebx");
@@ -97,8 +96,7 @@ var[] str = "factorial of 8 is ";
         for(var i = 0; i < 10; i++) {
         }
 
-        var x;
-        x = 5;
+        var x = 5;
         while((--x) > 0) {
             printc(x);
             __asm("nop movi ' ',ebx" "_putc ebx");
@@ -115,11 +113,15 @@ var[] str = "factorial of 8 is ";
             print("caught error ");
             print(e.message);
             print("\n");
-        } // TODO: add goto at end of all catch clauses
+        } finally {
+
+        }
 
         print2("doing if statements\n");
         x = 11;
-        if(x == 7) {
+        arry = null;
+        __asm("nop nop");
+        if(arry == null) {
             print("x == 6");
         } else if(x == 10) {
             print("x == 10");

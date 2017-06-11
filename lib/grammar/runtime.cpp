@@ -728,6 +728,24 @@ void runtime::parseFinallyBlock(Block& block, ast* pAst) {
     parseBlock(pAst->getsubast(ast_block), block);
 }
 
+/*
+ * TODO: create FinallyBlockTabel to contain startpc and end pc of block
+ *
+ * in return_asp() do a check to see if there are any finally blocks in this func, then
+ * if there is execute the functions from the starting pc till end of func
+ *
+ * in theread class add variable called raisedPc
+ *
+ * if exception is caught execute last finally block from called pc to current pc
+ * in finally block function have setup like
+ *
+ * execFinallyBlocks(bool executeAll) // ALLOW Interrupts and suspends
+ *
+ * finallyBlockTabel format
+ * int64_t start_pc
+ * int64_t end_pc
+ *
+ */
 void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     ExceptionTable et;
@@ -933,20 +951,18 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
     list<AccessModifier> modifiers;
     List<AccessModifier> modCompat;
     int startpos=0;
-    int64_t i64;
+    token_entity operand = pAst->getentity(pAst->getentitycount()-1);
 
     parse_access_decl(pAst, modifiers, startpos);
 
     string name =  pAst->getentity(startpos).gettoken();
-    keypair<int, Field>* field;
 
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
     Field f = Field(NULL, uid++, name, scope->klass, modCompat, note);
 
-    f.vaddr = scope->function->local_count;
+    f.vaddr = scope->function->local_count++;
     f.local=true;
-    scope->function->local_count++;
     Expression utype = parseUtype(pAst->getsubast(ast_utype));
     if(utype.utype.type == ResolvedReference::CLASS) {
         f.klass = utype.utype.klass;
@@ -965,39 +981,42 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
             errors->newerror(COULD_NOT_RESOLVE, pAst, " `" + utype.utype.field->name + "`");
         }
 
-
         modCompat.addAll(modifiers);
         scope->locals.add(keypair<int, Field>(scope->blocks, f));
-        field = scope->getLocalField(name);
+        Expression fieldExpr = fieldToExpression(pAst, f);
 
-        if(!(f.nativeInt() && !f.array))
+        if(f.isObjectInMemory())
             block.code.__asm64.push_back(SET_Di(i64, op_MOVL, f.vaddr));
 
         if(pAst->hassubast(ast_value)) {
-            Expression expression = parse_value(pAst->getsubast(ast_value));
+            Expression expression = parse_value(pAst->getsubast(ast_value)), out;
+            equals(fieldExpr, expression);
 
-            if(f.type == field_native) {
-                if(f.nativeInt()) {
-                    switch(expression.type) {
-                        case expression_string:
-                            block.code.__asm64.push_back(SET_Di(i64, op_NEWSTR, get_string(expression.value)));
-                            break;
-                    }
+            if(f.isObjectInMemory()) {
+                if(operand == "=") {
+                    assignValue(operand, out, fieldExpr, expression, pAst);
+                    block.code.inject(block.code.__asm64.size(), out.code);
+                } else {
+                    errors->newerror(GENERIC, pAst, " explicit call to operator `" + operand.gettoken() + "` without initilization");
                 }
-            }
+            } else {
+                if(operand != "=") {
+                    block.code.push_i64(SET_Di(i64, op_MOVI, 0), egx);
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Ci(i64, op_SMOVR, egx,0, field_offset(scope, f.vaddr)));
+                }
 
-            Expression assignee(pAst);
-            assignee.type = expression_field;
-            assignee.utype.field = &field->value;
-            assignee.utype.type = ResolvedReference::FIELD;
-            assignee.utype.refrenceName = field->value.name;
-
-            if(equals(assignee, expression)) {
-                return;
+                assignValue(operand, out, fieldExpr, expression, pAst);
+                block.code.inject(block.code.__asm64.size(), out.code);
             }
-            // TODO: do something based on the assign expression
         } else {
-            // create variable
+            if(!f.isObjectInMemory()) {
+                block.code.push_i64(SET_Di(i64, op_MOVI, 0), egx);
+                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                block.code.push_i64(SET_Ci(i64, op_SMOVR, egx,0, field_offset(scope, f.vaddr)));
+            } else {
+                block.code.push_i64(SET_Ei(i64, op_DEL));
+            }
         }
     }
 
@@ -1068,7 +1087,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseLabelDecl(block, pAst); // done
             break;
         case ast_var_decl:
-            parseVarDecl(block, pAst);
+            parseVarDecl(block, pAst); // done
             break;
         default: {
             stringstream err;
@@ -4968,9 +4987,26 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
     } else if(left.type == expression_field) {
         if(left.utype.field->isObjectInMemory()) {
             memassign:
-            if(left.utype.field->array && operand != "=") {
+            if(left.utype.field->array && operand != "=" && !(operand == "==" && right.type == expression_null)) {
                 errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
                                                                   + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+            }
+
+            if(right.type == expression_null) {
+                out.code.inject(out.code.__asm64.size(), left.code);
+                out.code.push_i64(SET_Ei(i64, op_DEL));
+                return;
+            } else if(right.type == expression_string) {
+                pushExpressionToStack(right, out);
+                out.code.inject(out.code.__asm64.size(), left.code);
+
+                out.code.push_i64(SET_Ei(i64, op_POPREF));
+                return;
+            } else if(operand == "==" && right.type == expression_null) {
+                out.code.inject(out.code.__asm64.size(), left.code);
+                out.code.push_i64(SET_Ei(i64, op_CHKNULL));
+                out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+                return;
             }
 
             if(equalsNoErr(left, right)) {
@@ -5316,13 +5352,13 @@ Expression runtime::parseEqualExpression(ast* pAst) {
         case expression_field:
             if(left.utype.field->type == field_native) {
                 // add var
-                if(operand.gettokentype() == ASSIGN) {
+                if(right.type == expression_null || operand.gettokentype() == ASSIGN) {
                     assignValue(operand, out, left, right, pAst);
                 } else {
                     assignNative(operand, out, left, right, pAst);
                 }
             } else if(left.utype.field->type == field_class) {
-                if(operand.gettokentype() == ASSIGN) {
+                if(right.type == expression_null || operand.gettokentype() == ASSIGN) {
                     assignValue(operand, out, left, right, pAst);
                 } else {
                     addClass(operand, left.utype.field->klass, out, left, right, pAst);
@@ -5335,7 +5371,7 @@ Expression runtime::parseEqualExpression(ast* pAst) {
             errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + left.typeToString() + "`");
             break;
         case expression_lclass:
-            if(operand.gettokentype() == ASSIGN) {
+            if(right.type == expression_null || operand.gettokentype() == ASSIGN) {
                 assignValue(operand, out, left, right, pAst);
             } else {
                 addClass(operand, left.utype.field->klass, out, left, right, pAst);
@@ -5944,7 +5980,7 @@ bool runtime::equalsNoErr(Expression& left, Expression& right) {
                         return left.utype.field->dynamicObject();
                     }
                 } else if(right.type == expression_string) {
-                    return right.utype.field->nativeInt() && left.utype.field->array;
+                    return left.utype.field->nativeInt() && left.utype.field->array;
                 } else if(right.type == expression_lclass) {
                     return left.utype.field->dynamicObject();
                 }
