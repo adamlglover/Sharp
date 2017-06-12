@@ -1306,7 +1306,7 @@ void Thread::Throw(Object* exceptionObject) {
         } else {
             try{
                 return_asp();
-            }catch (Exception e) {
+            }catch (Exception &e) {
                 throwable=e.throwable;
                 exceptionObject = &__stack[SP64].object;
                 goto __throw;
