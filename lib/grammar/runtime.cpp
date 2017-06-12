@@ -821,6 +821,7 @@ ClassObject* runtime::parseCatchClause(Block &block, ast *pAst, ExceptionTable e
 }
 
 void runtime::parseFinallyBlock(Block& block, ast* pAst) {
+    current_scope()->reachable=true;
     parseBlock(pAst->getsubast(ast_block), block);
 }
 
