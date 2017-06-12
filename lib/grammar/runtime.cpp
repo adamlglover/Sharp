@@ -1729,12 +1729,13 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                 errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " ecpected class or module before `" + object_name + "` ");
             }
             expression.code.push_i64(SET_Di(i64, op_MOVG, klass->vaddr));
+            klass = k;
+
             if(lastRefrence) {
                 expression.utype.type = ResolvedReference::CLASS;
                 expression.utype.klass = klass;
                 expression.type = expression_class;
             }
-            klass = k;
         }
     }
 }

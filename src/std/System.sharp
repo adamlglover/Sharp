@@ -8,6 +8,14 @@ import libcore;
 class System {
 
     public static fn print(var[] data) {
-        Libcore.printData(data);
+        Libcore.os.printData(data);
+    }
+
+    public static fn print(var data) {
+        Libcore.os.__print_(data, false);
+    }
+
+    public static fn printChar(var data) {
+        Libcore.os.__print_(data, true);
     }
 }

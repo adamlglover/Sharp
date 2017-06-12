@@ -1,19 +1,10 @@
 mod application;
 
+import std;
+
 class Main {
-    var value;
 
-    fn operator+(var x)  : var {
-        value  = value + x;
-        return value; 
-    }
-
-    fn main(string[] args) {
-
-        Main m;
-
-        if(m + 8 > 9) {
-
-        }
+    static fn main(string[] args) {
+        System.print("Hello, World!");
     }
 }
