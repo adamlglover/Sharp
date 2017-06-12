@@ -54,6 +54,7 @@ Exception::Exception(Throwable &throwable)
         :
         runtime_error("")
 {
+    this->throwable.init();
     this->throwable = throwable;
 }
 
