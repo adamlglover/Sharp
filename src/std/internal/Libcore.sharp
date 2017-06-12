@@ -1,0 +1,58 @@
+mod libcore;
+
+/**
+* {@class Libcore}
+* This class contains the low level functions of performing
+* basic operations on the Sharp Virtual machine
+*/
+class Libcore {
+
+    public static fn printData(var[] data) {
+        __os_print_(data);
+    }
+
+    /**
+    * Classic print function to print an array of data to
+    * the console
+    */
+    private static fn __os_print_(var[] message) {
+        __asm(
+            "  movl <message>                                                                     "
+            "  _sizeof %ecf               // get size of message                               "
+            "  movi #0, %cx                                                                    "
+            "  .check_null:                                                                    "
+            "      test %cx,%ecf                                                               "
+            "      movi $_print,%adx                                                           "
+            "      ifne                                                                        "
+            "      ret                                                                         "
+            "                                                                                  "
+            "  ._print:                                                                         "
+            "     movi $_print+2,%adx    // store address of label <_print> omit store instr   "
+            "     movx %ebx,%cx          // get char at [index]                                "
+            "     _putc %ebx                                                                   "
+            "     inc %cx                                                                      "
+            "     lt %cx,%ecf            // check if we have reached the end of the string     "
+            "     bre                                                                          "
+        );
+    }
+
+    /**
+    * print a single character to the console
+    */
+    private static fn __os_print_(var char, var isCharacter) {
+        if(isCharacter) {
+            __asm(
+                "  movr %adx,%fp                                                                   "
+                "  smov ebx+0               // get local 'char'                                    "
+                "  put ebx                                                                         "
+            );
+        } else {
+            __asm(
+                "  movr %adx,%fp                                                                   "
+                "  smov ebx+0               // get local 'char'                                    "
+                "  put ebx                                                                         "
+            );
+        }
+
+    }
+}

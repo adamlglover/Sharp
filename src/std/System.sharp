@@ -1,8 +1,13 @@
 mod std;
 
+import libcore;
+
 /**
  * Created by BraxtonN on 5/23/2017.
  */
 class System {
-    
+
+    public static fn print(var[] data) {
+        Libcore.printData(data);
+    }
 }
