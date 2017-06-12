@@ -25,36 +25,7 @@ class Main base Base {
     }
 
     static fn fact(var x) : var {
-       // return (x == 1 ? x : x * fact(x - 1));
-        try {
-        __asm(
-            "movr %adx,%fp"
-            "smov %ebx"
-            "movi 1,%ecx"
-            "movi $L1,%adx"
-            "le ebx,ecx"
-            "ifne"
-            "movr %adx,%fp"
-            "smovr %ebx-0x5"
-            "ret"
-            ".L1:"
-            "movr ecf,ebx"
-            "dec %ecf"
-            "inc %sp"
-            "iframe"
-            "pushr %ecf"
-            "call <fact>"
-            "movr %adx,%sp"
-            "smov %ebx"
-            "movr %adx,%fp"
-            "smov %ecx"
-            "mul %ecx,%ebx, %bmr"
-            "smovr %bmr-0x5"
-            "ret"
-        );
-        } catch(Throwable e) {
-            __asm("ret");
-        }
+        return (x == 1) ? x : x * fact(x - 1);
     }
 
     static fn operator++(var x) {

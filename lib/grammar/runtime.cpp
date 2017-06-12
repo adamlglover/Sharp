@@ -229,6 +229,108 @@ void runtime::parseReturnStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     Expression returnVal, value = parse_value(pAst->getsubast(ast_value));
 
+    if(!value._new)
+        block.code.inject(block.code.__asm64.size(), value.code);
+
+    switch(value.type) {
+        case expression_var:
+            if(value._new) {
+                block.code.push_i64(SET_Di(i64, op_INC, fp));
+                block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                block.code.inject(block.code.__asm64.size(), value.code);
+            } else {
+                if (value.func) {
+                    // TODO: pull value from function
+                    if(value.utype.array) {
+                        block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    } else {
+                        Expression out;
+                        pushExpressionToRegisterNoInject(value, out, ebx);
+                        block.code.inject(block.code.__asm64.size(), out.code);
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                    }
+                } else {
+                    Expression out;
+                    pushExpressionToRegisterNoInject(value, out, ebx);
+                    block.code.inject(block.code.__asm64.size(), out.code);
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                }
+            }
+            break;
+        case expression_field:
+            if(value.utype.field->nativeInt() && !value.utype.field->array) {
+                if(value.utype.field->local) {
+                    Expression out;
+                    pushExpressionToRegisterNoInject(value, out, ebx);
+                    block.code.inject(block.code.__asm64.size(), out.code);
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                } else {
+                    block.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
+                    block.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                }
+            } else if(value.utype.field->nativeInt() && value.utype.field->array) {
+                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+            } else if(value.utype.field->dynamicObject() || value.utype.field->type == field_class) {
+                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+            }
+            break;
+        case expression_lclass:
+            if(value._new) {
+                block.code.push_i64(SET_Di(i64, op_INC, sp));
+                block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                block.code.inject(block.code.__asm64.size(), value.code);
+            } else {
+                if(value.func) {
+                    /* I think we do nothing? */
+                    block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                } else {
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                }
+            }
+            break;
+        case expression_string:
+            block.code.push_i64(SET_Di(i64, op_INC, sp));
+            block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+            block.code.push_i64(SET_Di(i64, op_NEWSTR, value.intValue));
+            break;
+        case expression_null:
+            block.code.push_i64(SET_Di(i64, op_INC, sp));
+            block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+            block.code.push_i64(SET_Ei(i64, op_DEL));
+            break;
+        case expression_dynamicclass:
+            if(value._new) {
+                block.code.push_i64(SET_Di(i64, op_INC, sp));
+                block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                block.code.inject(block.code.__asm64.size(), value.code);
+            } else {
+                if(value.func) {
+                    /* I think we do nothing? */
+                    block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                } else {
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                }
+            }
+            break;
+    }
+
+    block.code.push_i64(SET_Ei(i64, op_RET));
     returnVal.type = methodReturntypeToExpressionType(scope->function);
     if(returnVal.type == expression_lclass) {
         returnVal.utype.klass = scope->function->klass;
@@ -1078,7 +1180,7 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             parseDoWhileStatement(block, pAst); // done
             break;
         case ast_trycatch_statement:
-            parseTryCatchStatement(block, pAst);
+            parseTryCatchStatement(block, pAst); // done
             break;
         case ast_throw_statement:
             parseThrowStatement(block, pAst); // done
@@ -6137,7 +6239,7 @@ Expression runtime::parseQuesExpression(ast* pAst) {
 
     condition = parseIntermExpression(pAst->getsubast(0));
     condIfTrue = parseExpression(pAst->getsubast(1));
-    condIfFalse = parseExpression(pAst->getsubast(1));
+    condIfFalse = parseExpression(pAst->getsubast(2));
     expression = condIfTrue;
 
     expression.code.__asm64.free();
