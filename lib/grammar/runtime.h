@@ -236,7 +236,9 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            ulid(0)
+            ulid(0),
+            reachable(true),
+            last_statement(0)
     {
         locals.init();
         label_map.init();
@@ -253,7 +255,9 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            ulid(0)
+            ulid(0),
+            reachable(true),
+            last_statement(0)
     {
         locals.init();
         label_map.init();
@@ -270,7 +274,9 @@ struct Scope {
             blocks(0),
             loops(0),
             trys(0),
-            ulid(0)
+            ulid(0),
+            reachable(true),
+            last_statement(0)
     {
         locals.init();
         label_map.init();
@@ -337,8 +343,8 @@ struct Scope {
     List<keypair<std::string, int64_t>> label_map;
     List<BranchTable> branches;
     int blocks;
-    long loops, trys, ulid;
-    bool self, base;
+    long loops, trys, ulid, last_statement;
+    bool self, base, reachable;
 
     void free() {
         locals.free();
@@ -481,7 +487,6 @@ public:
         parse_map.key.init();
         parse_map.value.init();
         scope_map.init();
-        Generator::instance=this;
         interpret();
     }
 
@@ -880,22 +885,6 @@ private:
 
     void resolveAllBranches(Block& block);
 
-    class Generator {
-
-    public:
-        static runtime* instance;
-
-        static void setupVariable(m64Assembler& assembler, int64_t address);
-
-        static void assignValue(m64Assembler &assembler, Expression &expression, token_entity entity);
-
-        static int64_t variableOffset(int64_t address);
-    };
-
-    void assignVariable(Field &field, Expression &assignExpr, token_entity assignOper, Expression &outExpr);
-
-    void initVariable(Field &field, Expression &outExpr);
-
     Expression fieldToExpression(ast *pAst, string name);
 
     Expression fieldToExpression(ast *pAst, Field &field);
@@ -961,10 +950,14 @@ private:
     void assignUtypeForeach(ast *pAst, Scope *scope, Block &block, Expression &arrayExpr);
 
     void pushExpressionToPtr(Expression &expression, Expression &out);
+
+    void parseMacrosDecl(ast *pAst);
+
+    void parseOperatorDecl(ast *pAst);
 };
 
 #define progname "bootstrap"
-#define progvers "0.1.89"
+#define progvers "0.1.90"
 
 struct options {
     ~options()

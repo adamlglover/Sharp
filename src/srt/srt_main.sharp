@@ -10,7 +10,9 @@ class Start {
     /**
     *   Convert var[][] to string array
     */
-        __asm("transpose_args.asm");
+        //__asm("transpose_args.asm");
+        args = null;
+        return;
     };
 
     public static fn __init(var[] args) : var {

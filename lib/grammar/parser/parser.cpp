@@ -1337,7 +1337,9 @@ void parser::parse_returnstmnt(ast *pAst) {
     pAst = get_ast(pAst, ast_return_stmnt);
 
     pAst->add_entity(current());
-    parse_value(pAst);
+
+    if(peek(1).gettoken() != ";")
+        parse_value(pAst);
 
     expect(SEMICOLON, pAst, "`;`");
 }

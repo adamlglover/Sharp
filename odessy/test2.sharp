@@ -33,12 +33,12 @@ class Main base Base {
     }
 
     static fn operator+(var x) : var {
-        x = new Main();
+        x = 8;
         return 1;
     }
 
     static fn operator<<(var x) : var {
-        x = new Main();
+        x = 0;
         return 1;
     }
 
@@ -48,7 +48,7 @@ class Main base Base {
     }
 
     static fn operator+=(var x) : var {
-        x = new Main();
+        x = 12.9;
         return 1;
     }
 

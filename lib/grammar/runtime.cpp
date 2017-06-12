@@ -21,7 +21,6 @@ options c_options;
 _operator string_toop(string op);
 
 unsigned int runtime::classUID = 0;
-runtime* runtime::Generator::instance = 0;
 
 void runtime::interpret() {
 
@@ -77,6 +76,7 @@ void runtime::interpret() {
                         parse_class_decl(trunk);
                         break;
                     case ast_macros_decl:
+                        parseMacrosDecl(trunk);
                         break;
                     default:
                         stringstream err;
@@ -207,11 +207,13 @@ void runtime::parse_class_decl(ast *pAst) {
                 parseMethodDecl(pAst);
                 break;
             case ast_operator_decl:
+                parseOperatorDecl(pAst);
                 break;
             case ast_construct_decl:
                 parseConstructorDecl(pAst);
                 break;
             case ast_macros_decl:
+                parseMacrosDecl(pAst);
                 break;
             default: {
                 stringstream err;
@@ -227,24 +229,35 @@ void runtime::parse_class_decl(ast *pAst) {
 
 void runtime::parseReturnStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
-    Expression returnVal, value = parse_value(pAst->getsubast(ast_value));
+    Expression returnVal, value;
+    scope->reachable=false;
+    scope->last_statement=ast_return_stmnt;
 
-    if(!value._new)
-        block.code.inject(block.code.__asm64.size(), value.code);
+    if(pAst->hassubast(ast_value)) {
+        value = parse_value(pAst->getsubast(ast_value));
+        if(!value._new)
+            block.code.inject(block.code.__asm64.size(), value.code);
 
-    switch(value.type) {
-        case expression_var:
-            if(value._new) {
-                block.code.push_i64(SET_Di(i64, op_INC, fp));
-                block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
-                block.code.inject(block.code.__asm64.size(), value.code);
-            } else {
-                if (value.func) {
-                    // TODO: pull value from function
-                    if(value.utype.array) {
-                        block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+        switch(value.type) {
+            case expression_var:
+                if(value._new) {
+                    block.code.push_i64(SET_Di(i64, op_INC, fp));
+                    block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                    block.code.inject(block.code.__asm64.size(), value.code);
+                } else {
+                    if (value.func) {
+                        // TODO: pull value from function
+                        if(value.utype.array) {
+                            block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                            block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                            block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                        } else {
+                            Expression out;
+                            pushExpressionToRegisterNoInject(value, out, ebx);
+                            block.code.inject(block.code.__asm64.size(), out.code);
+                            block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                            block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                        }
                     } else {
                         Expression out;
                         pushExpressionToRegisterNoInject(value, out, ebx);
@@ -252,83 +265,80 @@ void runtime::parseReturnStatement(Block& block, ast* pAst) {
                         block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
                     }
-                } else {
-                    Expression out;
-                    pushExpressionToRegisterNoInject(value, out, ebx);
-                    block.code.inject(block.code.__asm64.size(), out.code);
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
                 }
-            }
-            break;
-        case expression_field:
-            if(value.utype.field->nativeInt() && !value.utype.field->array) {
-                if(value.utype.field->local) {
-                    Expression out;
-                    pushExpressionToRegisterNoInject(value, out, ebx);
-                    block.code.inject(block.code.__asm64.size(), out.code);
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
-                } else {
-                    block.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
-                    block.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+                break;
+            case expression_field:
+                if(value.utype.field->nativeInt() && !value.utype.field->array) {
+                    if(value.utype.field->local) {
+                        Expression out;
+                        pushExpressionToRegisterNoInject(value, out, ebx);
+                        block.code.inject(block.code.__asm64.size(), out.code);
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                    } else {
+                        block.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
+                        block.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
 
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                    }
+                } else if(value.utype.field->nativeInt() && value.utype.field->array) {
                     block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Ci(i64, op_SMOVR, ebx,0, -5));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                } else if(value.utype.field->dynamicObject() || value.utype.field->type == field_class) {
+                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
                 }
-            } else if(value.utype.field->nativeInt() && value.utype.field->array) {
-                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
-            } else if(value.utype.field->dynamicObject() || value.utype.field->type == field_class) {
-                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
-            }
-            break;
-        case expression_lclass:
-            if(value._new) {
+                break;
+            case expression_lclass:
+                if(value._new) {
+                    block.code.push_i64(SET_Di(i64, op_INC, sp));
+                    block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                    block.code.inject(block.code.__asm64.size(), value.code);
+                } else {
+                    if(value.func) {
+                        /* I think we do nothing? */
+                        block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    } else {
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    }
+                }
+                break;
+            case expression_string:
                 block.code.push_i64(SET_Di(i64, op_INC, sp));
                 block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
-                block.code.inject(block.code.__asm64.size(), value.code);
-            } else {
-                if(value.func) {
-                    /* I think we do nothing? */
-                    block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
-                } else {
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
-                }
-            }
-            break;
-        case expression_string:
-            block.code.push_i64(SET_Di(i64, op_INC, sp));
-            block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
-            block.code.push_i64(SET_Di(i64, op_NEWSTR, value.intValue));
-            break;
-        case expression_null:
-            block.code.push_i64(SET_Di(i64, op_INC, sp));
-            block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
-            block.code.push_i64(SET_Ei(i64, op_DEL));
-            break;
-        case expression_dynamicclass:
-            if(value._new) {
+                block.code.push_i64(SET_Di(i64, op_NEWSTR, value.intValue));
+                break;
+            case expression_null:
                 block.code.push_i64(SET_Di(i64, op_INC, sp));
                 block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
-                block.code.inject(block.code.__asm64.size(), value.code);
-            } else {
-                if(value.func) {
-                    /* I think we do nothing? */
-                    block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                block.code.push_i64(SET_Ei(i64, op_DEL));
+                break;
+            case expression_dynamicclass:
+                if(value._new) {
+                    block.code.push_i64(SET_Di(i64, op_INC, sp));
+                    block.code.push_i64(SET_Di(i64, op_MOVSL, -5));
+                    block.code.inject(block.code.__asm64.size(), value.code);
                 } else {
-                    block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                    block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    if(value.func) {
+                        /* I think we do nothing? */
+                        block.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    } else {
+                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                    }
                 }
-            }
-            break;
+                break;
+        }
+    } else {
+        value.type = expression_void;
     }
+
 
     block.code.push_i64(SET_Ei(i64, op_RET));
     returnVal.type = methodReturntypeToExpressionType(scope->function);
@@ -352,6 +362,9 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
     pushExpressionToRegister(cond, out, cmt);
     block.code.inject(block.code.size(), out.code);
 
+    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+        scope->reachable=true;
+    }
 
     if(pAst->getsubastcount() > 2) {
         int64_t insertAddr, difference;
@@ -381,6 +394,10 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
                     insertAddr=block.code.size();
                     parseBlock(trunk->getsubast(ast_block), block);
                     difference = block.code.size()-insertAddr;
+
+                    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+                        scope->reachable=true;
+                    }
 
                     block.code.__asm64.insert(insertAddr++, SET_Ci(i64, op_IADD, adx,0, (difference+4)));
                     block.code.__asm64.insert(insertAddr, SET_Ei(i64, op_IFNE));
@@ -514,6 +531,10 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
 
     parseBlock(pAst->getsubast(ast_block), block);
 
+    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+        scope->reachable=true;
+    }
+
     if(pAst->hassubast(ast_for_expresion_iter)) {
         iter = parseExpression(pAst->getsubast(ast_for_expresion_iter));
         block.code.inject(block.code.size(), iter.code);
@@ -524,37 +545,6 @@ void runtime::parseForStatement(Block& block, ast* pAst) {
     scope->remove_locals(scope->blocks);
     scope->blocks--;
     scope->loops--;
-}
-
-void runtime::assignVariable(Field &field, Expression &assignExpr,
-                             token_entity assignOper, Expression &outExpr) {
-    int64_t i64;
-    if(field.nativeInt()) {
-        outExpr.code.inject(outExpr.code.__asm64.size(), assignExpr.code); // integer value will be set in ebx
-
-        Generator::setupVariable(outExpr.code, field.vaddr); // get refrence to variable
-
-        outExpr.code.push_i64(SET_Di(i64, op_MOVI, 0), ecx);
-        outExpr.code.push_i64(SET_Ci(i64, op_RMOV, ecx, 0, ebx));
-    } else if(field.dynamicObject()) {
-
-    } else if(field.klass != NULL) {
-
-    }
-}
-
-void runtime::initVariable(Field& field, Expression& outExpr) {
-    Generator::setupVariable(outExpr.code, field.vaddr); // get refrence to variable
-    int64_t i64;
-
-    if(field.nativeInt()) {
-        outExpr.code.push_i64(SET_Di(i64, op_MOVI, 1), ecx);
-        outExpr.code.__asm64.add(SET_Di(i64, op_NEWi, ecx));
-    } else if(field.dynamicObject()) {
-        /* do nothing */
-    } else if(field.klass != NULL) {
-        outExpr.code.__asm64.add(SET_Di(i64, op_NEW_CLASS, field.klass));
-    }
 }
 
 void runtime::parseUtypeArg(ast *pAst, Scope *scope, Block &block, Expression* comparator) {
@@ -714,6 +704,10 @@ void runtime::parseForEachStatement(Block& block, ast* pAst) {
 
     parseBlock(pAst->getsubast(ast_block), block);
 
+    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+        scope->reachable=true;
+    }
+
     block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
     block.code.push_i64(SET_Ci(i64, op_SMOV, ebx,0, 0));
     block.code.push_i64(SET_Di(i64, op_INC, ebx));
@@ -860,6 +854,8 @@ void runtime:: parseTryCatchStatement(Block& block, ast* pAst) {
     parseBlock(pAst->getsubast(ast_block), block);
     et.end_pc = block.code.__asm64.size();
 
+    if(pAst->hassubast(ast_catch_clause))
+        scope->reachable=true;
 
     stringstream ss;
     ss << try_label_end_id << ++scope->ulid;
@@ -910,6 +906,8 @@ void runtime:: parseTryCatchStatement(Block& block, ast* pAst) {
 
 void runtime::parseThrowStatement(Block& block, ast* pAst) {
     Expression clause = parseExpression(pAst->getsubast(ast_expression)), out;
+    current_scope()->reachable=false;
+    current_scope()->last_statement=ast_throw_statement;
 
     if(clause.type == expression_lclass) {
         ClassObject* throwable = getClass("std.err", "Throwable");
@@ -1148,6 +1146,11 @@ void runtime::addLine(Block& block, ast *pAst) {
 void runtime::parseStatement(Block& block, ast* pAst) {
     addLine(block, pAst);
 
+    if(!current_scope()->reachable) {
+        errors->newerror(GENERIC, pAst, "unreachable statement");
+        current_scope()->reachable=true;
+    }
+
     switch(pAst->gettype()) {
         case ast_return_stmnt:
             parseReturnStatement(block, pAst);
@@ -1308,6 +1311,84 @@ void runtime::parseMethodDecl(ast* pAst) {
     parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
 
     Method* method = scope->klass->getFunction(name, params);
+
+    if(method != NULL) {
+
+        if(method->isStatic()) {
+            add_scope(Scope(scope_static_block, scope->klass, method));
+        } else
+            add_scope(Scope(scope_instance_block, scope->klass, method));
+
+        keypair<int, Field> local;
+        Scope* curr = current_scope();
+        for(unsigned int i = 0; i < params.size(); i++) {
+
+            params.get(i).field.vaddr=i;
+            params.get(i).field.local=true;
+            local.set(curr->blocks, params.get(i).field);
+            curr->locals.add(local);
+        }
+
+        Block fblock;
+        parseBlock(pAst->getsubast(ast_block), fblock);
+
+        resolveAllBranches(fblock);
+        method->code.__asm64.addAll(fblock.code.__asm64);
+        remove_scope();
+    }
+}
+
+void runtime::parseMacrosDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    parse_access_decl(pAst, modifiers, startpos);
+
+    List<Param> params;
+    string name =  pAst->getentity(startpos).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    Method* method = scope->klass->getMacros(name, params);
+
+    if(method != NULL) {
+
+        if(method->isStatic()) {
+            add_scope(Scope(scope_static_block, scope->klass, method));
+        } else
+            add_scope(Scope(scope_instance_block, scope->klass, method));
+
+        keypair<int, Field> local;
+        Scope* curr = current_scope();
+        for(unsigned int i = 0; i < params.size(); i++) {
+
+            params.get(i).field.vaddr=i;
+            params.get(i).field.local=true;
+            local.set(curr->blocks, params.get(i).field);
+            curr->locals.add(local);
+        }
+
+        Block fblock;
+        parseBlock(pAst->getsubast(ast_block), fblock);
+
+        resolveAllBranches(fblock);
+        method->code.__asm64.addAll(fblock.code.__asm64);
+        remove_scope();
+    }
+}
+
+void runtime::parseOperatorDecl(ast* pAst) {
+    Scope* scope = current_scope();
+    list<AccessModifier> modifiers;
+    int startpos=1;
+
+    parse_access_decl(pAst, modifiers, startpos);
+
+    List<Param> params;
+    string name =  pAst->getentity(pAst->getentitycount()-1).gettoken();
+    parseMethodParams(params, parseUtypeArgList(pAst->getsubast(ast_utype_arg_list)), pAst->getsubast(ast_utype_arg_list));
+
+    Method* method = scope->klass->getOverload(string_toop(name), params);
 
     if(method != NULL) {
 
@@ -3189,10 +3270,6 @@ Expression runtime::parseNewExpression(ast* pAst) {
     utype = parseUtype(pAst->getsubast(ast_utype));
     if(pAst->hassubast(ast_vector_array)) {
         // vec array
-        if(!utype.utype.array) {
-            errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "expected '[]' before array initalizer '{}'");
-        }
-
         expressions = parseVectorArray(pAst->getsubast(ast_vector_array));
         checkVectorArray(utype, expressions);
 
@@ -8594,6 +8671,12 @@ void runtime::createDumpFile() {
     _ostream << "Object Dump file:\n" << "################################\n\n";
     for(unsigned int i =0; i < allMethods.size(); i++) {
         Method* method = allMethods.get(i);
+
+
+        if(method->code.size() == 0) {
+            method->code.push_i64(SET_Ei(i64, op_RET));
+        }
+
         stringstream tmp;
         tmp << "func:@" << method->vaddr;
 
@@ -9407,25 +9490,4 @@ void runtime::createDumpFile() {
         cout << progname << ": error: failed to write out to dump file " << c_options.out << endl;
     }
     _ostream.end();
-}
-
-void runtime::Generator::setupVariable(m64Assembler &assembler, int64_t address) {
-    int64_t i64;
-
-    assembler.push_i64(SET_Di(i64, op_MOVL, variableOffset(address)));
-}
-
-int64_t runtime::Generator::variableOffset(int64_t address) {
-    if(runtime::Generator::instance->current_scope()->type == scope_instance_block) {
-        /*
-         * We add 1 to the local address because self will be refrence 0
-         * on the stack
-         */
-        address++;
-    }
-    return address;
-}
-
-void runtime::Generator::assignValue(m64Assembler &assembler, Expression &expression, token_entity entity) {
-
 }
