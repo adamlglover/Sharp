@@ -585,12 +585,11 @@ void Thread::run() {
 
     call_asp(main->id);
     _init_opcode_table
-
     try {
         for (;;) {
             interp:
             if(suspendPending)
-                Thread::suspendSelf();
+                suspendSelf();
             if(state == thread_killed)
                 return;
 
@@ -610,25 +609,25 @@ void Thread::run() {
             CHECK_CAST:
                 check_cast(GET_Da(cache[pc]))
             MOV8:
-                mov8(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov8(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOV16:
-                mov16(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov16(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOV32:
-                mov32(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov32(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOV64:
-                mov64(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mov64(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             PUSHR:
                 pushr(GET_Da(cache[pc]))
             ADD:
-                _add(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _add(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SUB:
-                _sub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _sub(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MUL:
-                _mul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _mul(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             DIV:
-                _div(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _div(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOD:
-                mod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                mod(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             POP:
                 _pop
             INC:
@@ -636,11 +635,11 @@ void Thread::run() {
             DEC:
                 dec(GET_Da(cache[pc]))
             MOVR:
-                movr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                movr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOVX: /* Requires register value */
-                movx(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                movx(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             LT:
-                lt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                lt(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             BRH:
                 brh
             BRE:
@@ -650,21 +649,21 @@ void Thread::run() {
             IFNE:
                 ifne
             GT:
-                gt(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                gt(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             GTE:
-                gte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                gte(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             LTE:
-                lte(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                lte(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOVL:
                 movl(GET_Da(cache[pc]))
             RMOV:
-                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],__rxs[GET_Cb(cache[pc])]) _brh)
+                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])], __rxs[GET_Cb(cache[pc])]) _brh)
             MOV:
-                CHK_NULL(_nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh)
+                CHK_NULL(_nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])], GET_Cb(cache[pc])) _brh)
             MOVD:
-                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])],GET_Cb(cache[pc])) _brh)
+                CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])], GET_Cb(cache[pc])) _brh)
             MOVBI:
-                movbi(GET_Da(cache[pc]) + exponent(cache[pc+1]))
+                movbi(GET_Da(cache[pc]) + exponent(cache[pc + 1]))
             _SIZEOF:
                 _sizeof(GET_Da(cache[pc]))
             PUT:
@@ -694,21 +693,21 @@ void Thread::run() {
             MOVN:
                 movn(GET_Da(cache[pc]))
             SMOV:
-                smov(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                smov(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SMOVR:
-                smovr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                smovr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SMOVOBJ:
                 smovobj(GET_Da(cache[pc]))
             IADD:
-                _iadd(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _iadd(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             ISUB:
-                _isub(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _isub(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IMUL:
-                _imul(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _imul(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IDIV:
-                _idiv(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _idiv(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IMOD:
-                imod(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                imod(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             _SLEEP:
                 _sleep(GET_Da(cache[pc]))
             TEST:
@@ -720,15 +719,15 @@ void Thread::run() {
             EXP:
                 exp(GET_Da(cache[pc]))
             ADDL:
-                _addl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _addl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SUBL:
-                _subl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _subl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MULL:
-                _mull(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _mull(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             DIVL:
-                _divl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _divl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MODL:
-                modl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                modl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             MOVSL:
                 movsl(GET_Da(cache[pc]))
             DEL:
@@ -740,29 +739,29 @@ void Thread::run() {
             NEW_OBJ_ARRY:
                 new_obj_arry(GET_Da(cache[pc]))
             NOT:
-                _not(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _not(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SKP:
                 skp(GET_Da(cache[pc]))
             LOADF:
-                loadf(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                loadf(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IADDL:
-                _iaddl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _iaddl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             ISUBL:
-                _isubl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _isubl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IMULL:
-                _imull(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _imull(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IDIVL:
-                _idivl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _idivl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             IMODL:
-                imodl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                imodl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             POPR:
                 popr(GET_Da(cache[pc]))
             SHL:
-                shl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                shl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             SHR:
-                shr(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                shr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             TNE:
-                tne(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                tne(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             POPREF:
                 popref()
             MUTL:
@@ -772,25 +771,25 @@ void Thread::run() {
             SKPNE:
                 skpne(GET_Da(cache[pc]))
             AND:
-                _and(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _and(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             uAND:
-                uand(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                uand(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             OR:
-                _or(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _or(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             uNOT:
-                _unot(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _unot(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             ANDL:
-                _andl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _andl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             ORL:
-                _orl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _orl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             NOTL:
-                _notl(GET_Ca(cache[pc]),GET_Cb(cache[pc]))
+                _notl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
             _THROW:
                 _throw()
             CHKNULL:
                 _chknull()
         }
-    } catch (std::bad_alloc &e) {
+    } catch (bad_alloc &e) {
         cout << "std::bad_alloc\n";
         // TODO: throw out of memory error
     } catch (Exception &e) {
@@ -798,9 +797,265 @@ void Thread::run() {
         exceptionThrown = true;
         Throw(&__stack[SP64].object);
 
-
         DISPATCH();
     }
+}
+
+bool Thread::execFinally(int command) {
+    Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
+    _init_opcode_table
+
+    int64_t  start;
+    sh_asp* currMethod=env->__address_spaces+curr_adsp;
+
+    if(command ==EXEC_ALL_FINALLY) {
+        pc = 0;
+        start=0;
+    } else {
+        start=currMethod->finallyBlocks.size()+1;
+        for(unsigned int i = 0; i < currMethod->finallyBlocks.size(); i++) {
+            FinallyTable &ft = currMethod->finallyBlocks.get(i);
+            if(ft.start_pc>pc) {
+                start=i;
+                break;
+            }
+        }
+    }
+
+    try {
+        for(unsigned int i = start; i < currMethod->finallyBlocks.size(); i++) {
+            FinallyTable &ft = currMethod->finallyBlocks.get(i);
+            int64_t code_base=ft.end_pc-ft.start_pc;
+            pc = ft.start_pc;
+
+            /*
+             * We only want to execute the code in the first finally block
+             */
+            if(i > start && command==EXEC_SINGLE_FINALLY) {
+                return true;
+            }
+
+            for(;;) {
+                interp:
+                if((pc <ft.start_pc || pc > ft.end_pc) && curr_adsp==currMethod->id)
+                    break;
+
+                if(suspendPending)
+                    suspendSelf();
+                if(state == thread_killed)
+                    return true;
+
+
+                DISPATCH();
+                _NOP:
+                    NOP
+                _INT:
+                    _int(GET_Da(cache[pc]))
+                MOVI:
+                    movi(GET_Da(cache[pc]))
+                RET:
+                    ret_frame2(return_asp(); , true)  _brh
+                HLT:
+                    hlt
+                NEWi: /* Requires register value */
+                    _newi(GET_Da(cache[pc]))
+                CHECK_CAST:
+                    check_cast(GET_Da(cache[pc]))
+                MOV8:
+                    mov8(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOV16:
+                    mov16(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOV32:
+                    mov32(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOV64:
+                    mov64(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                PUSHR:
+                    pushr(GET_Da(cache[pc]))
+                ADD:
+                    _add(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SUB:
+                    _sub(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MUL:
+                    _mul(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                DIV:
+                    _div(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOD:
+                    mod(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                POP:
+                    _pop
+                INC:
+                    inc(GET_Da(cache[pc]))
+                DEC:
+                    dec(GET_Da(cache[pc]))
+                MOVR:
+                    movr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOVX: /* Requires register value */
+                    movx(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                LT:
+                    lt(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                BRH:
+                    brh
+                BRE:
+                    bre
+                IFE:
+                    ife
+                IFNE:
+                    ifne
+                GT:
+                    gt(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                GTE:
+                    gte(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                LTE:
+                    lte(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOVL:
+                    movl(GET_Da(cache[pc]))
+                RMOV:
+                    CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])], __rxs[GET_Cb(cache[pc])]) _brh)
+                MOV:
+                    CHK_NULL(_nativewrite3((int64_t)__rxs[GET_Ca(cache[pc])], GET_Cb(cache[pc])) _brh)
+                MOVD:
+                    CHK_NULL(_nativewrite2((int64_t)__rxs[GET_Ca(cache[pc])], GET_Cb(cache[pc])) _brh)
+                MOVBI:
+                    movbi(GET_Da(cache[pc]) + exponent(cache[pc + 1]))
+                _SIZEOF:
+                    _sizeof(GET_Da(cache[pc]))
+                PUT:
+                    _put(GET_Da(cache[pc]))
+                PUTC:
+                    putc(GET_Da(cache[pc]))
+                CHECKLEN:
+                    _checklen(GET_Da(cache[pc]))
+                GOTO:
+                    _goto(GET_Da(cache[pc]))
+                MOVG:
+                    movg(GET_Da(cache[pc]))
+                LOADX:
+                    _loadx(GET_Da(cache[pc]))
+                NEWstr:
+                    _newstr(GET_Da(cache[pc]))
+                PUSHREF:
+                    pushref()
+                DELREF:
+                    delref(ptr)
+                INIT_FRAME:
+                    _init_frame()
+                CALL:
+                    call(GET_Da(cache[pc]))
+                NEW_CLASS:
+                    new_class(GET_Da(cache[pc]))
+                MOVN:
+                    movn(GET_Da(cache[pc]))
+                SMOV:
+                    smov(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SMOVR:
+                    smovr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SMOVOBJ:
+                    smovobj(GET_Da(cache[pc]))
+                IADD:
+                    _iadd(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                ISUB:
+                    _isub(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IMUL:
+                    _imul(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IDIV:
+                    _idiv(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IMOD:
+                    imod(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                _SLEEP:
+                    _sleep(GET_Da(cache[pc]))
+                TEST:
+                    test(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                LOCK:
+                    __lock(GET_Da(cache[pc]))
+                ULOCK:
+                    __ulock()
+                EXP:
+                    exp(GET_Da(cache[pc]))
+                ADDL:
+                    _addl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SUBL:
+                    _subl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MULL:
+                    _mull(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                DIVL:
+                    _divl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MODL:
+                    modl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                MOVSL:
+                    movsl(GET_Da(cache[pc]))
+                DEL:
+                    del()
+                MOVND:
+                    movnd(GET_Da(cache[pc]))
+                SDELREF:
+                    sdelref()
+                NEW_OBJ_ARRY:
+                    new_obj_arry(GET_Da(cache[pc]))
+                NOT:
+                    _not(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SKP:
+                    skp(GET_Da(cache[pc]))
+                LOADF:
+                    loadf(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IADDL:
+                    _iaddl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                ISUBL:
+                    _isubl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IMULL:
+                    _imull(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IDIVL:
+                    _idivl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                IMODL:
+                    imodl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                POPR:
+                    popr(GET_Da(cache[pc]))
+                SHL:
+                    shl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                SHR:
+                    shr(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                TNE:
+                    tne(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                POPREF:
+                    popref()
+                MUTL:
+                    mutl(GET_Da(cache[pc]))
+                SKPE:
+                    skpe(GET_Da(cache[pc]))
+                SKPNE:
+                    skpne(GET_Da(cache[pc]))
+                AND:
+                    _and(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                uAND:
+                    uand(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                OR:
+                    _or(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                uNOT:
+                    _unot(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                ANDL:
+                    _andl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                ORL:
+                    _orl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                NOTL:
+                    _notl(GET_Ca(cache[pc]), GET_Cb(cache[pc]))
+                _THROW:
+                    _throw()
+                CHKNULL:
+                    _chknull()
+            }
+        }
+    } catch (bad_alloc &e) {
+        cout << "std::bad_alloc\n";
+        // TODO: throw out of memory error
+    } catch (Exception &e) {
+        throwable=e.getThrowable();
+        Object* exceptionObject = &__stack[SP64].object;
+
+        throwable.throwable = exceptionObject->klass;
+        fillStackTrace(exceptionObject);
+        return false;
+    }
+
+    return true;
 }
 
 void Thread::send_panic_message(ThreadPanic& err) {
@@ -878,7 +1133,23 @@ bool Thread::TryThrow(sh_asp* asp, Object* exceptionObject) {
 
                 if(tbl->klass == klass->name) {
                     object->mutate(exceptionObject);
+                    sh_asp* method = (curr_adsp+env->__address_spaces);
+                    uint64_t oldpc = pc, newpc=tbl->handler_pc;
                     pc = tbl->handler_pc;
+
+
+                    for(unsigned int i = 0; i < method->finallyBlocks.size(); i++) {
+                        FinallyTable &ft = method->finallyBlocks.get(i);
+                        if(ft.start_pc > oldpc && ft.start_pc < pc) {
+                            pc = oldpc;
+                            if(!execFinally(EXEC_SINGLE_FINALLY)) {
+                                return false;
+                            }
+                            oldpc = pc;
+                        }
+                    }
+
+                    pc = newpc;
                     return true;
                 }
 
@@ -982,6 +1253,15 @@ void Thread::fillStackTrace(nString& stack_trace) {
     pcs.free();
 }
 
+void varObjectToStr(Object* obj, nString &str) {
+    if(obj != NULL) {
+        for(unsigned int i = 0; i < obj->size; i++) {
+            if(obj->HEAD != NULL)
+                str += obj->HEAD[i];
+        }
+    }
+}
+
 void Thread::fillStackTrace(Object* exceptionObject) {
     nString str;
     fillStackTrace(str);
@@ -990,13 +1270,17 @@ void Thread::fillStackTrace(Object* exceptionObject) {
     if(exceptionObject->klass != NULL) {
 
         Object* stackTrace = env->findfield("stackTrace", exceptionObject);
-        Object* message = throwable.native ? env->findfield("message", exceptionObject) : NULL;
+        Object* message = env->findfield("message", exceptionObject);
 
         if(stackTrace != NULL) {
             stackTrace->createstr(str);
         }
         if(message != NULL) {
-            message->createstr(throwable.message);
+            if(throwable.native)
+                message->createstr(throwable.message);
+            else {
+                 varObjectToStr(message, throwable.message);
+            }
         }
     }
 }
@@ -1010,6 +1294,7 @@ void Thread::Throw(Object* exceptionObject) {
     throwable.throwable = exceptionObject->klass;
     fillStackTrace(exceptionObject);
 
+    __throw:
     if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject)) {
         exceptionThrown = false;
         throwable.drop();
@@ -1019,7 +1304,13 @@ void Thread::Throw(Object* exceptionObject) {
         if(curr_adsp == main->id) {
             break;
         } else {
-            return_asp();
+            try{
+                return_asp();
+            }catch (Exception e) {
+                throwable=e.throwable;
+                exceptionObject = &__stack[SP64].object;
+                goto __throw;
+            }
 
             if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject)) {
                 exceptionThrown = false;
@@ -1135,6 +1426,10 @@ void Thread::return_asp() {
         stringstream ss;
         ss << "could not return from method @" << id << "; method not found.";
         throw Exception(ss.str());
+    }
+
+    if(!execFinally(EXEC_PRECEDING_FINALLY)) {
+        throw Exception(throwable);
     }
 
     sh_asp* asp = &env->__address_spaces[id];

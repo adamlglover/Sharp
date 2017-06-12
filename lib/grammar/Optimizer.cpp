@@ -87,6 +87,14 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
         if(stopAddr <= et.handler_pc)
             et.handler_pc--;
     }
+    for(unsigned int i = 0; i < func->finallyBlocks.size(); i++) {
+        FinallyTable &ft = func->finallyBlocks.get(i);
+
+        if(stopAddr <= ft.start_pc)
+            ft.start_pc--;
+        if(stopAddr <= ft.end_pc)
+            ft.end_pc--;
+    }
 
     int64_t x64, op, addr;
     for(unsigned int i = 0; i < stopAddr; i++) {

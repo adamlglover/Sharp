@@ -60,6 +60,7 @@ public:
     Exception(const char *msg, bool native = true);
     Exception(const std::string &__arg, bool native = true);
     Exception(ClassObject* throwable, const std::string &__arg, bool native = true);
+    Exception(Throwable& throwable);
 
     ~Exception();
 
@@ -106,6 +107,28 @@ struct ExceptionTable{
     uint64_t handler_pc;
     int64_t local;
     nString klass;
+};
+
+struct FinallyTable {
+    FinallyTable()
+    :
+        start_pc(0),
+        end_pc(0)
+    {
+    }
+
+    void operator=(const FinallyTable& ft) {
+        start_pc=ft.start_pc;
+        end_pc=ft.end_pc;
+    }
+
+    uint64_t start_pc, end_pc;
+};
+
+enum FinallyCommands {
+    EXEC_ALL_FINALLY=0,
+    EXEC_SINGLE_FINALLY=1,
+    EXEC_PRECEDING_FINALLY=3,
 };
 
 #define EXCEPTION_PRINT_MAX 20

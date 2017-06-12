@@ -104,17 +104,29 @@ class Main base Base {
         print("done1\n");
 
         try {
+        try {
             do {
                 x++;
             }while(x < 10);
             throw new RuntimeErr("Hello first error");
         }
          catch(RuntimeErr e) {
+            try {
+            throw new RuntimeErr("Genericcc!!!");
+            } catch(RuntimeErr re) {
+                print("caught FIRSTTTT!! error ");
+                print(re.message);
+                throw new RuntimeErr("OOppsss!!!!");
+            }
             print("caught error ");
             print(e.message);
             print("\n");
         } finally {
-
+            print("finally!!");
+            throw new RuntimeErr("OOppsss Number 2!!!!");
+        }
+        } finally {
+            print("finally!! yet again");
         }
 
         print2("doing if statements\n");

@@ -159,6 +159,7 @@ private:
 
     string getPrettyErrorLine(long line, long sourceFile);
 
+    bool execFinally(int);
 };
 
 extern thread_local Thread* thread_self;

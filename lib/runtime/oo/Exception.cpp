@@ -50,6 +50,13 @@ void Exception::setupFrame() {
     }
 }
 
+Exception::Exception(Throwable &throwable)
+        :
+        runtime_error("")
+{
+    this->throwable = throwable;
+}
+
 ThreadPanic::ThreadPanic(char *msg, List<sh_asp*>& calls, List<long long>& pcs) : runtime_error(msg) {
     message.init();
     message= string(msg);

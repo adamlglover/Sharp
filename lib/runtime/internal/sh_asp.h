@@ -36,6 +36,7 @@ struct sh_asp {
     long sourceFile;
     int64_t cache_size;
     List<ExceptionTable> exceptions;
+    List<FinallyTable> finallyBlocks;
     List<line_table> lineNumbers;
 
     void free() {
@@ -43,6 +44,7 @@ struct sh_asp {
         sourceFile=0;
         exceptions.free();
         lineNumbers.free();
+        finallyBlocks.free();
 
         if(param_size != 0) {
             if(arrayFlag != NULL)
@@ -62,6 +64,7 @@ struct sh_asp {
         sourceFile=0;
         exceptions.init();
         lineNumbers.init();
+        finallyBlocks.init();
         params = NULL;
         arrayFlag = NULL;
         param_size = 0;
@@ -101,6 +104,9 @@ struct data_stack {
 
 #define ret_frame(x) \
     if(curr_adsp == main->id) return; else { x }
+
+#define ret_frame2(x, ret) \
+    if(curr_adsp == main->id) return ret; else { x }
 
 #define pc_offset 2
 #define fp_offset 3

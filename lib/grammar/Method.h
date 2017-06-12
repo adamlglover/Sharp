@@ -36,6 +36,7 @@ public:
             sourceFile(0),
             local_count(0)
     {
+        this->finallyBlocks.init();
         this->unique_address_table.init();
         this->exceptions.init();
         this->line_table.init();
@@ -57,6 +58,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->finallyBlocks.init();
         this->unique_address_table.init();
         this->exceptions.init();
         this->line_table.init();
@@ -80,6 +82,7 @@ public:
             sourceFile(sourceFile),
             local_count(0)
     {
+        this->finallyBlocks.init();
         this->unique_address_table.init();
         this->exceptions.init();
         this->line_table.init();
@@ -118,6 +121,7 @@ public:
     int64_t local_count;
     List<keypair<int64_t, long>> line_table;
     List<ExceptionTable> exceptions;
+    List<FinallyTable> finallyBlocks;
     List<long> unique_address_table;
 private:
     List<AccessModifier> modifiers; // 3 max modifiers

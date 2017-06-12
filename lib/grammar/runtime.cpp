@@ -734,7 +734,7 @@ void runtime::parseFinallyBlock(Block& block, ast* pAst) {
  * in return_asp() do a check to see if there are any finally blocks in this func, then
  * if there is execute the functions from the starting pc till end of func
  *
- * in theread class add variable called raisedPc
+ * in thread class add variable called raisedPc
  *
  * if exception is caught execute last finally block from called pc to current pc
  * in finally block function have setup like
@@ -746,7 +746,7 @@ void runtime::parseFinallyBlock(Block& block, ast* pAst) {
  * int64_t end_pc
  *
  */
-void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
+void runtime:: parseTryCatchStatement(Block& block, ast* pAst) {
     Scope* scope = current_scope();
     ExceptionTable et;
     scope->trys++;
@@ -788,11 +788,20 @@ void runtime::parseTryCatchStatement(Block& block, ast* pAst) {
         }
     }
 
+    block.code.push_i64(SET_Ei(i64, op_NOP)); // for allignment
+    block.code.push_i64(SET_Ei(i64, op_NOP));
+
     klasses.free();
     scope->label_map.add(keypair<string,int64_t>(catchEndLabel, __init_label_address(block.code)));
 
     if(pAst->hassubast(ast_finally_block)) {
+        FinallyTable ft;
+        ft.start_pc=__init_label_address(block.code);
         parseFinallyBlock(block, pAst->getsubast(ast_finally_block));
+        ft.end_pc=__init_label_address(block.code);
+
+        scope->function->finallyBlocks.push_back(ft);
+
     }
     scope->trys--;
 }
@@ -8384,6 +8393,13 @@ std::string runtime::generate_text_section() {
             text << allMethods.get(i)->exceptions.get(x).klass.str() << ((char)nil);
             text << mi64_tostr(allMethods.get(i)->exceptions.get(x).local);
             text << mi64_tostr(allMethods.get(i)->exceptions.get(x).start_pc);
+        }
+
+        text << allMethods.get(i)->finallyBlocks.size() << ((char)nil);
+        for(unsigned int x = 0; x < allMethods.get(i)->finallyBlocks.size(); x++) {
+            FinallyTable &ft=allMethods.get(i)->finallyBlocks.get(x);
+            text << mi64_tostr(ft.start_pc);
+            text << mi64_tostr(ft.end_pc);
         }
     }
 

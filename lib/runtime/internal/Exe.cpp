@@ -324,6 +324,15 @@ int Process_Exe(std::string exe)
 
                         e = et;
                     }
+
+                    len = getlong(buffer);
+                    FinallyTable ft;
+
+                    for(long i = 0; i < len; i++) {
+                        ft.start_pc=getmi64(buffer);
+                        ft.end_pc=getmi64(buffer);
+                        adsp->finallyBlocks.push_back(ft);
+                    }
                     break;
                 }
 
