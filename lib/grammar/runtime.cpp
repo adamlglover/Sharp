@@ -3446,12 +3446,11 @@ Expression runtime::parseNewExpression(ast* pAst) {
 
             if(fn!= NULL) {
 
+                expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+
                 expression.code.push_i64(SET_Di(i64, op_INC, sp));
                 expression.code.push_i64(SET_Di(i64, op_MOVSL, 0));
                 expression.code.push_i64(SET_Di(i64, op_NEW_CLASS, utype.utype.klass->vaddr));
-                expression.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
-                if(!fn->isStatic())
-                    expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
 
                 for(unsigned int i = 0; i < expressions.size(); i++) {
                     pushExpressionToStack(expressions.get(i), expression);

@@ -5,7 +5,10 @@ import std;
 class Main {
 
     static fn main(string[] args) {
+        System.print(string.convertInt(99));
         var v = 9;
+        string str = new string("mystr");
+        System.print(str);
         System.print("Hello, World!" + 'v');
         System.print("Hello, World!" + " another string");
     }

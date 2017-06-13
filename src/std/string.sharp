@@ -4,20 +4,23 @@ class string {
     /*this will hold our string */
         private var[] data;
 
-        string( var[] immstr ) {
+        string( var[] immstr )
+        {
             append(immstr);
         }
 
-        fn replace( var pos, var replaceChar ) : string {
+        fn replace( var pos, var replaceChar ) : string
+        {
             if(pos >= sizeof(data)) {
                 throw new RuntimeErr("Index out of bounds exception");
             }
 
             data[pos] = replaceChar;
             return self;
-        }
+         }
 
-        fn append(var[] immstr) : string {
+        fn append(var[] immstr) : string
+        {
             var[] newStr = new var[sizeof(data) + sizeof(immstr)];
 
             var iter;
@@ -25,7 +28,8 @@ class string {
                 newStr[iter++] = data[i];
             }
 
-            for(var i = 0; i < sizeof(immstr); i++) {
+            for(var i = 0; i < sizeof(immstr); i++)
+            {
                 newStr[iter++] = immstr[i];
             }
 
@@ -33,7 +37,8 @@ class string {
             return self;
         }
 
-        fn at( var pos ) : __int8 {
+        fn at( var pos ) : __int8
+        {
             if(pos >= sizeof(data)) {
                 throw new RuntimeErr("Index out of bounds");
             }
@@ -41,17 +46,20 @@ class string {
             return data[pos];
         }
 
-        fn operator+( var[] immstr ) : string {
+        fn operator+( var[] immstr ) : string
+        {
             append(immstr);
             return self;
         }
 
-        fn operator+( string str ) : string {
+        fn operator+( string str ) : string
+        {
             append(str.data);
             return self;
         }
 
-        fn operator==( string str ) : var {
+        fn operator==( string str ) : var
+        {
             var iter;
             foreach(var char : data) {
                 if(char != str.at(iter++)) {
@@ -62,7 +70,8 @@ class string {
             return true;
         }
 
-        fn operator==( var[] str ) : var {
+        fn operator==( var[] str ) : var
+        {
             var iter;
             foreach( var char : data ) {
                 if(char != str[iter++]) {
@@ -73,18 +82,41 @@ class string {
             return true;
         }
 
-        fn operator=( var[] immstr ) {
+        fn operator=( var[] immstr )
+        {
             data = Array.copyOf(immstr, sizeof(immstr));
         }
 
-        fn operator+( var char ) : string {
+        fn operator+( var char ) : string
+        {
             var[] arry = new var[1];
             arry[0]=char;
             append(arry);
             return self;
         }
 
-        fn value() : var[] {
+        fn value() : var[]
+        {
             return data;
+        }
+
+        static fn convertInt( var number ) : string
+        {
+            if (number == 0) {
+                return new string("0");
+            }
+
+            string temp = new string("");
+            string returnvalue= new string("");
+            while (number>0) {
+                temp+(number%10)+48;
+                number/=10;
+            }
+            System.print(sizeof(temp));
+            for (var i=0;i< sizeof(temp);i++) {
+                returnvalue+temp.at((sizeof(temp)-i)-1);
+            }
+            System.print(sizeof(returnvalue));
+            return returnvalue;
         }
 }
