@@ -1212,6 +1212,8 @@ void Thread::fillStackTrace(nString& stack_trace) {
                 thread_panic("stack is unaligned, check your assembly?", calls, pcs);
 
             pc = (int64_t )__stack[_fp-pc_offset].var;
+            if(__stack[_fp-fp_offset].var > _fp)
+                break;
             _fp = (int64_t )__stack[_fp-fp_offset].var;
         }
     }
@@ -1413,7 +1415,7 @@ void Thread::init_frame() {
 }
 
 void Thread::return_asp() {
-    if((FP64-1) < 0) {
+    if((FP64-1) < 0 || __stack[FP64-fp_offset].var > _FP) {
         List<sh_asp*> calls;
         List<long long> pcs;
 

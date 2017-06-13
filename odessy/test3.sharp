@@ -3,16 +3,10 @@ mod application;
 import std;
 
 class Main {
-    
-    static fn getArray() : var[] {
-
-    }
 
     static fn main(string[] args) {
         var v = 9;
-        var[] data = getArray();
         System.print("Hello, World!" + 'v');
-        System.print(("Hello, World!" + " another string").value());
         System.print("Hello, World!" + " another string");
     }
 }

@@ -42,13 +42,13 @@ class string {
         }
 
         fn operator+( var[] immstr ) : string {
-            System.print(immstr);
             append(immstr);
+            return self;
         }
 
         fn operator+( string str ) : string {
-            System.print("+ string");
             append(str.data);
+            return self;
         }
 
         fn operator==( string str ) : var {
@@ -74,7 +74,7 @@ class string {
         }
 
         fn operator=( var[] immstr ) {
-            data = immstr;
+            data = Array.copyOf(immstr, sizeof(immstr));
         }
 
         fn operator+( var char ) : string {
