@@ -942,6 +942,20 @@ bool parser::parse_expression(ast *pAst) {
         if(peek(1).gettokentype() != LEFTBRACE)
             return true;
     }
+    
+    if(peek(1).gettoken() == "sizeof")
+    {
+        advance();
+        expect_token(pAst, "sizeof", "");
+
+        expect(LEFTPAREN, pAst, "`(`");
+        parse_expression(pAst);
+        expect(RIGHTPAREN, pAst, "`)`");
+        
+        pAst->encapsulate(ast_sizeof_e);
+        if(!isexprsymbol(peek(1).gettoken()))
+            return true;
+    }
 
     if(peek(1).gettokentype() == LEFTBRACE)
     {
@@ -1788,7 +1802,7 @@ bool parser::iskeyword(string key) {
            || key == "finally" || key == "throw" || key == "continue"
            || key == "goto" || key == "break" || key == "else"
            || key == "dynamic_object" || key == "__asm" || key == "for" || key == "foreach"
-            || key == "var";
+            || key == "var" || key == "sizeof";
 }
 
 bool parser::parse_type_identifier(ast *pAst) {

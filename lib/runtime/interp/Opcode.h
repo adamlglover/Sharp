@@ -196,7 +196,7 @@ void print_stack();
 
 #define new_class(x) CHK_NULL(ptr->createclass(x);) _brh
 
-#define movn(x) CHK_NULL(ptr = &ptr->_Node[x];) _brh
+#define movn(x) CHK_NULL(ptr = ptr->size ? &ptr->_Node[x] : NULL;) _brh
 
 #define _sleep(r) __os_sleep((int64_t)__rxs[r]);
 

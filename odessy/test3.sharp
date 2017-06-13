@@ -5,6 +5,7 @@ import std;
 class Main {
 
     static fn main(string[] args) {
-        System.print("Hello, World!");
+        var v = 9;
+        System.print("Hello, World!" + 'v');
     }
 }

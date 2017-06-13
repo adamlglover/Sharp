@@ -11,6 +11,10 @@ class System {
         Libcore.os.printData(data);
     }
 
+    public static fn print(string str) {
+        Libcore.os.printData(str.value());
+    }
+
     public static fn print(var data) {
         Libcore.os.__print_(data, false);
     }

@@ -85,6 +85,7 @@ enum ast_types
     ast_and_e,
     ast_ques_e,
     ast_assign_e,
+    ast_sizeof_e,
 
     ast_none
 };

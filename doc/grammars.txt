@@ -122,6 +122,7 @@ expression '[' expression ']' [<dot-notation-call-expr>]
     | 'base' '->' <dot-notation-call-expr>
     | null
     | new uType [([<value-list>] | [VectorArray>])] // TODO: add array creation
+    | sizeof '(' expression ')'
     | <array-expression>
     | '(' uType ')' expression
     | expression ('++' | '--')

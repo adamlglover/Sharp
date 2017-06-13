@@ -577,7 +577,7 @@ void Thread::run() {
     if(id != main_threadid) {
         __rxs[sp] = -1;
         __rxs[fp] = 0;
-        this->__stack = (data_stack*)memalloc(sizeof(data_stack)*stack_lmt);
+        this ->__stack = (data_stack*)memalloc(sizeof(data_stack)*stack_lmt);
         Environment::init(__stack, stack_lmt);
     }
 
@@ -1357,7 +1357,7 @@ void print_stack() {
     cout << "@" << thread_self->curr_adsp << ":"
          << (thread_self->curr_adsp+env->__address_spaces)->name.str() << " ";
     cout << "[[" << "sp:" << SP64 << " fp:" << FP64 << endl;
-    for(unsigned int i = 0; i < SP64+4; i++) {
+    for(unsigned int i = 0; i < SP64+15; i++) {
         if(i==FP64) cout << "#FP: ";
         if(i==SP64) cout << "#SP: ";
         cout << "{@" << i << " v:" << thread_self->__stack[i].var << ":"
@@ -1386,7 +1386,7 @@ void Thread::call_asp(int64_t id) {
         this->cache_size=asp->cache_size;
 
         _FP= ((_SP+1)-asp->param_size)-asp->self;
-        _SP = asp->frame_init == 0 ? _FP : _FP+(asp->frame_init-1);
+        _SP = asp->frame_init == 0 ? _FP : _FP+(asp->frame_init+asp->self-1);
         if(_FP != 0) __stack[FP64-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {

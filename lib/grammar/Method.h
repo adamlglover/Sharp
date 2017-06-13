@@ -34,7 +34,8 @@ public:
             array(false),
             code(),
             sourceFile(0),
-            local_count(0)
+            local_count(0),
+            constructor(false)
     {
         this->finallyBlocks.init();
         this->unique_address_table.init();
@@ -56,7 +57,8 @@ public:
             array(false),
             code(),
             sourceFile(sourceFile),
-            local_count(0)
+            local_count(0),
+            constructor(false)
     {
         this->finallyBlocks.init();
         this->unique_address_table.init();
@@ -80,7 +82,8 @@ public:
             array(false),
             code(),
             sourceFile(sourceFile),
-            local_count(0)
+            local_count(0),
+            constructor(false)
     {
         this->finallyBlocks.init();
         this->unique_address_table.init();
@@ -117,7 +120,7 @@ public:
     m64Assembler code;
     ClassObject* pklass;
     long long sourceFile;
-    bool array;
+    bool array, constructor;
     int64_t local_count;
     List<keypair<int64_t, long>> line_table;
     List<ExceptionTable> exceptions;

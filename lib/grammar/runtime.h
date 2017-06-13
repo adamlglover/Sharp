@@ -954,6 +954,12 @@ private:
     void parseMacrosDecl(ast *pAst);
 
     void parseOperatorDecl(ast *pAst);
+
+    void constructNewString(Expression &string_expr, Expression &out);
+
+    Expression parseSizeOfExpression(ast *pAst);
+
+    bool constructNewString(Expression &stringExpr, Expression &assignExpr, token_entity operand, Expression &out, ast *pAst);
 };
 
 #define progname "bootstrap"

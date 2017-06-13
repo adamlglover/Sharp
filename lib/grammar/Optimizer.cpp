@@ -40,6 +40,7 @@ bool Optimizer::referenceUsed(unsigned int start) {
             case op_POPREF:
             case op_MUTL:
             case op_CHKNULL:
+            case op_SMOVOBJ:
             {
                 return true;
             }
