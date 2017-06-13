@@ -367,7 +367,8 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
     pushExpressionToRegister(cond, out, cmt);
     block.code.inject(block.code.size(), out.code);
 
-    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+    if(!scope->reachable && (scope->last_statement==ast_return_stmnt
+                             || scope->last_statement == ast_throw_statement)) {
         scope->reachable=true;
     }
 
@@ -400,7 +401,8 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
                     parseBlock(trunk->getsubast(ast_block), block);
                     difference = block.code.size()-insertAddr;
 
-                    if(!scope->reachable && scope->last_statement==ast_return_stmnt) {
+                    if(!scope->reachable && (scope->last_statement==ast_return_stmnt
+                                             || scope->last_statement == ast_throw_statement)) {
                         scope->reachable=true;
                     }
 
