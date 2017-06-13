@@ -48,14 +48,14 @@ class string {
 
         fn operator+( var[] immstr ) : string
         {
-            append(immstr);
-            return self;
+            string s = new string(data);
+            return s.append(immstr);
         }
 
         fn operator+( string str ) : string
         {
-            append(str.data);
-            return self;
+            string s = new string(data);
+            return s.append(str.value());;
         }
 
         fn operator==( string str ) : var
@@ -91,8 +91,24 @@ class string {
         {
             var[] arry = new var[1];
             arry[0]=char;
-            append(arry);
-            return self;
+
+            string s = new string(data);
+            s.append(arry);
+
+            return s;
+        }
+
+        fn operator+=( var char ) : string
+        {
+            var[] arry = new var[1];
+            arry[0]=char;
+
+            return append(arry);
+        }
+
+        fn operator+=( var[] immstr ) : string
+        {
+            return append(immstr);
         }
 
         fn value() : var[]
@@ -109,12 +125,12 @@ class string {
             string temp = new string("");
             string returnvalue= new string("");
             while (number>0) {
-                temp+(number%10)+48;
+                temp+=(number%10)+48;
                 number/=10;
             }
             System.print(sizeof(temp));
             for (var i=0;i< sizeof(temp);i++) {
-                returnvalue+temp.at((sizeof(temp)-i)-1);
+                returnvalue+=temp.at((sizeof(temp)-i)-1);
             }
             System.print(sizeof(returnvalue));
             return returnvalue;

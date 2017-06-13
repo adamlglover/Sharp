@@ -17,25 +17,32 @@ class Libcore {
         * the console
         */
         private static fn __print_(var[] message) {
-            __asm(
-                "  movl <message>                                                                  "
-                "  _sizeof %ecf               // get size of message                               "
-                "  movi #0, %cx                                                                    "
-                "  .check_null:                                                                    "
-                "      test %cx,%ecf                                                               "
-                "      movi $_print,%adx                                                           "
-                "      ifne                                                                        "
-                "      ret                                                                         "
-                "                                                                                  "
-                "  ._print:                                                                        "
-                "     movi $_print+2,%adx    // store address of label <_print> omit store instr   "
-                "     chklen %cx             // check object length for safety                     "
-                "     movx %ebx,%cx          // get char at [index]                                "
-                "     _putc %ebx                                                                   "
-                "     inc %cx                                                                      "
-                "     lt %cx,%ecf            // check if we have reached the end of the string     "
-                "     bre                                                                          "
-            );
+            if(message != null) {
+                __asm(
+                    "  movl <message>                                                                  "
+                    "  _sizeof %ecf               // get size of message                               "
+                    "  movi #0, %cx                                                                    "
+                    "  .check_null:                                                                    "
+                    "      test %cx,%ecf                                                               "
+                    "      movi $_print,%adx                                                           "
+                    "      ifne                                                                        "
+                    "      ret                                                                         "
+                    "                                                                                  "
+                    "  ._print:                                                                        "
+                    "     movi $_print+2,%adx    // store address of label <_print> omit store instr   "
+                    "     chklen %cx             // check object length for safety                     "
+                    "     movx %ebx,%cx          // get char at [index]                                "
+                    "     _putc %ebx                                                                   "
+                    "     inc %cx                                                                      "
+                    "     lt %cx,%ecf            // check if we have reached the end of the string     "
+                    "     bre                                                                          "
+                );
+            } else {
+                __print_('n', true);
+                __print_('u', true);
+                __print_('l', true);
+                __print_('l', true);
+            }
         }
 
         /**

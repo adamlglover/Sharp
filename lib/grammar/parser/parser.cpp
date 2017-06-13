@@ -1636,6 +1636,7 @@ void parser::parse_statement(ast* pAst) {
     }
     else if(current().gettokentype() == SEMICOLON)
     {
+
         /* we don't care about empty statements but we allow them */
         if(commas > 1) {
             commas = 0;

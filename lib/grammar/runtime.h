@@ -324,9 +324,9 @@ struct Scope {
 
     void addStore(string label, int _register, long offset, m64Assembler& assembler, int line, int col) {
         BranchTable bt;
+        bt.branch_pc=assembler.__asm64.size();
         assembler.__asm64.add(0); // add empty instruction for storeing later
         assembler.__asm64.add(0);
-        bt.branch_pc = assembler.__asm64.size()-2;
         bt.line=line;
         bt.col=col;
         bt.label = label;
@@ -447,8 +447,6 @@ public:
 #define generic_label_id "$$L"
 
 #define __init_label_address(code) (code.__asm64.size() == 0 ? 0 : code.__asm64.size() - 1)
-
-#define field_offset(s, offset) (s->function->isStatic() ? offset : (1+offset))
 
 #define unique_label_id(x) "$$L" << (x)
 
