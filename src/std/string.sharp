@@ -2,10 +2,10 @@ mod std;
 
 class string {
     /*this will hold our string */
-        var[] data;
+        private var[] data;
 
         string( var[] immstr ) {
-            data = immstr;
+            append(immstr);
         }
 
         fn replace( var pos, var replaceChar ) : string {
@@ -29,7 +29,7 @@ class string {
                 newStr[iter++] = immstr[i];
             }
 
-            data = newStr;
+            data = Array.copyOf(newStr, sizeof(newStr));
             return self;
         }
 
@@ -42,11 +42,13 @@ class string {
         }
 
         fn operator+( var[] immstr ) : string {
+            System.print(immstr);
             append(immstr);
         }
 
         fn operator+( string str ) : string {
-            append(str.value());
+            System.print("+ string");
+            append(str.data);
         }
 
         fn operator==( string str ) : var {

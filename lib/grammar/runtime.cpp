@@ -4221,7 +4221,8 @@ Expression runtime::parseArrayExpression(ast* pAst) {
 Expression &runtime::parseDotNotationChain(ast *pAst, Expression &expression, unsigned int startpos) {
 
     ast* utype;
-    Expression rightExpr(expression);
+    Expression rightExpr;
+    rightExpr =expression;
     for(unsigned int i = startpos; i < pAst->getsubastcount(); i++) {
             utype = pAst->getsubast(i);
 

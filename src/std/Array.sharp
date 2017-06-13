@@ -1,0 +1,14 @@
+mod std;
+
+class Array {
+    
+    fn copyOf(var[] data, var len) : var[] {
+        var[] newArry = new var[len];
+    
+        for(var i = 0; i < len; i++) {
+            newArry[i] = data[i];
+        }
+        
+        return newArry;
+    }
+}
