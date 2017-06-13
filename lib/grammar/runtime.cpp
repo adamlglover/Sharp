@@ -367,17 +367,17 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
     pushExpressionToRegister(cond, out, cmt);
     block.code.inject(block.code.size(), out.code);
 
-    if(!scope->reachable && (scope->last_statement==ast_return_stmnt
-                             || scope->last_statement == ast_throw_statement)) {
-        scope->reachable=true;
-    }
-
     if(pAst->getsubastcount() > 2) {
         int64_t insertAddr, difference;
         block.code.push_i64(SET_Di(i64, op_LOADX, adx));
         insertAddr=block.code.size();
         parseBlock(pAst->getsubast(ast_block), block);
         difference = block.code.size()-insertAddr;
+
+        if(!scope->reachable && (scope->last_statement==ast_return_stmnt
+                                 || scope->last_statement == ast_throw_statement)) {
+            scope->reachable=true;
+        }
 
         block.code.__asm64.insert(insertAddr++, SET_Ci(i64, op_IADD, adx,0, (difference+4)));
         block.code.__asm64.insert(insertAddr, SET_Ei(i64, op_IFNE));
@@ -422,6 +422,11 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
                         pAst->getsubast(ast_expression)->col);
         block.code.push_i64(SET_Ei(i64, op_IFNE));
         parseBlock(pAst->getsubast(ast_block), block);
+
+        if(!scope->reachable && (scope->last_statement==ast_return_stmnt
+                                 || scope->last_statement == ast_throw_statement)) {
+            scope->reachable=true;
+        }
     }
 
 
