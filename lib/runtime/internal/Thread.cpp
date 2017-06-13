@@ -803,10 +803,12 @@ void Thread::run() {
 
 bool Thread::execFinally(int command) {
     Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
-    _init_opcode_table
 
     int64_t  start;
     sh_asp* currMethod=env->__address_spaces+curr_adsp;
+    if(currMethod->finallyBlocks.size() == 0) return true;
+
+    _init_opcode_table
 
     if(command ==EXEC_ALL_FINALLY) {
         pc = 0;
