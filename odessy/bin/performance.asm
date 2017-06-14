@@ -38,58 +38,59 @@ main:
 [0x1e] 30:	movsl #0
 [0x1f] 31:	newstr @1
 [0x20] 32:	call @14 // <std#string.$operator+=>
-[0x21] 33:	iframe
-[0x22] 34:	inc sp
-[0x23] 35:	iframe
-[0x24] 36:	movl 2
-[0x25] 37:	pushref
-[0x26] 38:	movi #10, ebx
-[0x28] 40:	pushr ebx
-[0x29] 41:	call @12 // <std#string.$operator+>
-[0x2a] 42:	call @26 // <std#System.print>
-[0x2b] 43:	iframe
-[0x2c] 44:	inc sp
-[0x2d] 45:	iframe
-[0x2e] 46:	inc sp
-[0x2f] 47:	iframe
-[0x30] 48:	inc sp
-[0x31] 49:	iframe
-[0x32] 50:	inc sp
-[0x33] 51:	movsl #0
-[0x34] 52:	new_class @2 // std#string
-[0x35] 53:	inc sp
-[0x36] 54:	movsl #0
-[0x37] 55:	newstr @2
-[0x38] 56:	call @3 // <std#string.string>
-[0x39] 57:	movi #118, ebx
-[0x3b] 59:	pushr ebx
-[0x3c] 60:	call @12 // <std#string.$operator+>
-[0x3d] 61:	call @15 // <std#string.value>
-[0x3e] 62:	movi #0, ebx
-[0x40] 64:	movsl #0
-[0x41] 65:	chklen ebx
-[0x42] 66:	movx ebx, ebx
-[0x43] 67:	pop
-[0x44] 68:	pushr ebx
-[0x45] 69:	call @27 // <std#System.print>
-[0x46] 70:	iframe
-[0x47] 71:	inc sp
-[0x48] 72:	iframe
-[0x49] 73:	inc sp
-[0x4a] 74:	iframe
-[0x4b] 75:	inc sp
-[0x4c] 76:	movsl #0
-[0x4d] 77:	new_class @2 // std#string
-[0x4e] 78:	inc sp
-[0x4f] 79:	movsl #0
-[0x50] 80:	newstr @2
-[0x51] 81:	call @3 // <std#string.string>
-[0x52] 82:	inc sp
-[0x53] 83:	movsl #0
-[0x54] 84:	newstr @3
-[0x55] 85:	call @7 // <std#string.$operator+>
-[0x56] 86:	call @26 // <std#System.print>
-[0x57] 87:	ret
+[0x21] 33:	pop
+[0x22] 34:	iframe
+[0x23] 35:	inc sp
+[0x24] 36:	iframe
+[0x25] 37:	movl 2
+[0x26] 38:	pushref
+[0x27] 39:	movi #10, ebx
+[0x29] 41:	pushr ebx
+[0x2a] 42:	call @12 // <std#string.$operator+>
+[0x2b] 43:	call @26 // <std#System.print>
+[0x2c] 44:	iframe
+[0x2d] 45:	inc sp
+[0x2e] 46:	iframe
+[0x2f] 47:	inc sp
+[0x30] 48:	iframe
+[0x31] 49:	inc sp
+[0x32] 50:	iframe
+[0x33] 51:	inc sp
+[0x34] 52:	movsl #0
+[0x35] 53:	new_class @2 // std#string
+[0x36] 54:	inc sp
+[0x37] 55:	movsl #0
+[0x38] 56:	newstr @2
+[0x39] 57:	call @3 // <std#string.string>
+[0x3a] 58:	movi #118, ebx
+[0x3c] 60:	pushr ebx
+[0x3d] 61:	call @12 // <std#string.$operator+>
+[0x3e] 62:	call @15 // <std#string.value>
+[0x3f] 63:	movi #0, ebx
+[0x41] 65:	movsl #0
+[0x42] 66:	chklen ebx
+[0x43] 67:	movx ebx, ebx
+[0x44] 68:	pop
+[0x45] 69:	pushr ebx
+[0x46] 70:	call @27 // <std#System.print>
+[0x47] 71:	iframe
+[0x48] 72:	inc sp
+[0x49] 73:	iframe
+[0x4a] 74:	inc sp
+[0x4b] 75:	iframe
+[0x4c] 76:	inc sp
+[0x4d] 77:	movsl #0
+[0x4e] 78:	new_class @2 // std#string
+[0x4f] 79:	inc sp
+[0x50] 80:	movsl #0
+[0x51] 81:	newstr @2
+[0x52] 82:	call @3 // <std#string.string>
+[0x53] 83:	inc sp
+[0x54] 84:	movsl #0
+[0x55] 85:	newstr @3
+[0x56] 86:	call @7 // <std#string.$operator+>
+[0x57] 87:	call @26 // <std#System.print>
+[0x58] 88:	ret
 
 func:@1 [application#Main.Main] in file: odessy/test3.sharp:5:6: note:  
 		class Main {
@@ -291,12 +292,18 @@ append:
 [0x77] 119:	movl 0
 [0x78] 120:	movn #0
 [0x79] 121:	popref
-[0x7a] 122:	movl 0
-[0x7b] 123:	movr adx, fp
-[0x7c] 124:	smovobj @-5
-[0x7d] 125:	ret
+[0x7a] 122:	iframe
+[0x7b] 123:	movl 0
+[0x7c] 124:	movn #0
+[0x7d] 125:	sizeof ebx
+[0x7e] 126:	pushr ebx
+[0x7f] 127:	call @27 // <std#System.print>
+[0x80] 128:	movl 0
+[0x81] 129:	movr adx, fp
+[0x82] 130:	smovobj @-5
+[0x83] 131:	ret
 
-func:@6 [std#string.at] in file: src/std/string.sharp:40:14: note:  
+func:@6 [std#string.at] in file: src/std/string.sharp:41:14: note:  
 		        fn at( var pos ) : __int8
 		             ^
 
@@ -358,7 +365,7 @@ at:
 [0x36] 54:	smovr ebx+[-5]
 [0x37] 55:	ret
 
-func:@7 [std#string.$operator+] in file: src/std/string.sharp:50:20: note:  
+func:@7 [std#string.$operator+] in file: src/std/string.sharp:51:20: note:  
 		        fn operator+( var[] immstr ) : string
 		                   ^
 
@@ -388,7 +395,7 @@ $operator+:
 [0x15] 21:	smovobj @-5
 [0x16] 22:	ret
 
-func:@8 [std#string.$operator+] in file: src/std/string.sharp:56:20: note:  
+func:@8 [std#string.$operator+] in file: src/std/string.sharp:57:20: note:  
 		        fn operator+( string str ) : string
 		                   ^
 
@@ -421,7 +428,7 @@ $operator+:
 [0x18] 24:	smovobj @-5
 [0x19] 25:	ret
 
-func:@9 [std#string.$operator==] in file: src/std/string.sharp:62:20: note:  
+func:@9 [std#string.$operator==] in file: src/std/string.sharp:63:20: note:  
 		        fn operator==( string str ) : var
 		                   ^
 
@@ -479,7 +486,7 @@ $operator==:
 [0x38] 56:	smovr ebx+[-5]
 [0x39] 57:	ret
 
-func:@10 [std#string.$operator==] in file: src/std/string.sharp:74:20: note:  
+func:@10 [std#string.$operator==] in file: src/std/string.sharp:75:20: note:  
 		        fn operator==( var[] str ) : var
 		                   ^
 
@@ -535,7 +542,7 @@ $operator==:
 [0x36] 54:	smovr ebx+[-5]
 [0x37] 55:	ret
 
-func:@11 [std#string.$operator=] in file: src/std/string.sharp:86:20: note:  
+func:@11 [std#string.$operator=] in file: src/std/string.sharp:87:20: note:  
 		        fn operator=( var[] immstr )
 		                   ^
 
@@ -555,7 +562,7 @@ $operator=:
 [0xb] 11:	popref
 [0xc] 12:	ret
 
-func:@12 [std#string.$operator+] in file: src/std/string.sharp:91:20: note:  
+func:@12 [std#string.$operator+] in file: src/std/string.sharp:92:20: note:  
 		        fn operator+( var char ) : string
 		                   ^
 
@@ -606,7 +613,7 @@ $operator+:
 [0x2c] 44:	smovobj @-5
 [0x2d] 45:	ret
 
-func:@13 [std#string.$operator+=] in file: src/std/string.sharp:102:20: note:  
+func:@13 [std#string.$operator+=] in file: src/std/string.sharp:103:20: note:  
 		        fn operator+=( var char ) : string
 		                   ^
 
@@ -644,7 +651,7 @@ $operator+=:
 [0x1f] 31:	smovobj @-5
 [0x20] 32:	ret
 
-func:@14 [std#string.$operator+=] in file: src/std/string.sharp:110:20: note:  
+func:@14 [std#string.$operator+=] in file: src/std/string.sharp:111:20: note:  
 		        fn operator+=( var[] immstr ) : string
 		                   ^
 
@@ -662,7 +669,7 @@ $operator+=:
 [0x9] 9:	smovobj @-5
 [0xa] 10:	ret
 
-func:@15 [std#string.value] in file: src/std/string.sharp:115:17: note:  
+func:@15 [std#string.value] in file: src/std/string.sharp:116:17: note:  
 		        fn value() : var[]
 		                ^
 
@@ -674,7 +681,7 @@ value:
 [0x3] 3:	smovobj @-5
 [0x4] 4:	ret
 
-func:@16 [std#string.convertInt] in file: src/std/string.sharp:120:29: note:  
+func:@16 [std#string.convertInt] in file: src/std/string.sharp:121:29: note:  
 		        static fn convertInt( var number ) : string
 		                            ^
 
@@ -737,7 +744,7 @@ convertInt:
 [0x39] 57:	gt ebx, ecx
 [0x3a] 58:	movr ebx, cmt
 [0x3b] 59:	movr cmt, ebx
-[0x3c] 60:	movi #91, adx
+[0x3c] 60:	movi #97, adx
 [0x3e] 62:	ifne
 [0x3f] 63:	inc sp
 [0x40] 64:	iframe
@@ -754,57 +761,70 @@ convertInt:
 [0x4e] 78:	add ebx, ecx -> ebx
 [0x50] 80:	pushr ebx
 [0x51] 81:	call @13 // <std#string.$operator+=>
-[0x52] 82:	movi #10, ebx
-[0x54] 84:	movr ecx, ebx
-[0x55] 85:	divl ecx, @0
-[0x56] 86:	iframe
-[0x57] 87:	movl 1
-[0x58] 88:	pushref
-[0x59] 89:	call @26 // <std#System.print>
-[0x5a] 90:	goto @48
-[0x5b] 91:	movi #0, ebx
-[0x5d] 93:	movr ecx, ebx
-[0x5e] 94:	movr adx, fp
-[0x5f] 95:	smovr ecx+3
-[0x60] 96:	movl 1
-[0x61] 97:	sizeof ebx
-[0x62] 98:	movr egx, ebx
-[0x63] 99:	movr adx, fp
-[0x64] 100:	smov ebx+3
-[0x65] 101:	lt ebx, egx
-[0x66] 102:	movr ebx, cmt
-[0x67] 103:	movi #136, adx
-[0x69] 105:	ifne
-[0x6a] 106:	inc sp
-[0x6b] 107:	iframe
-[0x6c] 108:	movl 2
-[0x6d] 109:	pushref
-[0x6e] 110:	inc sp
-[0x6f] 111:	iframe
-[0x70] 112:	movl 1
-[0x71] 113:	pushref
-[0x72] 114:	movi #1, ebx
-[0x74] 116:	movr egx, ebx
-[0x75] 117:	movr adx, fp
-[0x76] 118:	smov ebx+3
-[0x77] 119:	sub ebx, egx -> ebx
-[0x79] 121:	pushr ebx
-[0x7a] 122:	movl 1
-[0x7b] 123:	sizeof ebx
-[0x7c] 124:	popr ecx
-[0x7d] 125:	sub ebx, ecx -> ebx
-[0x7f] 127:	pushr ebx
-[0x80] 128:	call @6 // <std#string.at>
-[0x81] 129:	call @13 // <std#string.$operator+=>
-[0x82] 130:	movr adx, fp
-[0x83] 131:	smov ebx+3
-[0x84] 132:	movi #1, ecx
-[0x86] 134:	addl ecx, @3
-[0x87] 135:	goto @96
-[0x88] 136:	movl 2
-[0x89] 137:	movr adx, fp
-[0x8a] 138:	smovobj @-5
-[0x8b] 139:	ret
+[0x52] 82:	pop
+[0x53] 83:	movi #10, ebx
+[0x55] 85:	movr ecx, ebx
+[0x56] 86:	divl ecx, @0
+[0x57] 87:	iframe
+[0x58] 88:	inc sp
+[0x59] 89:	iframe
+[0x5a] 90:	movl 1
+[0x5b] 91:	pushref
+[0x5c] 92:	call @15 // <std#string.value>
+[0x5d] 93:	sizeof ebx
+[0x5e] 94:	pushr ebx
+[0x5f] 95:	call @27 // <std#System.print>
+[0x60] 96:	goto @48
+[0x61] 97:	inc sp
+[0x62] 98:	iframe
+[0x63] 99:	movl 1
+[0x64] 100:	pushref
+[0x65] 101:	call @15 // <std#string.value>
+[0x66] 102:	sizeof ebx
+[0x67] 103:	movr ecx, ebx
+[0x68] 104:	movr adx, fp
+[0x69] 105:	smovr ecx+3
+[0x6a] 106:	movi #0, ebx
+[0x6c] 108:	movr egx, ebx
+[0x6d] 109:	movr adx, fp
+[0x6e] 110:	smov ebx+3
+[0x6f] 111:	gt ebx, egx
+[0x70] 112:	movr ebx, cmt
+[0x71] 113:	movi #146, adx
+[0x73] 115:	ifne
+[0x74] 116:	iframe
+[0x75] 117:	inc sp
+[0x76] 118:	iframe
+[0x77] 119:	movl 1
+[0x78] 120:	pushref
+[0x79] 121:	movr adx, fp
+[0x7a] 122:	smov ebx+3
+[0x7b] 123:	pushr ebx
+[0x7c] 124:	call @6 // <std#string.at>
+[0x7d] 125:	call @27 // <std#System.print>
+[0x7e] 126:	inc sp
+[0x7f] 127:	iframe
+[0x80] 128:	movl 2
+[0x81] 129:	pushref
+[0x82] 130:	inc sp
+[0x83] 131:	iframe
+[0x84] 132:	movl 1
+[0x85] 133:	pushref
+[0x86] 134:	movr adx, fp
+[0x87] 135:	smov ebx+3
+[0x88] 136:	pushr ebx
+[0x89] 137:	call @6 // <std#string.at>
+[0x8a] 138:	call @13 // <std#string.$operator+=>
+[0x8b] 139:	pop
+[0x8c] 140:	movr adx, fp
+[0x8d] 141:	smov ebx+3
+[0x8e] 142:	movi #1, ecx
+[0x90] 144:	subl ecx, @3
+[0x91] 145:	goto @106
+[0x92] 146:	movl 2
+[0x93] 147:	movr adx, fp
+[0x94] 148:	smovobj @-5
+[0x95] 149:	ret
 
 func:@17 [std#string.string] in file: src/std/string.sharp:3:6: note:  
 		class string {
@@ -987,50 +1007,62 @@ __print_:
 [0x3] 3:	movr ebx, cmt
 [0x4] 4:	movr cmt, ebx
 [0x5] 5:	loadx adx
-[0x6] 6:	iadd adx, #21
+[0x6] 6:	iadd adx, #33
 [0x7] 7:	ifne
-[0x8] 8:	movl 0
-[0x9] 9:	sizeof ecf
-[0xa] 10:	movi #0, cx
-[0xc] 12:	test cx, ecf
-[0xd] 13:	movi #17, adx
-[0xf] 15:	ifne
-[0x10] 16:	ret
-[0x11] 17:	movi #19, adx
-[0x13] 19:	chklen cx
-[0x14] 20:	movx ebx, cx
-[0x15] 21:	_putc ebx
-[0x16] 22:	inc cx
-[0x17] 23:	lt cx, ecf
-[0x18] 24:	bre
-[0x19] 25:	goto @58
-[0x1a] 26:	iframe
-[0x1b] 27:	movi #110, ebx
+[0x8] 8:	movi #0, ebx
+[0xa] 10:	pushr ebx
+[0xb] 11:	movl 0
+[0xc] 12:	movr adx, sp
+[0xd] 13:	smov ebx+0
+[0xe] 14:	sizeof egx
+[0xf] 15:	lt ebx, egx
+[0x10] 16:	movi #36, adx
+[0x12] 18:	ifne
+[0x13] 19:	movx ebx, ebx
+[0x14] 20:	movr ecx, ebx
+[0x15] 21:	movr adx, fp
+[0x16] 22:	smovr ecx+1
+[0x17] 23:	iframe
+[0x18] 24:	movr adx, fp
+[0x19] 25:	smov ebx+1
+[0x1a] 26:	pushr ebx
+[0x1b] 27:	movi #1, ebx
 [0x1d] 29:	pushr ebx
-[0x1e] 30:	movi #1, ebx
-[0x20] 32:	pushr ebx
-[0x21] 33:	call @32 // <libcore#Libcore.os.__print_>
-[0x22] 34:	iframe
-[0x23] 35:	movi #117, ebx
-[0x25] 37:	pushr ebx
-[0x26] 38:	movi #1, ebx
-[0x28] 40:	pushr ebx
-[0x29] 41:	call @32 // <libcore#Libcore.os.__print_>
-[0x2a] 42:	iframe
-[0x2b] 43:	movi #108, ebx
-[0x2d] 45:	pushr ebx
-[0x2e] 46:	movi #1, ebx
-[0x30] 48:	pushr ebx
-[0x31] 49:	call @32 // <libcore#Libcore.os.__print_>
-[0x32] 50:	iframe
-[0x33] 51:	movi #108, ebx
-[0x35] 53:	pushr ebx
-[0x36] 54:	movi #1, ebx
-[0x38] 56:	pushr ebx
-[0x39] 57:	call @32 // <libcore#Libcore.os.__print_>
-[0x3a] 58:	ret
+[0x1e] 30:	call @32 // <libcore#Libcore.os.__print_>
+[0x1f] 31:	movr adx, sp
+[0x20] 32:	smov ebx+0
+[0x21] 33:	inc ebx
+[0x22] 34:	smovr ebx+0
+[0x23] 35:	goto @11
+[0x24] 36:	pop
+[0x25] 37:	goto @70
+[0x26] 38:	iframe
+[0x27] 39:	movi #110, ebx
+[0x29] 41:	pushr ebx
+[0x2a] 42:	movi #1, ebx
+[0x2c] 44:	pushr ebx
+[0x2d] 45:	call @32 // <libcore#Libcore.os.__print_>
+[0x2e] 46:	iframe
+[0x2f] 47:	movi #117, ebx
+[0x31] 49:	pushr ebx
+[0x32] 50:	movi #1, ebx
+[0x34] 52:	pushr ebx
+[0x35] 53:	call @32 // <libcore#Libcore.os.__print_>
+[0x36] 54:	iframe
+[0x37] 55:	movi #108, ebx
+[0x39] 57:	pushr ebx
+[0x3a] 58:	movi #1, ebx
+[0x3c] 60:	pushr ebx
+[0x3d] 61:	call @32 // <libcore#Libcore.os.__print_>
+[0x3e] 62:	iframe
+[0x3f] 63:	movi #108, ebx
+[0x41] 65:	pushr ebx
+[0x42] 66:	movi #1, ebx
+[0x44] 68:	pushr ebx
+[0x45] 69:	call @32 // <libcore#Libcore.os.__print_>
+[0x46] 70:	ret
 
-func:@32 [libcore#Libcore.os.__print_] in file: src/std/internal/Libcore.sharp:51:34: note:  
+func:@32 [libcore#Libcore.os.__print_] in file: src/std/internal/Libcore.sharp:35:34: note:  
 		        public static fn __print_(var char, var isCharacter) {
 		                                 ^
 

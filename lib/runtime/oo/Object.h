@@ -86,7 +86,7 @@ public:
     string toString() {
         stringstream ss;
 
-        ss << "{";
+        ss << " {";
         ss << "size:" << size << " mark:" << mark;
         ss << (klass==NULL?"" : (" klass:" + klass->name.str()));
         ss << " refs:" << refs.size();

@@ -4811,6 +4811,7 @@ void runtime::addClass(token_entity operand, ClassObject* klass, Expression& out
             right.utype.type = ResolvedReference::CLASS;
         }
 
+        out.func=true;
         out.code.push_i64(SET_Di(i64, op_CALL, overload->vaddr));
     } else {
         errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `"

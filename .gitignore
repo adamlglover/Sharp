@@ -5,3 +5,8 @@
 /cmake-build-debug
 .idea/
 out
+odessy/bin
+cmake-build-releasevm/
+cmake-build-relwithdebinfo/
+helloworld
+lib/grammar/resolve.txt

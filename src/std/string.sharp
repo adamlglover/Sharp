@@ -34,6 +34,7 @@ class string {
             }
 
             data = Array.copyOf(newStr, sizeof(newStr));
+            System.print(sizeof(data));
             return self;
         }
 
@@ -128,11 +129,12 @@ class string {
             while (((__int64)number)>0) {
                 temp+=(number%10)+48;
                 number/=10;
-                System.print(temp);
+                System.print(sizeof(temp.value()));
             }
 
-            for (var i=0;i< sizeof(temp);i++) {
-                returnvalue+=temp.at(sizeof(temp)-i - 1);
+            for (var i=sizeof(temp.value()); i > 0; i--) {
+                System.print(temp.at(i));
+                returnvalue+=temp.at(i);
             }
             return returnvalue;
         }
