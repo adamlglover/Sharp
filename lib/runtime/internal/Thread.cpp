@@ -1308,12 +1308,22 @@ void Thread::Throw(Object* exceptionObject) {
         if(curr_adsp == main->id) {
             break;
         } else {
+            int64_t _fp=FP64;
             try{
                 return_asp();
             }catch (Exception &e) {
                 throwable=e.throwable;
-                exceptionObject = &__stack[SP64].object;
-                goto __throw;
+
+                /*
+                 * This testes if we are in a state where the stack has
+                 * been destroyed and we cant return from it
+                 */
+                if((SP64+4) >= stack_lmt || FP64==_fp)
+                    throw e;
+                else {
+                    exceptionObject = &__stack[SP64].object;
+                    goto __throw;
+                }
             }
 
             if(TryThrow(env->__address_spaces+curr_adsp, exceptionObject)) {

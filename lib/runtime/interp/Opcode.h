@@ -93,7 +93,7 @@ void print_stack();
 
 #define _div(r,x) __rxs[cache[pc+1]]=__rxs[r]/__rxs[x]; pc++; _brh
 
-#define mod(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; _brh
+#define mod(r,x) __rxs[cache[pc+1]]=(int64_t)__rxs[r]%(int64_t)__rxs[x]; pc++; _brh
 
 #define _iadd(r,x) __rxs[r]+=x; _brh
 

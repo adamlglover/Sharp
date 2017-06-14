@@ -939,7 +939,7 @@ bool parser::parse_expression(ast *pAst) {
             parse_valuelist(pAst);
 
         pAst->encapsulate(ast_new_e);
-        if(peek(1).gettokentype() != LEFTBRACE)
+        if(peek(1).gettokentype() != LEFTBRACE && !isexprsymbol(peek(1).gettoken()))
             return true;
     }
     

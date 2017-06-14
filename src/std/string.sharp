@@ -23,7 +23,7 @@ class string {
         {
             var[] newStr = new var[sizeof(data) + sizeof(immstr)];
 
-            var iter;
+            var iter=0;
             for(var i = 0; i < sizeof(data); i++) {
                 newStr[iter++] = data[i];
             }
@@ -40,7 +40,8 @@ class string {
         fn at( var pos ) : __int8
         {
             if(pos >= sizeof(data)) {
-                throw new RuntimeErr("Index out of bounds");
+                throw new RuntimeErr(((new string("Index out of bounds Array: ")
+                    + sizeof(data)) + " at index pos").value());
             }
 
             return data[pos];
@@ -124,15 +125,15 @@ class string {
 
             string temp = new string("");
             string returnvalue= new string("");
-            while (number>0) {
+            while (((__int64)number)>0) {
                 temp+=(number%10)+48;
                 number/=10;
+                System.print(temp);
             }
-            System.print(sizeof(temp));
+
             for (var i=0;i< sizeof(temp);i++) {
-                returnvalue+=temp.at((sizeof(temp)-i)-1);
+                returnvalue+=temp.at(sizeof(temp)-i - 1);
             }
-            System.print(sizeof(returnvalue));
             return returnvalue;
         }
 }
