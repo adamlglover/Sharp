@@ -788,6 +788,8 @@ void Thread::run() {
                 _throw()
             CHKNULL:
                 _chknull()
+            RETURNREF:
+                returnref()
         }
     } catch (bad_alloc &e) {
         cout << "std::bad_alloc\n";
@@ -1043,6 +1045,8 @@ bool Thread::execFinally(int command) {
                     _throw()
                 CHKNULL:
                     _chknull()
+                RETURNREF:
+                    returnref()
             }
         }
     } catch (bad_alloc &e) {
@@ -1400,7 +1404,7 @@ void Thread::call_asp(int64_t id) {
         this->cache_size=asp->cache_size;
 
         _FP= ((_SP+1)-asp->param_size)-asp->self;
-        _SP = asp->frame_init == 0 ? _FP : _FP+(asp->frame_init+asp->self-1);
+        _SP = asp->frame_init == 0 ? (_FP+asp->self) : _FP+(asp->frame_init+asp->self-1);
         if(_FP != 0) __stack[FP64-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {

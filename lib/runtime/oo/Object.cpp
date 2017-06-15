@@ -68,13 +68,17 @@ void Object::createnative(int64_t size) {
 void Object::inc_ref(Object *ptr) {
     if(ptr!=this)
     {
-        this->refs.addif(ptr);
-        ptr->HEAD=HEAD;
-        ptr->klass=klass;
-        ptr->size=size;
-        ptr->_Node=_Node;
-        ptr->_rNode=this;
-        ptr->mark = gc_green;
+        if(_rNode==NULL) {
+            this->refs.addif(ptr);
+            ptr->HEAD=HEAD;
+            ptr->klass=klass;
+            ptr->size=size;
+            ptr->_Node=_Node;
+            ptr->_rNode=this;
+            ptr->mark = gc_green;
+        } else
+            _rNode->inc_ref(ptr);
+
     }
 }
 

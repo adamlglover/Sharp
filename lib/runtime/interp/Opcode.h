@@ -252,6 +252,9 @@ void print_stack();
 
 #define _chknull() CHK_NULL(__rxs[0x0002]=ptr->isnull();) _brh
 
+#define returnref() CHK_NULL(ptr->inc_ref(&__stack[(int64_t)__rxs[sp]-5].object);) _brh
+
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -358,6 +361,7 @@ void print_stack();
         &&NOTL,                                                        \
         &&_THROW,                                                        \
         &&CHKNULL,                                                        \
+        &&RETURNREF,                                                        \
     };
 
 /*
@@ -468,6 +472,7 @@ enum OPCODE {
     op_NOTL=0x65,
     op_THROW=0x66,
     op_CHKNULL=0x67,
+    op_RETURNREF=0x68,
 
     MAX_OPCODE=0x59
 };

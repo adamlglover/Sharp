@@ -5,7 +5,7 @@
 /cmake-build-debug
 .idea/
 out
-odessy/bin
+odessy/bin/
 cmake-build-releasevm/
 cmake-build-relwithdebinfo/
 helloworld

@@ -34,7 +34,7 @@ class string {
             }
 
             data = Array.copyOf(newStr, sizeof(newStr));
-            System.print(sizeof(data));
+            newStr = null;
             return self;
         }
 
