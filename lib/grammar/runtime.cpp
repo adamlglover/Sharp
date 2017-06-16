@@ -1191,11 +1191,8 @@ void runtime::parseStatement(Block& block, ast* pAst) {
             Expression expr;
             expr = parseExpression(pAst);
             if(expr.func && expr.type != expression_void) {
-                if(expr.type == expression_lclass) {
-                    expr.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
-                    expr.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-                    expr.code.push_i64(SET_Ei(i64, op_DEL));
-                    expr.code.push_i64(SET_Ei(i64, op_POP));
+                if(expr.arrayObject() || expr.type == expression_lclass) {
+                    expr.code.push_i64(SET_Ei(i64, op_SDEL));
                 }
                 else
                     expr.code.push_i64(SET_Ei(i64, op_POP));
@@ -3421,8 +3418,18 @@ Expression runtime::parseSizeOfExpression(ast* pAst) {
 
             if(out.code.size() == 0)
                 out.code.push_i64(SET_Di(i64, op_MOVI, 1), ebx); // just in case out object isnt an object
-            else
-                out.code.push_i64(SET_Di(i64, op_SIZEOF, ebx)); // just in case out object isnt an object
+            else {
+                if(expression.func) {
+                    out.code.push_i64(SET_Di(i64, op_SIZEOF, ebx)); // just in case out object isnt an object
+
+                    if(expression.arrayObject() || expression.type == expression_lclass) {
+                        out.code.push_i64(SET_Ei(i64, op_SDEL));
+                    }
+                    else
+                        out.code.push_i64(SET_Ei(i64, op_POP));
+                } else
+                    out.code.push_i64(SET_Di(i64, op_SIZEOF, ebx)); // just in case out object isnt an object
+            }
             break;
     }
 
@@ -9639,6 +9646,12 @@ void runtime::createDumpFile() {
                 case op_RETURNREF:
                 {
                     ss<<"returnref";
+                    _ostream << ss.str();
+                    break;
+                }
+                case op_SDEL:
+                {
+                    ss<<"sdel";
                     _ostream << ss.str();
                     break;
                 }

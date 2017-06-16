@@ -12,14 +12,14 @@ class Throwable {
     }
 
     Throwable(string message) {
-     //   self->message = message.getData();
+        self->message = message.value();
     }
 
     fn getStackTrace() : string {
-//        if(message == null) {
-//            message = ""; // TodO: fill stack trace
-//        }
+        if(stackTrace == null) {
+            stackTrace = "";
+        }
 
-      //  return message;
+        return new string(stackTrace);
     }
 }

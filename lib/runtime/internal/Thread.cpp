@@ -790,6 +790,8 @@ void Thread::run() {
                 _chknull()
             RETURNREF:
                 returnref()
+            SDEL:
+                sdel()
         }
     } catch (bad_alloc &e) {
         cout << "std::bad_alloc\n";
@@ -1047,6 +1049,8 @@ bool Thread::execFinally(int command) {
                     _chknull()
                 RETURNREF:
                     returnref()
+                SDEL:
+                    sdel()
             }
         }
     } catch (bad_alloc &e) {

@@ -12,5 +12,6 @@ class Main {
         System.print(str + '\n');
         System.print(("Hello, World!" + 'v').value()[0]);
         System.print("Hello, World!" + " another string\n");
+        str.at(99);
     }
 }

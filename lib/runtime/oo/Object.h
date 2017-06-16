@@ -86,11 +86,12 @@ public:
     string toString() {
         stringstream ss;
 
-        ss << " {";
+        ss << this << " {";
         ss << "size:" << size << " mark:" << mark;
         ss << (klass==NULL?"" : (" klass:" + klass->name.str()));
         ss << " refs:" << refs.size();
         ss << (_rNode==NULL? " refrence:false" : " refrence:true");
+        if(_rNode!=NULL) ss << " @" << _rNode << " ";
         if(size>0) {
             ss << " data:[";
             for(unsigned int i=0; i < size; i++) {

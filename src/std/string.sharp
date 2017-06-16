@@ -41,8 +41,10 @@ class string {
         fn at( var pos ) : __int8
         {
             if(pos >= sizeof(data)) {
-                throw new RuntimeErr(((new string("Index out of bounds Array: ")
-                    + sizeof(data)) + " at index pos").value());
+                string err = "Index out of bounds Array: " + string.convertInt(sizeof(data));
+                err += " at index pos ";
+                err += string.convertInt(pos);
+                throw new RuntimeErr(err);
             }
 
             return data[pos];
@@ -113,6 +115,11 @@ class string {
             return append(immstr);
         }
 
+        fn operator+=( string str ) : string
+        {
+            return append(str.value());
+        }
+
         fn value() : var[]
         {
             return data;
@@ -129,11 +136,9 @@ class string {
             while (((__int64)number)>0) {
                 temp+=(number%10)+48;
                 number/=10;
-                System.print(sizeof(temp.value()));
             }
 
-            for (var i=sizeof(temp.value()); i > 0; i--) {
-                System.print(temp.at(i));
+            for (var i=sizeof(temp.value())-1; i >= 0; i--) {
                 returnvalue+=temp.at(i);
             }
             return returnvalue;
