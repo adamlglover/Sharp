@@ -159,7 +159,8 @@ void*
 //                }
                 thread_self->throwable = e.getThrowable();
                 thread_self->exceptionThrown = true;
-                cout << e.throwable.message.str();
+                cout << "Uncaught Exception: " << e.throwable.throwable->name.str()
+                     << ": " << e.throwable.message.str();
             }
         }
 

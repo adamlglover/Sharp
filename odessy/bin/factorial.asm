@@ -90,15 +90,19 @@ main:
 [0x55] 85:	newstr @3
 [0x56] 86:	call @9 // <std#string.$operator+>
 [0x57] 87:	call @27 // <std#System.print>
-[0x58] 88:	inc sp
-[0x59] 89:	iframe
-[0x5a] 90:	movl 2
-[0x5b] 91:	pushref
-[0x5c] 92:	movi #99, ebx
-[0x5e] 94:	pushr ebx
-[0x5f] 95:	call @8 // <std#string.at>
-[0x60] 96:	pop
-[0x61] 97:	ret
+[0x58] 88:	iframe
+[0x59] 89:	movi #21, ebx
+[0x5b] 91:	pushr ebx
+[0x5c] 92:	call @28 // <std#System.print>
+[0x5d] 93:	inc sp
+[0x5e] 94:	iframe
+[0x5f] 95:	movl 2
+[0x60] 96:	pushref
+[0x61] 97:	movi #99, ebx
+[0x63] 99:	pushr ebx
+[0x64] 100:	call @8 // <std#string.at>
+[0x65] 101:	pop
+[0x66] 102:	ret
 
 func:@1 [application#Main.Main] in file: odessy/test3.sharp:5:6: note:  
 		class Main {
@@ -357,7 +361,7 @@ at:
 [0x6] 6:	ge ebx, egx
 [0x7] 7:	movr ebx, cmt
 [0x8] 8:	movr cmt, ebx
-[0x9] 9:	movi #64, adx
+[0x9] 9:	movi #76, adx
 [0xb] 11:	ifne
 [0xc] 12:	movl 2
 [0xd] 13:	inc sp
@@ -379,52 +383,64 @@ at:
 [0x1d] 29:	pushr ebx
 [0x1e] 30:	call @19 // <std#string.convertInt>
 [0x1f] 31:	call @10 // <std#string.$operator+>
-[0x20] 32:	movl 2
-[0x21] 33:	popref
+[0x20] 32:	inc sp
+[0x21] 33:	iframe
 [0x22] 34:	inc sp
 [0x23] 35:	iframe
-[0x24] 36:	movl 2
-[0x25] 37:	pushref
-[0x26] 38:	inc sp
-[0x27] 39:	movsl #0
-[0x28] 40:	newstr @6
-[0x29] 41:	call @16 // <std#string.$operator+=>
-[0x2a] 42:	sdel
+[0x24] 36:	inc sp
+[0x25] 37:	movsl #0
+[0x26] 38:	new_class @2 // std#string
+[0x27] 39:	inc sp
+[0x28] 40:	movsl #0
+[0x29] 41:	newstr @5
+[0x2a] 42:	call @5 // <std#string.string>
 [0x2b] 43:	inc sp
-[0x2c] 44:	iframe
-[0x2d] 45:	movl 2
-[0x2e] 46:	pushref
+[0x2c] 44:	movsl #0
+[0x2d] 45:	newstr @6
+[0x2e] 46:	call @9 // <std#string.$operator+>
 [0x2f] 47:	inc sp
 [0x30] 48:	iframe
-[0x31] 49:	movr adx, fp
-[0x32] 50:	smov ebx+1
-[0x33] 51:	pushr ebx
-[0x34] 52:	call @19 // <std#string.convertInt>
-[0x35] 53:	call @17 // <std#string.$operator+=>
-[0x36] 54:	sdel
-[0x37] 55:	inc sp
-[0x38] 56:	iframe
-[0x39] 57:	inc sp
-[0x3a] 58:	movsl #0
-[0x3b] 59:	new_class @3 // std.err#RuntimeErr
-[0x3c] 60:	movl 2
-[0x3d] 61:	pushref
-[0x3e] 62:	call @23 // <std.err#Throwable.Throwable>
-[0x3f] 63:	throw 
-[0x40] 64:	movl 0
-[0x41] 65:	movn #0
-[0x42] 66:	pushref
-[0x43] 67:	movr adx, fp
-[0x44] 68:	smov ebx+1
-[0x45] 69:	movsl #0
-[0x46] 70:	chklen ebx
-[0x47] 71:	movx ebx, ebx
-[0x48] 72:	sdelref
-[0x49] 73:	movr adx, fp
-[0x4a] 74:	smovr ebx+[-5]
-[0x4b] 75:	ret
+[0x31] 49:	inc sp
+[0x32] 50:	iframe
+[0x33] 51:	inc sp
+[0x34] 52:	movsl #0
+[0x35] 53:	new_class @2 // std#string
+[0x36] 54:	inc sp
+[0x37] 55:	movsl #0
+[0x38] 56:	newstr @5
+[0x39] 57:	call @5 // <std#string.string>
+[0x3a] 58:	inc sp
+[0x3b] 59:	iframe
+[0x3c] 60:	movr adx, fp
+[0x3d] 61:	smov ebx+1
+[0x3e] 62:	pushr ebx
+[0x3f] 63:	call @19 // <std#string.convertInt>
+[0x40] 64:	call @10 // <std#string.$operator+>
+[0x41] 65:	movl 2
+[0x42] 66:	popref
+[0x43] 67:	inc sp
+[0x44] 68:	iframe
+[0x45] 69:	inc sp
+[0x46] 70:	movsl #0
+[0x47] 71:	new_class @3 // std.err#RuntimeErr
+[0x48] 72:	movl 2
+[0x49] 73:	pushref
+[0x4a] 74:	call @23 // <std.err#Throwable.Throwable>
+[0x4b] 75:	throw 
+[0x4c] 76:	movl 0
+[0x4d] 77:	movn #0
+[0x4e] 78:	pushref
+[0x4f] 79:	movr adx, fp
+[0x50] 80:	smov ebx+1
+[0x51] 81:	movsl #0
+[0x52] 82:	chklen ebx
+[0x53] 83:	movx ebx, ebx
+[0x54] 84:	sdelref
+[0x55] 85:	movr adx, fp
+[0x56] 86:	smovr ebx+[-5]
+[0x57] 87:	ret
 
-func:@9 [std#string.$operator+] in file: src/std/string.sharp:53:20: note:  
+func:@9 [std#string.$operator+] in file: src/std/string.sharp:52:20: note:  
 		        fn operator+( var[] immstr ) : string
 		                   ^
 
@@ -454,7 +470,7 @@ $operator+:
 [0x15] 21:	smovobj @-5
 [0x16] 22:	ret
 
-func:@10 [std#string.$operator+] in file: src/std/string.sharp:59:20: note:  
+func:@10 [std#string.$operator+] in file: src/std/string.sharp:58:20: note:  
 		        fn operator+( string str ) : string
 		                   ^
 
@@ -487,7 +503,7 @@ $operator+:
 [0x18] 24:	smovobj @-5
 [0x19] 25:	ret
 
-func:@11 [std#string.$operator==] in file: src/std/string.sharp:65:20: note:  
+func:@11 [std#string.$operator==] in file: src/std/string.sharp:64:20: note:  
 		        fn operator==( string str ) : var
 		                   ^
 
@@ -545,7 +561,7 @@ $operator==:
 [0x38] 56:	smovr ebx+[-5]
 [0x39] 57:	ret
 
-func:@12 [std#string.$operator==] in file: src/std/string.sharp:77:20: note:  
+func:@12 [std#string.$operator==] in file: src/std/string.sharp:76:20: note:  
 		        fn operator==( var[] str ) : var
 		                   ^
 
@@ -601,7 +617,7 @@ $operator==:
 [0x36] 54:	smovr ebx+[-5]
 [0x37] 55:	ret
 
-func:@13 [std#string.$operator=] in file: src/std/string.sharp:89:20: note:  
+func:@13 [std#string.$operator=] in file: src/std/string.sharp:88:20: note:  
 		        fn operator=( var[] immstr )
 		                   ^
 
@@ -621,7 +637,7 @@ $operator=:
 [0xb] 11:	popref
 [0xc] 12:	ret
 
-func:@14 [std#string.$operator+] in file: src/std/string.sharp:94:20: note:  
+func:@14 [std#string.$operator+] in file: src/std/string.sharp:93:20: note:  
 		        fn operator+( var char ) : string
 		                   ^
 
@@ -672,7 +688,7 @@ $operator+:
 [0x2c] 44:	smovobj @-5
 [0x2d] 45:	ret
 
-func:@15 [std#string.$operator+=] in file: src/std/string.sharp:105:20: note:  
+func:@15 [std#string.$operator+=] in file: src/std/string.sharp:104:20: note:  
 		        fn operator+=( var char ) : string
 		                   ^
 
@@ -710,7 +726,7 @@ $operator+=:
 [0x1f] 31:	smovobj @-5
 [0x20] 32:	ret
 
-func:@16 [std#string.$operator+=] in file: src/std/string.sharp:113:20: note:  
+func:@16 [std#string.$operator+=] in file: src/std/string.sharp:112:20: note:  
 		        fn operator+=( var[] immstr ) : string
 		                   ^
 
@@ -728,7 +744,7 @@ $operator+=:
 [0x9] 9:	smovobj @-5
 [0xa] 10:	ret
 
-func:@17 [std#string.$operator+=] in file: src/std/string.sharp:118:20: note:  
+func:@17 [std#string.$operator+=] in file: src/std/string.sharp:117:20: note:  
 		        fn operator+=( string str ) : string
 		                   ^
 
@@ -749,7 +765,7 @@ $operator+=:
 [0xc] 12:	smovobj @-5
 [0xd] 13:	ret
 
-func:@18 [std#string.value] in file: src/std/string.sharp:123:17: note:  
+func:@18 [std#string.value] in file: src/std/string.sharp:122:17: note:  
 		        fn value() : var[]
 		                ^
 
@@ -760,7 +776,7 @@ value:
 [0x2] 2:	returnref
 [0x3] 3:	ret
 
-func:@19 [std#string.convertInt] in file: src/std/string.sharp:128:29: note:  
+func:@19 [std#string.convertInt] in file: src/std/string.sharp:127:29: note:  
 		        static fn convertInt( var number ) : string
 		                            ^
 

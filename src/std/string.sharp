@@ -41,9 +41,8 @@ class string {
         fn at( var pos ) : __int8
         {
             if(pos >= sizeof(data)) {
-                string err = "Index out of bounds Array: " + string.convertInt(sizeof(data));
-                err += " at index pos ";
-                err += string.convertInt(pos);
+                string err = "Index out of bounds Array: " + string.convertInt(sizeof(data))
+                    + " at index pos " + string.convertInt(pos);
                 throw new RuntimeErr(err);
             }
 

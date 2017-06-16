@@ -5067,9 +5067,9 @@ bool runtime::addExpressions(Expression &out, Expression &leftExpr, Expression &
             out.code.push_i64(SET_Di(i64, op_MOVI, *varout), ebx);
         }
 
-        rightExpr.literal = true;
-        rightExpr.intValue = *varout;
-        rightExpr.code.free();
+        leftExpr.literal = true;
+        leftExpr.intValue = *varout;
+        leftExpr.code.free();
     }
 
     out.literal = true;
@@ -5149,16 +5149,16 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
             operands.add(pAst->getsubast(i)->getentity(0));
     }
 
-    operandPtr=operands.size()-1;
-    for(long int i = pAst->getsubastcount()-1; i >= 0; i--) {
+    operandPtr=0;
+    for(long int i = 0; i < pAst->getsubastcount(); i++) {
         if(firstEval) {
-            rightExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i))
+            leftExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i))
                                                                         : parseIntermExpression(pAst->getsubast(i));
-            i--;
+            i++;
             firstEval= false;
         }
-        leftExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i)) : parseIntermExpression(pAst->getsubast(i));
-        operand = operands.get(operandPtr--);
+        rightExpr = pAst->getsubast(i)->gettype() == ast_expression ? parseExpression(pAst->getsubast(i)) : parseIntermExpression(pAst->getsubast(i));
+        operand = operands.get(operandPtr++);
         double var = 0;
 
         switch(leftExpr.type) {
@@ -5177,9 +5177,9 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
                         out.code.push_i64(SET_Di(i64, op_POPR, ecx));
                         out.code.push_i64(SET_Ci(i64, operandToOp(operand), ebx,0, ecx), ebx);
 
-                        rightExpr.func=false;
-                        rightExpr.literal = false;
-                        rightExpr.code.free();
+                        leftExpr.func=false;
+                        leftExpr.literal = false;
+                        leftExpr.code.free();
                         var=0;
                     }
 

@@ -12,6 +12,7 @@ class Main {
         System.print(str + '\n');
         System.print(("Hello, World!" + 'v').value()[0]);
         System.print("Hello, World!" + " another string\n");
+        System.print(2*6+9);
         str.at(99);
     }
 }
