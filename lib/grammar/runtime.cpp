@@ -1178,6 +1178,8 @@ void runtime::parseStatement(Block& block, ast* pAst) {
     if(!current_scope()->reachable) {
         errors->newerror(GENERIC, pAst, "unreachable statement");
         current_scope()->reachable=true;
+    }else {
+        current_scope()->last_statement=pAst->gettype();
     }
 
     switch(pAst->gettype()) {
@@ -2563,6 +2565,76 @@ void runtime::pushExpressionToStackNoInject(Expression& expression, Expression& 
 }
 
 
+void runtime::pushAuthenticExpressionToStackNoInject(Expression& expression, Expression& out) {
+
+    switch(expression.type) {
+        case expression_var:
+            if(expression._new) {
+            } else {
+                if (expression.func) {
+                    out.code.push_i64(SET_Di(i64, op_INC, sp));
+                } else
+                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+            }
+            break;
+        case expression_field:
+            if(expression.utype.field->nativeInt() && !expression.utype.field->array) {
+                if(expression.utype.field->local) {
+                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+                } else {
+                    out.code.push_i64(SET_Di(i64, op_MOVI, 0), adx);
+                    out.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, adx));
+                    out.code.push_i64(SET_Di(i64, op_PUSHR, ebx));
+                }
+            } else if(expression.utype.field->nativeInt() && expression.utype.field->array) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                out.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0));
+            } else if(expression.utype.field->dynamicObject() || expression.utype.field->type == field_class) {
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+                out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                out.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0));
+            }
+            break;
+        case expression_lclass:
+            if(expression._new) {
+            } else {
+                if(expression.func) {
+                    /* I think we do nothing? */
+                    out.code.push_i64(SET_Di(i64, op_INC, sp));
+                } else {
+                    out.code.push_i64(SET_Di(i64, op_INC, sp));
+                    out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                    out.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0));
+                }
+            }
+            break;
+        case expression_string:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Di(i64, op_NEWSTR, expression.intValue));
+            break;
+        case expression_null:
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Ei(i64, op_DEL));
+            break;
+        case expression_dynamicclass:
+            if(expression._new) {
+            } else {
+                if(expression.func) {
+                    /* I think we do nothing? */
+                    out.code.push_i64(SET_Di(i64, op_INC, sp));
+                } else {
+                    out.code.push_i64(SET_Di(i64, op_INC, sp));
+                    out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+                    out.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0));
+                }
+            }
+            break;
+    }
+}
+
 void runtime::pushExpressionToPtr(Expression& expression, Expression& out) {
     if(!expression._new)
         out.code.inject(out.code.__asm64.size(), expression.code);
@@ -2708,8 +2780,14 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
 
         out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
         if(!fn->isStatic()) {
-            pushExpressionToPtr(expression, out);
-            out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            if(access && scope->last_statement == ast_return_stmnt) {
+                out.inject(expression);
+                pushAuthenticExpressionToStackNoInject(expression, out);
+            } else {
+
+                pushExpressionToPtr(expression, out);
+                out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+            }
         }
 
         for(unsigned int i = 0; i < expressions.size(); i++) {
@@ -3155,6 +3233,7 @@ Expression runtime::parseSelfExpression(ast* pAst) {
     } else {
         // self
         expression.type = expression_lclass;
+        expression.utype.type = ResolvedReference::CLASS;
         expression.utype.klass = scope->klass;
         expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
     }
@@ -3365,25 +3444,29 @@ bool runtime::constructNewString(Expression &stringExpr, Expression &right, toke
 
     if((klass = getClass("std", "string")) != NULL) {
         if((fn=klass->getConstructor(params)) != NULL) {
-            left.type = expression_lclass;
-            left.utype.klass = klass;
-            left.utype.type=ResolvedReference::CLASS;
+            stringExpr.type = expression_lclass;
+            stringExpr.utype.klass = klass;
+            stringExpr.utype.type=ResolvedReference::CLASS;
+            out.type = expression_lclass;
+            out.utype.klass = klass;
+            out.utype.type=ResolvedReference::CLASS;
 
-            left.code.push_i64(SET_Di(i64, op_INC, sp));
-            left.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
 
-            left.code.push_i64(SET_Di(i64, op_INC, sp));
-            left.code.push_i64(SET_Di(i64, op_MOVSL, 0));
-            left.code.push_i64(SET_Di(i64, op_NEW_CLASS, klass->vaddr));
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Di(i64, op_NEW_CLASS, klass->vaddr));
 
             for(unsigned int i = 0; i < expressions.size(); i++) {
-                pushExpressionToStack(expressions.get(i), left);
+                pushExpressionToStack(expressions.get(i), out);
             }
-            left.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
+            out.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
             left._new=true;
 
-            addClass(operand, klass, out, left, right, pAst);
+            addStringConstruct(operand, klass, out, left, right, pAst);
 
+            stringExpr=right;
             out.func=true;
             __freeList(params);
             __freeList(expressions);
@@ -4848,6 +4931,115 @@ void runtime::addClass(token_entity operand, ClassObject* klass, Expression& out
     __freeList(eList);
 }
 
+void runtime::addStringConstruct(token_entity operand, ClassObject* klass, Expression& out, Expression& left, Expression &right, ast* pAst) {
+    List<Param> params;
+    List<Expression> eList;
+    eList.push_back(right);
+    OperatorOverload* overload;
+    right.literal = false;
+    Expression newOut;
+
+    expressionListToParams(params, eList);
+
+    if((overload = klass->getOverload(string_toop(operand.gettoken()), params)) != NULL) {
+        // call operand
+        if(overload->type != lvoid)
+            newOut.code.push_i64(SET_Di(i64, op_INC, sp));
+
+        newOut.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+
+        newOut.inject(out);
+
+        pushExpressionToStack(right, newOut);
+
+        out.type = methodReturntypeToExpressionType(overload);
+        left.free();
+        left.type=out.type;
+        left.func=true;
+        if(out.type == expression_lclass) {
+            out.utype.klass = overload->klass;
+            out.utype.type = ResolvedReference::CLASS;
+            left.utype.klass = overload->klass;
+            left.utype.type = ResolvedReference::CLASS;
+        }
+
+        out.func=true;
+        newOut.code.push_i64(SET_Di(i64, op_CALL, overload->vaddr));
+
+        out.code.free();
+        out.inject(newOut);
+    } else {
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `"
+                                                          + left.typeToString() + "` and `" + right.typeToString() + "`");
+    }
+
+    __freeList(params);
+    __freeList(eList);
+}
+
+
+void runtime::addClassChain(token_entity operand, ClassObject* klass, Expression& out, Expression& left, Expression &right, ast* pAst) {
+    List<Param> params;
+    List<Expression> eList;
+    eList.push_back(right);
+    OperatorOverload* overload;
+    left.literal = false;
+
+    expressionListToParams(params, eList);
+
+    if((overload = klass->getOverload(string_toop(operand.gettoken()), params)) != NULL) {
+        // call operand
+        if(overload->isStatic()) {
+            errors->newerror(GENERIC, pAst, "call to function `$operator" + operand.gettoken() + "` is static");
+        }
+
+
+        if(left.func && left.type != expression_void) {
+            out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+            out.code.push_i64(SET_Di(i64, op_DEC, sp));
+
+            if(overload->type != lvoid)
+                out.code.push_i64(SET_Di(i64, op_INC, sp));
+
+            out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+            out.code.push_i64(SET_Di(i64, op_INC, sp));
+            out.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, sp));
+            out.code.push_i64(SET_Di(i64, op_SMOVOBJ, 0));
+        } else if(left.func) {
+            errors->newerror(GENERIC, pAst, "call to function `$operator" + operand.gettoken() + "` returns void from previous operand");
+        } else {
+            if(overload->type != lvoid)
+                out.code.push_i64(SET_Di(i64, op_INC, sp)); // we dont need to increment bcause we just use the slot of th old objects location
+
+            out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+            out.code.push_i64(SET_Ei(i64, op_PUSHREF));
+        }
+
+        pushExpressionToStack(right, out);
+
+        out.type = methodReturntypeToExpressionType(overload);
+        left.free();
+        left.type=out.type;
+        left.func=true;
+        if(out.type == expression_lclass) {
+            out.utype.klass = overload->klass;
+            out.utype.type = ResolvedReference::CLASS;
+            left.utype.klass = overload->klass;
+            left.utype.type = ResolvedReference::CLASS;
+        }
+
+        out.func=true;
+        out.code.push_i64(SET_Di(i64, op_CALL, overload->vaddr));
+    } else {
+        errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken() + "` cannot be applied to expression of type `"
+                                                          + left.typeToString() + "` and `" + right.typeToString() + "`");
+    }
+
+    __freeList(params);
+    __freeList(eList);
+}
+
+
 OPCODE runtime::operandToLocalMathOp(token_entity operand)
 {
     if(operand == "+")
@@ -5161,6 +5353,7 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
         operand = operands.get(operandPtr++);
         double var = 0;
 
+
         switch(leftExpr.type) {
             case expression_var:
                 if(rightExpr.type == expression_var) {
@@ -5224,7 +5417,13 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
                     // add var
                     addNative(operand, leftExpr.utype.field->nf, out, leftExpr, rightExpr, pAst);
                 } else if(leftExpr.utype.field->type == field_class) {
-                    addClass(operand, leftExpr.utype.field->klass, out, leftExpr, rightExpr, pAst);
+                    if(i <= 1) {
+                        addClass(operand, leftExpr.utype.field->klass, out, leftExpr, rightExpr, pAst);
+                        leftExpr=rightExpr;
+                    }
+                    else {
+                        addClassChain(operand, leftExpr.utype.field->klass, out, leftExpr, rightExpr, pAst);
+                    }
                 } else {
                     // do nothing field unresolved
                 }
@@ -5233,7 +5432,13 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
                 errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + leftExpr.typeToString() + "`");
                 break;
             case expression_lclass:
-                addClass(operand, leftExpr.utype.klass, out, leftExpr, rightExpr, pAst);
+                if(i <= 1) {
+                    addClass(operand, leftExpr.utype.klass, out, leftExpr, rightExpr, pAst);
+                    leftExpr=rightExpr;
+                }
+                else {
+                    addClassChain(operand, leftExpr.utype.klass, out, leftExpr, rightExpr, pAst);
+                }
                 break;
             case expression_class:
                 errors->newerror(UNEXPECTED_SYMBOL, pAst->line, pAst->col, " `" + leftExpr.typeToString() + "`");
@@ -8812,8 +9017,12 @@ void runtime::generate() {
 
 string runtime::find_method(int64_t id) {
     for(unsigned int i = 0; i < allMethods.size(); i++) {
-        if(allMethods.get(i)->vaddr == id)
-            return allMethods.get(i)->getFullName();
+        if(allMethods.get(i)->vaddr == id) {
+            stringstream ss;
+            ss << allMethods.get(i)->getFullName();
+            ss << paramsToString(*allMethods.get(i)->getParams());
+            return ss.str();
+        }
     }
     return "";
 }

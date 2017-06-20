@@ -95,6 +95,10 @@ public:
         if(size>0) {
             ss << " data:[";
             for(unsigned int i=0; i < size; i++) {
+                if(i>10&&HEAD != NULL) {
+                    ss << "...";
+                    break;
+                }
                 if(klass==NULL) {
                     if(HEAD != NULL)
                         ss << HEAD[i] << ",";

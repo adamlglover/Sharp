@@ -41,6 +41,7 @@ bool Optimizer::referenceUsed(unsigned int start) {
             case op_MUTL:
             case op_CHKNULL:
             case op_SMOVOBJ:
+            case op_RETURNREF:
             {
                 return true;
             }
@@ -54,6 +55,7 @@ bool Optimizer::referenceUsed(unsigned int start) {
 
 void Optimizer::optimizeUnusedReferences() {
     int64_t x64;
+    readjust:
     for(unsigned int i = 0; i < assembler->size(); i++) {
         x64 = assembler->__asm64.get(i);
 
@@ -68,6 +70,7 @@ void Optimizer::optimizeUnusedReferences() {
                     assembler->__asm64.remove(i);
                     readjustAddresses(i);
                     optimizedOpcodes++;
+                    goto readjust;
                 }
                 break;
             }
@@ -177,6 +180,7 @@ void Optimizer::readjustAddresses(unsigned int stopAddr) {
 
 void Optimizer::optimizeRegisterOverride() {
     int64_t x64;
+    readjust:
     for(unsigned int i = 0; i < assembler->size(); i++) {
         x64 = assembler->__asm64.get(i);
 
@@ -189,7 +193,7 @@ void Optimizer::optimizeRegisterOverride() {
                         assembler->__asm64.remove(i);
                         readjustAddresses(i);
                         optimizedOpcodes++;
-                        i--;
+                        goto readjust;
                     }
                 }
 
@@ -208,10 +212,18 @@ void Optimizer::optimizeRegisterOverride() {
                 break;
             }
             case op_SMOV:
+            case op_SMOVR:
             {
                 register_state &left=get_register(GET_Ca(x64));
                 left.assign_type=assign_stack;
                 left.value=0;
+                break;
+            }
+            case op_NOT:
+            {
+                register_state &left=get_register(GET_Ca(x64));
+                left.assign_type=assign_register;
+                left.value=get_register(GET_Cb(x64)).id;
                 break;
             }
             case op_LT:
@@ -219,6 +231,12 @@ void Optimizer::optimizeRegisterOverride() {
             case op_GTE:
             case op_LTE:
             case op_TEST:
+            case op_TNE:
+            case op_AND:
+            case op_uAND:
+            case op_OR:
+            case op_uNOT:
+            case op_CHKNULL:
             {
                 register_state &left=get_register(0x2);
                 left.assign_type=assign_bool;
@@ -233,6 +251,8 @@ void Optimizer::optimizeRegisterOverride() {
             }
             case op_SIZEOF:
             case op_LOADX:
+            case op_LOADF:
+            case op_POPR:
             {
                 register_state &left=get_register(GET_Da(x64));
                 left.assign_type=assign_value;
@@ -249,6 +269,8 @@ void Optimizer::optimizeRegisterOverride() {
                 left.value=0;
                 break;
             }
+            case op_SHL:
+            case op_SHR:
             case op_MOVI:
             {
                 register_state &left=get_register(assembler->__asm64.get(++i));

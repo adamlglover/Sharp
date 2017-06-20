@@ -671,7 +671,7 @@ void Thread::run() {
             PUTC:
                 putc(GET_Da(cache[pc]))
             CHECKLEN:
-                _checklen(GET_Da(cache[pc]))
+                CHK_NULL(_checklen(GET_Da(cache[pc])))
             GOTO:
                 _goto(GET_Da(cache[pc]))
             MOVG:

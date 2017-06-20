@@ -81,12 +81,16 @@ public:
             }
             __shrink();
         } else {
-            if(_X!=(len-1)) {
-                for(unsigned long i = _X; i < len-1; i++) {
-                    _Data[i] = _Data[i+1];
-                }
-            }
-            __shrink();
+            T* result = new T[len-1];
+            long long newLen=len-1,iter=0;
+            for(long long i = 0; i < _X; i++)
+                result[iter++] = _Data[i];
+            for(long long i = _X+1; i < len; i++)
+                result[iter++] = _Data[i];
+
+            free();
+            len=newLen;
+            _Data=result;
         }
 
 

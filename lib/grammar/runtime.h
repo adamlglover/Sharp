@@ -958,6 +958,14 @@ private:
     Expression parseSizeOfExpression(ast *pAst);
 
     bool constructNewString(Expression &stringExpr, Expression &assignExpr, token_entity operand, Expression &out, ast *pAst);
+
+    void addClassChain(token_entity operand, ClassObject *klass, Expression &out, Expression &left, Expression &right,
+                       ast *pAst);
+
+    void addStringConstruct(token_entity operand, ClassObject *klass, Expression &out, Expression &left, Expression &right,
+                            ast *pAst);
+
+    void pushAuthenticExpressionToStackNoInject(Expression &expression, Expression &out);
 };
 
 #define progname "bootstrap"
