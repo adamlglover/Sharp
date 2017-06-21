@@ -16,12 +16,11 @@ class Main {
             str.at(99);
         } catch(RuntimeErr e) {
             /* We know why lol */
-            System.print(99);
             System.print("exception caught: " + e.getMessage() + '\n');
         }
 
-        str = new string("Hello");
-        string str2 = new string("Hello");
+        str = "Hello";
+        string str2 = "Hello-";
         if(str==str2) {
             System.print("\nstr==str2");
         } else {

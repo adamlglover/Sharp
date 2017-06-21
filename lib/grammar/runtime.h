@@ -966,6 +966,8 @@ private:
                             ast *pAst);
 
     void pushAuthenticExpressionToStackNoInject(Expression &expression, Expression &out);
+
+    void initalizeNewClass(ClassObject *klass, Expression &out);
 };
 
 #define progname "bootstrap"

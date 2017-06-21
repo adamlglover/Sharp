@@ -1050,6 +1050,20 @@ void runtime::parseLabelDecl(Block& block,ast* pAst) {
     parseStatement(block, pAst->getsubast(ast_statement)->getsubast(0));
 }
 
+void runtime::initalizeNewClass(ClassObject* klass, Expression& out) {
+    List<Param> emptyParams;
+    Method* fn = klass->getConstructor(emptyParams);
+
+    out.code.push_i64(SET_Di(i64, op_INC, sp));
+    out.code.push_i64(SET_Ei(i64, op_INIT_FRAME));
+
+    out.code.push_i64(SET_Di(i64, op_INC, sp));
+    out.code.push_i64(SET_Di(i64, op_MOVSL, 0));
+    out.code.push_i64(SET_Di(i64, op_NEW_CLASS, klass->vaddr));
+
+    out.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
+}
+
 /*
  * if(scope->getLocalField(name) != NULL) {
         // chech scope
@@ -1132,6 +1146,14 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
 
             if(f.isObjectInMemory()) {
                 if(operand == "=") {
+                    if(f.type==field_class && !expression._new) {
+                        initalizeNewClass(f.klass, out);
+                        block.code.inject(block.code.__asm64.size(), out.code);
+                        block.code.push_i64(SET_Di(i64, op_MOVL, f.vaddr));
+                        block.code.push_i64(SET_Ei(i64, op_POPREF));
+                        out.free();
+                    }
+
                     assignValue(operand, out, fieldExpr, expression, pAst);
                     block.code.inject(block.code.__asm64.size(), out.code);
                 } else {
@@ -5616,7 +5638,7 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
                 out.code.inject(out.code.__asm64.size(), left.code);
                 out.code.push_i64(SET_Ei(i64, op_DEL));
                 return;
-            } else if(right.type == expression_string) {
+            } else if(left.utype.field->type != field_class && right.type == expression_string) {
                 pushExpressionToStack(right, out);
                 out.code.inject(out.code.__asm64.size(), left.code);
 
@@ -7219,6 +7241,7 @@ void runtime::resolveConstructorDecl(ast* pAst) {
 
         Method method = Method(name, current_module, scope->klass, params, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
         method.type = lvoid;
+        method.constructor=true;
 
         method.vaddr = address_spaces++;
         if(!scope->klass->addConstructor(method)) {
@@ -7243,6 +7266,7 @@ void runtime::addDefaultConstructor(ClassObject* klass, ast* pAst) {
     if(klass->getConstructor(emptyParams) == NULL) {
         Method method = Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
 
+        method.constructor=true;
         method.vaddr = address_spaces++;
         klass->addConstructor(method);
     }
@@ -8984,6 +9008,21 @@ void runtime::generate() {
     _ostream << (char)sdata;
     _ostream << generate_data_section();
 
+    for(unsigned int i = 0; i < allMethods.size(); i++)
+    {
+        Method* method = allMethods.get(i);
+
+        if(method->code.size() == 0) {
+            if(method->constructor) {
+                method->code.push_i64(SET_Di(i64, op_MOVL, 0));
+                method->code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                method->code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+            }
+
+            method->code.push_i64(SET_Ei(i64, op_RET));
+        }
+    }
+
     if(c_options.optimize) {
         Optimizer optimizer; // ToDo: make struct OptimizerStat { } to create a total view of how many instructions optimized out in total
         for(unsigned int i = 0; i < allMethods.size(); i++)
@@ -9046,11 +9085,6 @@ void runtime::createDumpFile() {
     _ostream << "Object Dump file:\n" << "################################\n\n";
     for(unsigned int i =0; i < allMethods.size(); i++) {
         Method* method = allMethods.get(i);
-
-
-        if(method->code.size() == 0) {
-            method->code.push_i64(SET_Ei(i64, op_RET));
-        }
 
         stringstream tmp;
         tmp << "func:@" << method->vaddr;
