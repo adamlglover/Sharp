@@ -1058,10 +1058,7 @@ bool Thread::execFinally(int command) {
         // TODO: throw out of memory error
     } catch (Exception &e) {
         throwable=e.getThrowable();
-        Object* exceptionObject = &__stack[SP64].object;
-
-        throwable.throwable = exceptionObject->klass;
-        fillStackTrace(exceptionObject);
+        fillStackTrace(&__stack[SP64].object);
         return false;
     }
 
@@ -1317,17 +1314,14 @@ void Thread::Throw(Object* exceptionObject) {
             break;
         } else {
             int64_t _fp=FP64;
-            try{
-                return_asp();
-            }catch (Exception &e) {
-                throwable=e.throwable;
 
+            if(return_asp()) {
                 /*
                  * This testes if we are in a state where the stack has
                  * been destroyed and we cant return from it
                  */
                 if((SP64+4) >= stack_lmt || FP64==_fp)
-                    throw e;
+                    throw Exception(throwable);
                 else {
                     exceptionObject = &__stack[SP64].object;
                     goto __throw;
@@ -1432,7 +1426,7 @@ void Thread::init_frame() {
     }
 }
 
-void Thread::return_asp() {
+int Thread::return_asp() {
     if((FP64-1) < 0 || __stack[FP64-fp_offset].var > _FP) {
         List<sh_asp*> calls;
         List<long long> pcs;
@@ -1451,7 +1445,7 @@ void Thread::return_asp() {
     }
 
     if(!execFinally(EXEC_PRECEDING_FINALLY)) {
-        throw Exception(throwable);
+        return 1;
     }
 
     sh_asp* asp = &env->__address_spaces[id];
@@ -1462,6 +1456,7 @@ void Thread::return_asp() {
     pc = (uint64_t )__stack[FP64-pc_offset].var;
     _SP = __stack[FP64-sp_offset].var;
     _FP = __stack[FP64-fp_offset].var;
+    return 0;
 }
 
 void Thread::thread_panic(string message, List<sh_asp*> calls, List<long long> pcs) {

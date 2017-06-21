@@ -137,7 +137,7 @@ public:
 
 private:
     void call_asp(int64_t id);
-    void return_asp();
+    int return_asp();
 
     void wait();
 
