@@ -64,7 +64,7 @@ public:
 
     ~Exception();
 
-    void operator=(Exception& e) {
+    void operator=(Exception e) {
         throwable=e.throwable;
     }
 
