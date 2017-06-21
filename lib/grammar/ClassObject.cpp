@@ -34,7 +34,7 @@ Method *ClassObject::getConstructor(List<Param>& params, bool ubase) {
     }
 
     if(ubase && base != NULL)
-        return base->getConstructor(params);
+        return base->getConstructor(params, ubase);
 
     return NULL;
 }

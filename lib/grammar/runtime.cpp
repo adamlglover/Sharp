@@ -87,26 +87,7 @@ void runtime::interpret() {
             }
 
             if(iter == parsers.size() && errors->error_count() == 0 && errors->uoerror_count() == 0) {
-                string starter_classname = "Start";
-
-                ClassObject* StarterClass = getClass("application", starter_classname);
-                if(StarterClass != NULL) {
-                    List<Param> params;
-                    List<AccessModifier> modifiers;
-                    RuntimeNote note = RuntimeNote(p->sourcefile, p->geterrors()->getline(1), 1, 0);
-                    params.add(Field(fvar, 0, "args", StarterClass, modifiers, note));
-                    params.get(0).field.array = true;
-                    params.get(0).field.type = field_native;
-
-                    Method* main = StarterClass->getFunction("__init" , params);
-
-                    if(main == NULL) {
-                        errors->newerror(GENERIC, 1, 0, "could not locate main method '__init(var[])' in starter class");
-                    } else
-                        this->main = main;
-                } else {
-                    errors->newerror(GENERIC, 1, 0, "Could not find starter class '" + starter_classname + "' for application entry point.");
-                }
+                getMainMethod(p);
             }
 
             if(errors->_errs()){
@@ -124,6 +105,31 @@ void runtime::interpret() {
             errors->free();
             delete (errors); this->errors = NULL;
         }
+    }
+}
+
+Method *runtime::getMainMethod(parser *p) {
+    string starter_classname = "Start";
+
+    ClassObject* StarterClass = getClass("application", starter_classname);
+    if(StarterClass != NULL) {
+        List<Param> params;
+        List<AccessModifier> modifiers;
+        RuntimeNote note = RuntimeNote(p->sourcefile, p->geterrors()->getline(1), 1, 0);
+        params.add(Field(fvar, 0, "args", StarterClass, modifiers, note));
+        params.get(0).field.array = true;
+        params.get(0).field.type = field_native;
+
+        Method* main = StarterClass->getFunction("__init" , params);
+
+        if(main == NULL) {
+            errors->newerror(GENERIC, 1, 0, "could not locate main method '__init(var[])' in starter class");
+        } else
+            runtime::main = main;
+        return main;
+    } else {
+        errors->newerror(GENERIC, 1, 0, "Could not find starter class '" + starter_classname + "' for application entry point.");
+        return NULL;
     }
 }
 
@@ -1518,6 +1524,7 @@ void runtime::parse_var_decl(ast *pAst) {
     Scope* scope = current_scope();
     list<AccessModifier> modifiers;
     int startpos=0;
+    token_entity operand;
 
     parse_access_decl(pAst, modifiers, startpos);
 
@@ -1525,25 +1532,59 @@ void runtime::parse_var_decl(ast *pAst) {
     Field* field = scope->klass->getField(name);
 
     if(pAst->hassubast(ast_value)) {
-        Expression expression = parse_value(pAst->getsubast(ast_value));
+        Expression expression = parse_value(pAst->getsubast(ast_value)), out;
+        Expression fieldExpr = fieldToExpression(pAst, *field);
+        fieldExpr.code.free();
+        equals(fieldExpr, expression);
+        operand=pAst->getentity(pAst->getsubastcount()-1);
 
-        Expression assignee(pAst);
-        assignee.type = expression_field;
-        assignee.utype.field = field;
-        assignee.utype.type = ResolvedReference::FIELD;
-        assignee.utype.refrenceName = field->name;
+        if(field->isStatic() && field->nativeInt() && !field->array && expression.literal) {
+            // inline local static variables
+            inline_map.add(keypair<string, double>(field->fullName, expression.intValue));
+        } else {
+            fieldExpr.code.__asm64.push_back(SET_Di(i64, op_MOVL, 0));
+            fieldExpr.code.__asm64.push_back(SET_Di(i64, op_MOVN, field->vaddr));
 
-        if(equals(assignee, expression)) {
-            return;
+            if(field->isObjectInMemory()) {
+                if(operand == "=") {
+                    if(field->type==field_class && !expression._new) {
+                        initalizeNewClass(field->klass, out);
+                        out.code.__asm64.push_back(SET_Di(i64, op_MOVL, 0));
+                        out.code.push_i64(SET_Di(i64, op_MOVL, field->vaddr));
+                        out.code.push_i64(SET_Ei(i64, op_POPREF));
+                    }
+
+                    assignValue(operand, out, fieldExpr, expression, pAst);
+                } else {
+                    errors->newerror(GENERIC, pAst, " explicit call to operator `" + operand.gettoken() + "` without initilization");
+                }
+            } else {
+                assignValue(operand, out, fieldExpr, expression, pAst);
+            }
+
+            if(field->isStatic()) {
+                Method* main = getMainMethod(_current);
+                if(main != NULL) {
+                    main->code.inject(0, out.code); // inilize static variable at runtime start in main method
+                }
+            } else {
+                /*
+                 * We want to inject the value into all constructors
+                 */
+                for(unsigned int i = 0; i < scope->klass->constructorCount(); i++) {
+                    Method* method = scope->klass->getConstructor(i);
+                    method->code.inject(method->code.size(), out.code);
+                }
+            }
+
         }
-        // TODO: do something based on the assign expression
     }
 
 //
 //    if(pAst->hasentity(COMMA)) {
 //
 //    }
-    // check for value assignment and other vars.
+    // TODO: check for value assignment and other vars.
     // if it dosent have a var decl init it to default value in injector (if not in method)
 }
 
@@ -1634,6 +1675,7 @@ void runtime::parseIntegerLiteral(token_entity token, Expression& expression) {
         }
 
         expression.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
+        expression.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
     }
 
     expression.intValue = var;
@@ -1801,7 +1843,11 @@ void runtime::resolveClassHeiarchy(ClassObject* klass, ref_ptr& refrence, Expres
                         expression.utype.refrenceName = object_name;
                         return;
                     case field_native:
-                        if(lastRefrence){}
+                        if(lastRefrence){
+                            if(isFieldInlined(field)) {
+                                inlineVariableValue(expression, field);
+                            }
+                        }
                         else {
                             errors->newerror(GENERIC, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, "invalid access to non-class field `" + object_name + "`");
                             expression.utype.refrenceName = object_name;
@@ -2059,8 +2105,12 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
                 expression.utype.field = field;
                 expression.type = expression_field;
 
-                expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                if(isFieldInlined(field)) {
+                    inlineVariableValue(expression, field);
+                } else {
+                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                }
             } else {
                 /* Un resolvable */
                 errors->newerror(COULD_NOT_RESOLVE, pAst->getsubast(ast_type_identifier)->line, pAst->getsubast(ast_type_identifier)->col, " `" + reference.refname + "` " +
@@ -2129,6 +2179,27 @@ void runtime::resolveSelfUtype(Scope* scope, ref_ptr& reference, Expression& exp
     }
 }
 
+double runtime::getInlinedFieldValue(Field* field) {
+    for(unsigned int i = 0; i < inline_map.size(); i++) {
+        if(inline_map.get(i).key==field->fullName)
+            return inline_map.get(i).value;
+    }
+
+    return 0;
+}
+
+bool runtime::isFieldInlined(Field* field) {
+    if(!field->isStatic())
+        return false;
+
+    for(unsigned int i = 0; i < inline_map.size(); i++) {
+        if(inline_map.get(i).key==field->fullName)
+            return true;
+    }
+
+    return false;
+}
+
 void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst) {
     Scope* scope = current_scope();
     int64_t i64;
@@ -2188,8 +2259,12 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
                     expression.utype.field = field;
                     expression.type = expression_field;
 
-                    expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
-                    expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                    if(isFieldInlined(field)) {
+                        inlineVariableValue(expression, field);
+                    } else {
+                        expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                        expression.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                    }
                 } else {
                     if((klass = getClassGlobal(refrence.module, refrence.refname)) != NULL) {
                         // global class ?
@@ -2303,6 +2378,23 @@ void runtime::resolveUtype(ref_ptr& refrence, Expression& expression, ast* pAst)
             }
         }
     }
+}
+
+void runtime::inlineVariableValue(Expression &expression, Field *field) {
+    int64_t i64;
+    double value = getInlinedFieldValue(field);
+    expression.free();
+
+    if(!isDClassNumberEncodable(value))
+        expression.code.push_i64(SET_Di(i64, op_MOVI, 0), ebx);
+    else {
+        expression.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)value)), abs(get_low_bytes(value)));
+        expression.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
+    }
+
+    expression.type=expression_var;
+    expression.literal=true;
+    expression.intValue=value;
 }
 
 Expression runtime::parseUtype(ast* pAst) {
@@ -5161,6 +5253,7 @@ Expression runtime::parseUnary(token_entity operand, Expression& right, ast* pAs
                     }
 
                     expression.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
+                    expression.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
                 } else {
                     // movi
                     if(var > DA_MAX || var < DA_MIN) {
@@ -5306,6 +5399,7 @@ bool runtime::addExpressions(Expression &out, Expression &leftExpr, Expression &
         if((((int64_t)abs(*varout)) - abs(*varout)) > 0) {
             // movbi
             out.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)*varout)), abs(get_low_bytes(*varout)));
+            out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
         } else {
             // movi
             out.code.push_i64(SET_Di(i64, op_MOVI, *varout), ebx);
@@ -5335,6 +5429,7 @@ bool runtime::shiftLiteralExpressions(Expression &out, Expression &leftExpr, Exp
         if((((int64_t)abs(var)) - abs(var)) > 0) {
             // movbi
             out.code.push_i64(SET_Di(i64, op_MOVBI, ((int64_t)var)), abs(get_low_bytes(var)));
+            out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, bmr));
         } else {
             // movi
             out.code.push_i64(SET_Di(i64, op_MOVI, var), ebx);

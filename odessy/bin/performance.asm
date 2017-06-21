@@ -71,7 +71,13 @@ func:@4 [application#Main.foo] in file: odessy/test2.sharp:23:18: note:
 
 
 foo:
-[0x0] 0:	ret
+[0x0] 0:	inc sp
+[0x1] 1:	iframe
+[0x2] 2:	movi #0, ebx
+[0x4] 4:	pushr ebx
+[0x5] 5:	call @5 // <application#Main.fact(var)>
+[0x6] 6:	pop
+[0x7] 7:	ret
 
 func:@5 [application#Main.fact] in file: odessy/test2.sharp:27:19: note:  
 		    static fn fact(var x) : var {
@@ -176,13 +182,14 @@ func:@10 [application#Main.$operator+=] in file: odessy/test2.sharp:50:23: note:
 
 $operator+=:
 [0x0] 0:	movbi #12, #9
-[0x2] 2:	movr ecx, ebx
-[0x3] 3:	movr adx, fp
-[0x4] 4:	smovr ecx+0
-[0x5] 5:	movi #1, ebx
-[0x7] 7:	movr adx, fp
-[0x8] 8:	smovr ebx+[-5]
-[0x9] 9:	ret
+[0x2] 2:	movr ebx, bmr
+[0x3] 3:	movr ecx, ebx
+[0x4] 4:	movr adx, fp
+[0x5] 5:	smovr ecx+0
+[0x6] 6:	movi #1, ebx
+[0x8] 8:	movr adx, fp
+[0x9] 9:	smovr ebx+[-5]
+[0xa] 10:	ret
 
 func:@11 [application#Main.main] in file: odessy/test2.sharp:56:19: note:  
 		    static fn main(string[] args) : var {

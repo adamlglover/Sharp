@@ -480,6 +480,7 @@ public:
         allMethods.init();
         import_map.init();
         string_map.init();
+        inline_map.init();
 
         sourceFiles.init();
         parse_map.key.init();
@@ -527,6 +528,7 @@ private:
     string current_module;
     List<ClassObject> classes;
     List<keypair<string, List<string>>>  import_map;
+    List<keypair<string, double>>  inline_map;
     List<string> string_map;
     List<Scope> scope_map;
     Method* main;
@@ -970,6 +972,14 @@ private:
     void initalizeNewClass(ClassObject *klass, Expression &out);
 
     void reorderFinallyBlocks(Method *method);
+
+    Method *getMainMethod(parser *p);
+
+    void inlineVariableValue(Expression &expression, Field *field);
+
+    bool isFieldInlined(Field *field);
+
+    double getInlinedFieldValue(Field *field);
 };
 
 #define progname "bootstrap"

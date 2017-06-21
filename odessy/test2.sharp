@@ -9,7 +9,7 @@ class Base {
 
 class Main base Base {
 
-    var x;
+    var x = 9;
     Main mm;
 
     static fn print(var[] message) {
@@ -21,7 +21,7 @@ class Main base Base {
     }
 
     static fn foo(Main main) {
-
+        fact(Main.x);
     }
 
     static fn fact(var x) : var {
