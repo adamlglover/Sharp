@@ -1321,6 +1321,20 @@ void runtime::parseConstructorDecl(ast* pAst) {
         }
 
         Block fblock;
+
+        for(unsigned int i = 0; i < current_scope()->klass->fieldCount(); i++) {
+            Field* field = current_scope()->klass->getField(i);
+
+            /*
+             * We want to initalize all the integer values in the constructors
+             */
+            if(field->nativeInt() && !field->array) {
+                fblock.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                fblock.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                fblock.code.push_i64(SET_Di(i64, op_NEWi, 1));
+            }
+        }
+
         parseBlock(pAst->getsubast(ast_block), fblock);
 
         fblock.code.push_i64(SET_Di(i64, op_MOVL, 0));
@@ -7282,11 +7296,24 @@ void runtime::addDefaultConstructor(ClassObject* klass, ast* pAst) {
     RuntimeNote note = RuntimeNote(_current->sourcefile, _current->geterrors()->getline(pAst->line),
                                    pAst->line, pAst->col);
 
-    if(klass->getConstructor(emptyParams) == NULL) {
+    if(klass->getConstructor(emptyParams, false) == NULL) {
         Method method = Method(klass->getName(), current_module, scope->klass, emptyParams, modCompat, NULL, note, sourceFiles.indexof(_current->sourcefile));
 
         method.constructor=true;
         method.vaddr = address_spaces++;
+        for(unsigned int i = 0; i < klass->fieldCount(); i++) {
+            Field* field = klass->getField(i);
+
+            /*
+             * We want to initalize all the integer values in the constructors
+             */
+            if(field->nativeInt() && !field->array) {
+                method.code.push_i64(SET_Di(i64, op_MOVL, 0));
+                method.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
+                method.code.push_i64(SET_Di(i64, op_MOVI, 1), ebx);
+                method.code.push_i64(SET_Di(i64, op_NEWi, ebx));
+            }
+        }
         klass->addConstructor(method);
     }
 }
@@ -9031,7 +9058,7 @@ void runtime::generate() {
     {
         Method* method = allMethods.get(i);
 
-        if(method->code.size() == 0) {
+        if(method->code.size() == 0 || GET_OP(method->code.__asm64.last()) != op_RET) {
             if(method->constructor) {
                 method->code.push_i64(SET_Di(i64, op_MOVL, 0));
                 method->code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));

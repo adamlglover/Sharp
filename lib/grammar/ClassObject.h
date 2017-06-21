@@ -124,7 +124,7 @@ public:
 
     size_t constructorCount();
     Method* getConstructor(int p);
-    Method* getConstructor(List<Param>& params);
+    Method* getConstructor(List<Param>& params, bool ubase=true);
     bool addConstructor(Method constr);
 
     size_t functionCount();

@@ -26,21 +26,21 @@ Method* ClassObject::getConstructor(int p) {
     return &constructors.get(p);
 }
 
-Method *ClassObject::getConstructor(List<Param>& params) {
+Method *ClassObject::getConstructor(List<Param>& params, bool ubase) {
     for(unsigned int i = 0; i < constructors.size(); i++) {
         Method& function = constructors.get(i);
         if(Param::match(*function.getParams(), params))
             return &function;
     }
 
-    if(base != NULL)
+    if(ubase && base != NULL)
         return base->getConstructor(params);
 
     return NULL;
 }
 
 bool ClassObject::addConstructor(Method constr) {
-    if(getConstructor(*constr.getParams()) != NULL)
+    if(getConstructor(*constr.getParams(), false) != NULL)
         return false;
 
     constructors.push_back(constr);
