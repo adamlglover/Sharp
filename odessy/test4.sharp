@@ -1,0 +1,21 @@
+mod application;
+
+class Main {
+
+    static fn fact(var x) : var {
+        if(x == 1) {
+            return x;
+        }
+
+        return x * fact(x - 1); // TODO: fix this
+    }
+
+    static fn main(string[] args) : var {
+        var d=0;
+        for(var i = 0; i < 10000000; i++) {
+            d=d+1;
+        }
+
+        return 0;
+    }
+}
