@@ -1,10 +1,11 @@
 mod application;
 
+import std;
+
 class Main {
 
     static fn main(string[] args) : var {
-        var[] message = "Hello, World!\n";
-        // print(message);
-        __asm("odessy/x64/print.asm");
+        System.print("Hello, World!");
+        return 0;
     }
 }

@@ -141,4 +141,9 @@ class string {
             }
             return returnvalue;
         }
+        
+        fn size() : var 
+        {
+            return sizeof(data);
+        }
 }

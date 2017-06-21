@@ -1,0 +1,30 @@
+mod std;
+
+class GpioManager {
+    
+    class pin {
+        protected var direction;
+        protected var address;
+        protected var value;
+    }
+    
+    static var ERR_UNAVAILABLE = 0x1;
+    static var ERR_FAIL  = 0x2;
+    static var ERR_OK  = 0x0;
+    
+    fn pinAvaliable(pin request) : var
+    {
+        for(pin p : pins) {
+            if(p.address==request.address) {
+                return true;
+            }
+        }
+        
+        List<Type> list;
+        List typeList;
+        
+        return false;
+    }
+    
+    private pin[] pins;
+}

@@ -1,0 +1,97 @@
+mod std;
+
+import std.err;
+
+class List {
+    
+    private dynamic_object[] data;
+    
+    fn add( dynamic_object object ) {
+        dynamic_object[] newArry = new dynamic_object[size()+1];
+        newArry[size()] = object;
+        
+        data = Array.copyOf(newArry, sizeof(newArry));
+    }
+    
+    fn add( var pos, dynamic_object object ) {
+        if( pos > sizeof(data) || pos < 0 ) {
+            throw new RuntimeErr("Index out of bounds List.at(): " + integer.toString(sizeof(data)) 
+                + " at position " + Integer.toString(pos));
+        }
+        
+        var newLen = size() + 1;
+        dynamic_object[] newArry = new dynamic_object[newLen];
+        
+        var iter=0;
+        for(var i = 0; i < pos; i++) {
+            newArry[iter++] = data[i];
+        }
+        newArry[iter++]=object;
+        for(var i = pos + 1; i < newLen; i++) {
+            newArry[i] = data[i - 1];
+        }
+        
+        data = Array.copyOf(newArry, sizeof(newArry));
+        newArry = null;
+    }
+    
+    
+    fn addAll( var pos, List collection ) {
+        if( pos > sizeof(data) || pos < 0 ) {
+            throw new RuntimeErr("Index out of bounds List.at(): " + integer.toString(sizeof(data)) 
+                + " at position " + Integer.toString(pos));
+        }
+        
+        dynamic_object[] newArry = new dynamic_object[size() + collection.size()];
+        
+        var iter=0;
+        for(var i = 0; i < pos; i++) {
+            newArry[iter++] = data[i];
+        }
+        for(dynamic_object object : collection.getArray()) {
+            newArry[iter++]=object;
+        }
+        for(var i = pos + 1; i < size(); i++) {
+            newArry[i] = data[i - 1];
+        }
+        
+        data = Array.copyOf(newArry, sizeof(newArry));
+        newArry = null;
+    }
+    
+    fn addAll(List collection) {
+        addAll(size(), collection);
+    }
+    
+    fn clear() {
+        data = null;
+    }
+    
+    fn get( var pos ) : dynamic_object {
+        //return data[pos];
+    }
+    
+    fn remove( var pos ) {
+        
+    }
+    
+    fn set( var pos, dynamic_object object )
+    {
+        
+    }
+    
+    fn size() : var 
+    {
+        return sizeof(data);
+    }
+    
+    fn subList( var start, var end ) : List
+    {
+        
+    }
+    
+    fn getArray() : dynamic_object[]
+    {
+        return data;
+    }
+}
