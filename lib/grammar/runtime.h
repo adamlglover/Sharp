@@ -968,6 +968,8 @@ private:
     void pushAuthenticExpressionToStackNoInject(Expression &expression, Expression &out);
 
     void initalizeNewClass(ClassObject *klass, Expression &out);
+
+    void reorderFinallyBlocks(Method *method);
 };
 
 #define progname "bootstrap"

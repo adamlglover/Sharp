@@ -92,7 +92,11 @@ class Main base Base {
 
         } finally {
             print("finally!!");
-            throw new RuntimeErr("OOppsss Number 2!!!!");
+            try {
+                throw new RuntimeErr("OOppsss Number 2!!!!");
+            } finally {
+            print("finally inside finally!!"); // todo: fix
+            }
         }
         } finally {
             print("finally!! yet again");

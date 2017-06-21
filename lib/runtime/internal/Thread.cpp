@@ -806,12 +806,12 @@ void Thread::run() {
 }
 
 bool Thread::execFinally(int command) {
-    Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
-
-    int64_t  start;
     sh_asp* currMethod=env->__address_spaces+curr_adsp;
     if(currMethod->finallyBlocks.size() == 0) return true;
 
+    Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
+
+    int64_t  start, result=true;
     _init_opcode_table
 
     if(command ==EXEC_ALL_FINALLY) {
@@ -828,19 +828,19 @@ bool Thread::execFinally(int command) {
         }
     }
 
-    try {
-        for(unsigned int i = start; i < currMethod->finallyBlocks.size(); i++) {
-            FinallyTable &ft = currMethod->finallyBlocks.get(i);
-            int64_t code_base=ft.end_pc-ft.start_pc;
-            pc = ft.start_pc;
+    for(unsigned int i = start; i < currMethod->finallyBlocks.size(); i++) {
+        FinallyTable &ft = currMethod->finallyBlocks.get(i);
+        int64_t code_base=ft.end_pc-ft.start_pc;
+        pc = ft.start_pc;
 
-            /*
-             * We only want to execute the code in the first finally block
-             */
-            if(i > start && command==EXEC_SINGLE_FINALLY) {
-                return true;
-            }
+        /*
+         * We only want to execute the code in the first finally block
+         */
+        if(i > start && command==EXEC_SINGLE_FINALLY) {
+            return true;
+        }
 
+        try{
             for(;;) {
                 interp:
                 if((pc <ft.start_pc || pc > ft.end_pc) && curr_adsp==currMethod->id)
@@ -1052,17 +1052,18 @@ bool Thread::execFinally(int command) {
                 SDEL:
                     sdel()
             }
+        } catch (bad_alloc &e) {
+            cout << "std::bad_alloc\n";
+            // TODO: throw out of memory error
+        } catch (Exception &e) {
+            throwable=e.getThrowable();
+            fillStackTrace(&__stack[SP64].object);
+            result=0;
         }
-    } catch (bad_alloc &e) {
-        cout << "std::bad_alloc\n";
-        // TODO: throw out of memory error
-    } catch (Exception &e) {
-        throwable=e.getThrowable();
-        fillStackTrace(&__stack[SP64].object);
-        return false;
     }
 
-    return true;
+
+    return (bool)result;
 }
 
 void Thread::send_panic_message(ThreadPanic& err) {

@@ -1328,6 +1328,7 @@ void runtime::parseConstructorDecl(ast* pAst) {
         fblock.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
 
         resolveAllBranches(fblock);
+        reorderFinallyBlocks(method);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
@@ -1361,6 +1362,21 @@ void runtime::resolveAllBranches(Block& block) {
         block.code.push_i64(SET_Ei(i64, op_RET));
     }
     __freeList(scope->branches);
+}
+
+void runtime::reorderFinallyBlocks(Method* method) {
+
+    if(method->finallyBlocks.size()==0)
+        return;
+
+    std::list<FinallyTable> reorderedList;
+    for(unsigned int i = 0; i < method->finallyBlocks.size(); i++) {
+        reorderedList.push_back(method->finallyBlocks.at(i));
+    }
+    reorderedList.sort([](const FinallyTable & a, const FinallyTable & b) { return a.start_pc < b.start_pc; });
+
+    method->finallyBlocks.addAll(reorderedList);
+    reorderedList.clear();
 }
 
 void runtime::parseMethodDecl(ast* pAst) {
@@ -1399,6 +1415,7 @@ void runtime::parseMethodDecl(ast* pAst) {
         parseBlock(pAst->getsubast(ast_block), fblock);
 
         resolveAllBranches(fblock);
+        reorderFinallyBlocks(method);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
@@ -1435,6 +1452,7 @@ void runtime::parseMacrosDecl(ast* pAst) {
         parseBlock(pAst->getsubast(ast_block), fblock);
 
         resolveAllBranches(fblock);
+        reorderFinallyBlocks(method);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }
@@ -1476,6 +1494,7 @@ void runtime::parseOperatorDecl(ast* pAst) {
         parseBlock(pAst->getsubast(ast_block), fblock);
 
         resolveAllBranches(fblock);
+        reorderFinallyBlocks(method);
         method->code.__asm64.addAll(fblock.code.__asm64);
         remove_scope();
     }

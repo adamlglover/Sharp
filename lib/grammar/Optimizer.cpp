@@ -251,10 +251,16 @@ void Optimizer::optimizeRegisterOverride() {
             }
             case op_SIZEOF:
             case op_LOADX:
-            case op_LOADF:
             case op_POPR:
             {
                 register_state &left=get_register(GET_Da(x64));
+                left.assign_type=assign_value;
+                left.value=0;
+                break;
+            }
+            case op_LOADF:
+            {
+                register_state &left=get_register(GET_Ca(x64));
                 left.assign_type=assign_value;
                 left.value=0;
                 break;
