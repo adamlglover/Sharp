@@ -3466,7 +3466,6 @@ bool runtime::constructNewString(Expression &stringExpr, Expression &right, toke
 
             addStringConstruct(operand, klass, out, left, right, pAst);
 
-            stringExpr=right;
             out.func=true;
             __freeList(params);
             __freeList(expressions);
