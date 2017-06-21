@@ -22,4 +22,8 @@ class Throwable {
 
         return new string(stackTrace);
     }
+
+    fn getMessage() : var[] {
+        return message;
+    }
 }

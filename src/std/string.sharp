@@ -50,22 +50,12 @@ class string {
 
         fn operator+( var[] immstr ) : string
         {
-            System.print("\n+ var[] orig");
-            System.print(data);
-            System.print(" new ");
-            System.print(immstr);
-            System.print("\n");
             string s = new string(data);
             return s.append(immstr);
         }
 
         fn operator+( string str ) : string
         {
-            System.print("\n+ string orig");
-            System.print(data);
-            System.print(" new ");
-            System.print(str.value());
-            System.print("\n");
             string s = new string(data);
             return s.append(str.value());
         }

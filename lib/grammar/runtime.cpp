@@ -3437,7 +3437,6 @@ bool runtime::constructNewString(Expression &stringExpr, Expression &right, toke
     List<Param> params;
     ClassObject* klass;
     Method* fn=NULL;
-    Expression left;
 
     expressions.add(stringExpr);
     expressionListToParams(params, expressions);
@@ -3462,9 +3461,8 @@ bool runtime::constructNewString(Expression &stringExpr, Expression &right, toke
                 pushExpressionToStack(expressions.get(i), out);
             }
             out.code.push_i64(SET_Di(i64, op_CALL, fn->vaddr));
-            left._new=true;
 
-            addStringConstruct(operand, klass, out, left, right, pAst);
+            addStringConstruct(operand, klass, out, stringExpr, right, pAst);
 
             out.func=true;
             __freeList(params);
@@ -5463,8 +5461,8 @@ void runtime::parseAddExpressionChain(Expression &out, ast *pAst) {
     /*
      * So we dont missinterpret the value returned from the expr :)
      */
-    out.func=rightExpr.func;
-    out.literal=rightExpr.literal=false;
+    out.func=leftExpr.func;
+    out.literal=leftExpr.literal=false;
 }
 
 Expression runtime::parseAddExpression(ast* pAst) {
