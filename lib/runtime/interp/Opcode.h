@@ -198,7 +198,7 @@ void print_stack();
 
 #define movn(x) CHK_NULL(ptr = ptr->size ? &ptr->_Node[x] : NULL;) _brh
 
-#define _sleep(r) __os_sleep((int64_t)__rxs[r]);
+#define _sleep(r) __os_sleep((int64_t)__rxs[r]); _brh
 
 #define test(r,x) __rxs[0x0002]=__rxs[r]==__rxs[x]; _brh
 
@@ -208,11 +208,11 @@ void print_stack();
 
 #define __ulock() CHK_NULL(ptr->monitor.release();) _brh
 
-#define exp(r) __rxs[0x0008] = exponent(__rxs[r]);
+#define exp(r) __rxs[0x0008] = exponent(__rxs[r]); _brh
 
 #define del() CHK_NULL(ptr->null();) _brh
 
-#define movg(x) ptr = &env->global_heap[x];
+#define movg(x) ptr = &env->global_heap[x]; _brh
 
 #define movnd(x) CHK_NULL(ptr = &ptr->_Node[(int64_t)__rxs[x]];) _brh
 
