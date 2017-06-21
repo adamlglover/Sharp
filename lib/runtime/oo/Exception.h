@@ -18,10 +18,10 @@ public:
     Throwable()
             :
             throwable(NULL),
-            message(),
-            native(false),
-            stackTrace()
+            native(false)
     {
+        message.init();
+        this->stackTrace.init();
     }
 
     void init() {
@@ -63,6 +63,10 @@ public:
     Exception(Throwable& throwable);
 
     ~Exception();
+
+    void operator=(Exception& e) {
+        throwable=e.throwable;
+    }
 
     Throwable& getThrowable() { return throwable; }
 
