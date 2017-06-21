@@ -373,7 +373,7 @@ void runtime::parseIfStatement(Block& block, ast* pAst) {
 
     string ifEndLabel;
     stringstream ss;
-    ss << for_label_end_id << scope->ulid;
+    ss << generic_label_id << scope->ulid;
     ifEndLabel=ss.str();
 
     pushExpressionToRegister(cond, out, cmt);

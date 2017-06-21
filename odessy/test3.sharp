@@ -20,12 +20,12 @@ class Main {
             System.print("exception caught: " + e.getMessage() + '\n');
         }
 
-        // string str = "Hello";
-        // string str2 = "world";
-        // if(str==str2) {
-        //     System.print("\nstr==str2");
-        // } else {
-        //     System.print("\nstr!=str2");
-        // }
+        str = new string("Hello");
+        string str2 = new string("Hello");
+        if(str==str2) {
+            System.print("\nstr==str2");
+        } else {
+            System.print("\nstr!=str2");
+        }
     }
 }

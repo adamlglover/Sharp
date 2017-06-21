@@ -96,7 +96,54 @@ main:
 [0x5d] 93:	goto @96
 [0x5e] 94:	nop
 [0x5f] 95:	nop
-[0x60] 96:	ret
+[0x60] 96:	inc sp
+[0x61] 97:	iframe
+[0x62] 98:	inc sp
+[0x63] 99:	movsl #0
+[0x64] 100:	new_class @2 // std#string
+[0x65] 101:	inc sp
+[0x66] 102:	movsl #0
+[0x67] 103:	newstr @3
+[0x68] 104:	call @5 // <std#string.string(var[])>
+[0x69] 105:	movl 2
+[0x6a] 106:	popref
+[0x6b] 107:	movl 4
+[0x6c] 108:	inc sp
+[0x6d] 109:	iframe
+[0x6e] 110:	inc sp
+[0x6f] 111:	movsl #0
+[0x70] 112:	new_class @2 // std#string
+[0x71] 113:	inc sp
+[0x72] 114:	movsl #0
+[0x73] 115:	newstr @3
+[0x74] 116:	call @5 // <std#string.string(var[])>
+[0x75] 117:	movl 4
+[0x76] 118:	popref
+[0x77] 119:	inc sp
+[0x78] 120:	iframe
+[0x79] 121:	movl 2
+[0x7a] 122:	pushref
+[0x7b] 123:	movl 4
+[0x7c] 124:	pushref
+[0x7d] 125:	call @11 // <std#string.$operator==(std#string)>
+[0x7e] 126:	movr adx, sp
+[0x7f] 127:	smov cmt+0
+[0x80] 128:	pop
+[0x81] 129:	loadx adx
+[0x82] 130:	iadd adx, #9
+[0x83] 131:	ifne
+[0x84] 132:	iframe
+[0x85] 133:	inc sp
+[0x86] 134:	movsl #0
+[0x87] 135:	newstr @4
+[0x88] 136:	call @27 // <std#System.print(var[])>
+[0x89] 137:	goto @143
+[0x8a] 138:	iframe
+[0x8b] 139:	inc sp
+[0x8c] 140:	movsl #0
+[0x8d] 141:	newstr @5
+[0x8e] 142:	call @27 // <std#System.print(var[])>
+[0x8f] 143:	ret
 
 func:@1 [application#Main.Main] in file: odessy/test3.sharp:5:6: note:  
 		class Main {
@@ -190,7 +237,7 @@ replace:
 [0x10] 16:	new_class @3 // std.err#RuntimeErr
 [0x11] 17:	inc sp
 [0x12] 18:	movsl #0
-[0x13] 19:	newstr @3
+[0x13] 19:	newstr @6
 [0x14] 20:	call @22 // <std.err#Throwable.Throwable(var[])>
 [0x15] 21:	throw 
 [0x16] 22:	movr adx, fp
@@ -371,7 +418,7 @@ at:
 [0x17] 23:	new_class @2 // std#string
 [0x18] 24:	inc sp
 [0x19] 25:	movsl #0
-[0x1a] 26:	newstr @4
+[0x1a] 26:	newstr @7
 [0x1b] 27:	call @5 // <std#string.string(var[])>
 [0x1c] 28:	inc sp
 [0x1d] 29:	iframe
@@ -390,7 +437,7 @@ at:
 [0x2a] 42:	smovobj @0
 [0x2b] 43:	inc sp
 [0x2c] 44:	movsl #0
-[0x2d] 45:	newstr @5
+[0x2d] 45:	newstr @8
 [0x2e] 46:	call @9 // <std#string.$operator+(var[])>
 [0x2f] 47:	movsl #0
 [0x30] 48:	dec sp
@@ -499,56 +546,96 @@ $operator==:
 [0x0] 0:	movi #0, egx
 [0x2] 2:	movr adx, fp
 [0x3] 3:	smovr egx+2
-[0x4] 4:	movi #0, ebx
-[0x6] 6:	pushr ebx
-[0x7] 7:	movl 0
-[0x8] 8:	movn #0
-[0x9] 9:	movr adx, sp
-[0xa] 10:	smov ebx+0
-[0xb] 11:	sizeof egx
-[0xc] 12:	lt ebx, egx
-[0xd] 13:	movi #47, adx
-[0xf] 15:	ifne
-[0x10] 16:	movx ebx, ebx
-[0x11] 17:	movr ecx, ebx
+[0x4] 4:	iframe
+[0x5] 5:	inc sp
+[0x6] 6:	iframe
+[0x7] 7:	inc sp
+[0x8] 8:	iframe
+[0x9] 9:	inc sp
+[0xa] 10:	movsl #0
+[0xb] 11:	new_class @2 // std#string
+[0xc] 12:	inc sp
+[0xd] 13:	movsl #0
+[0xe] 14:	newstr @9
+[0xf] 15:	call @5 // <std#string.string(var[])>
+[0x10] 16:	inc sp
+[0x11] 17:	iframe
 [0x12] 18:	movr adx, fp
-[0x13] 19:	smovr ecx+3
-[0x14] 20:	inc sp
-[0x15] 21:	iframe
-[0x16] 22:	movl 1
-[0x17] 23:	pushref
-[0x18] 24:	movr adx, fp
-[0x19] 25:	smov ebx+2
-[0x1a] 26:	movi #1, ecx
-[0x1c] 28:	addl ecx, @2
-[0x1d] 29:	pushr ebx
-[0x1e] 30:	call @8 // <std#string.at(var)>
-[0x1f] 31:	movr adx, sp
-[0x20] 32:	smov egx+0
-[0x21] 33:	pop
-[0x22] 34:	movr adx, fp
-[0x23] 35:	smov ebx+3
-[0x24] 36:	tne ebx, egx
-[0x25] 37:	movr ebx, cmt
-[0x26] 38:	movr cmt, ebx
-[0x27] 39:	movi #47, adx
-[0x29] 41:	ifne
-[0x2a] 42:	movi #0, ebx
-[0x2c] 44:	movr adx, fp
-[0x2d] 45:	smovr ebx+[-5]
-[0x2e] 46:	ret
-[0x2f] 47:	movr adx, sp
-[0x30] 48:	smov ebx+0
-[0x31] 49:	inc ebx
-[0x32] 50:	smovr ebx+0
-[0x33] 51:	goto @7
-[0x34] 52:	pop
-[0x35] 53:	movi #1, ebx
-[0x37] 55:	movr adx, fp
-[0x38] 56:	smovr ebx+[-5]
-[0x39] 57:	ret
+[0x13] 19:	smov ebx+2
+[0x14] 20:	pushr ebx
+[0x15] 21:	call @19 // <std#string.convertInt(var)>
+[0x16] 22:	call @10 // <std#string.$operator+(std#string)>
+[0x17] 23:	call @28 // <std#System.print(std#string)>
+[0x18] 24:	movi #0, ebx
+[0x1a] 26:	pushr ebx
+[0x1b] 27:	movl 0
+[0x1c] 28:	movn #0
+[0x1d] 29:	movr adx, sp
+[0x1e] 30:	smov ebx+0
+[0x1f] 31:	sizeof egx
+[0x20] 32:	lt ebx, egx
+[0x21] 33:	movi #92, adx
+[0x23] 35:	ifne
+[0x24] 36:	movx ebx, ebx
+[0x25] 37:	movr ecx, ebx
+[0x26] 38:	movr adx, fp
+[0x27] 39:	smovr ecx+3
+[0x28] 40:	iframe
+[0x29] 41:	inc sp
+[0x2a] 42:	iframe
+[0x2b] 43:	inc sp
+[0x2c] 44:	iframe
+[0x2d] 45:	inc sp
+[0x2e] 46:	movsl #0
+[0x2f] 47:	new_class @2 // std#string
+[0x30] 48:	inc sp
+[0x31] 49:	movsl #0
+[0x32] 50:	newstr @9
+[0x33] 51:	call @5 // <std#string.string(var[])>
+[0x34] 52:	inc sp
+[0x35] 53:	iframe
+[0x36] 54:	movr adx, fp
+[0x37] 55:	smov ebx+2
+[0x38] 56:	pushr ebx
+[0x39] 57:	call @19 // <std#string.convertInt(var)>
+[0x3a] 58:	call @10 // <std#string.$operator+(std#string)>
+[0x3b] 59:	call @28 // <std#System.print(std#string)>
+[0x3c] 60:	inc sp
+[0x3d] 61:	iframe
+[0x3e] 62:	movl 1
+[0x3f] 63:	pushref
+[0x40] 64:	movr adx, fp
+[0x41] 65:	smov ebx+2
+[0x42] 66:	movi #1, ecx
+[0x44] 68:	addl ecx, @2
+[0x45] 69:	pushr ebx
+[0x46] 70:	call @8 // <std#string.at(var)>
+[0x47] 71:	movr adx, sp
+[0x48] 72:	smov egx+0
+[0x49] 73:	pop
+[0x4a] 74:	movr adx, fp
+[0x4b] 75:	smov ebx+3
+[0x4c] 76:	tne ebx, egx
+[0x4d] 77:	movr ebx, cmt
+[0x4e] 78:	movr cmt, ebx
+[0x4f] 79:	movi #87, adx
+[0x51] 81:	ifne
+[0x52] 82:	movi #0, ebx
+[0x54] 84:	movr adx, fp
+[0x55] 85:	smovr ebx+[-5]
+[0x56] 86:	ret
+[0x57] 87:	movr adx, sp
+[0x58] 88:	smov ebx+0
+[0x59] 89:	inc ebx
+[0x5a] 90:	smovr ebx+0
+[0x5b] 91:	goto @27
+[0x5c] 92:	pop
+[0x5d] 93:	movi #1, ebx
+[0x5f] 95:	movr adx, fp
+[0x60] 96:	smovr ebx+[-5]
+[0x61] 97:	ret
 
-func:@12 [std#string.$operator==] in file: src/std/string.sharp:75:20: note:  
+func:@12 [std#string.$operator==] in file: src/std/string.sharp:77:20: note:  
 		        fn operator==( var[] str ) : var
 		                   ^
 
@@ -565,7 +652,7 @@ $operator==:
 [0xa] 10:	smov ebx+0
 [0xb] 11:	sizeof egx
 [0xc] 12:	lt ebx, egx
-[0xd] 13:	movi #45, adx
+[0xd] 13:	movi #50, adx
 [0xf] 15:	ifne
 [0x10] 16:	movx ebx, ebx
 [0x11] 17:	movr ecx, ebx
@@ -604,7 +691,7 @@ $operator==:
 [0x36] 54:	smovr ebx+[-5]
 [0x37] 55:	ret
 
-func:@13 [std#string.$operator=] in file: src/std/string.sharp:87:20: note:  
+func:@13 [std#string.$operator=] in file: src/std/string.sharp:89:20: note:  
 		        fn operator=( var[] immstr )
 		                   ^
 
@@ -624,7 +711,7 @@ $operator=:
 [0xb] 11:	popref
 [0xc] 12:	ret
 
-func:@14 [std#string.$operator+] in file: src/std/string.sharp:92:20: note:  
+func:@14 [std#string.$operator+] in file: src/std/string.sharp:94:20: note:  
 		        fn operator+( var char ) : string
 		                   ^
 
@@ -675,7 +762,7 @@ $operator+:
 [0x2c] 44:	smovobj @-5
 [0x2d] 45:	ret
 
-func:@15 [std#string.$operator+=] in file: src/std/string.sharp:103:20: note:  
+func:@15 [std#string.$operator+=] in file: src/std/string.sharp:105:20: note:  
 		        fn operator+=( var char ) : string
 		                   ^
 
@@ -713,7 +800,7 @@ $operator+=:
 [0x1f] 31:	smovobj @-5
 [0x20] 32:	ret
 
-func:@16 [std#string.$operator+=] in file: src/std/string.sharp:111:20: note:  
+func:@16 [std#string.$operator+=] in file: src/std/string.sharp:113:20: note:  
 		        fn operator+=( var[] immstr ) : string
 		                   ^
 
@@ -731,7 +818,7 @@ $operator+=:
 [0x9] 9:	smovobj @-5
 [0xa] 10:	ret
 
-func:@17 [std#string.$operator+=] in file: src/std/string.sharp:116:20: note:  
+func:@17 [std#string.$operator+=] in file: src/std/string.sharp:118:20: note:  
 		        fn operator+=( string str ) : string
 		                   ^
 
@@ -754,7 +841,7 @@ $operator+=:
 [0xe] 14:	smovobj @-5
 [0xf] 15:	ret
 
-func:@18 [std#string.value] in file: src/std/string.sharp:121:17: note:  
+func:@18 [std#string.value] in file: src/std/string.sharp:123:17: note:  
 		        fn value() : var[]
 		                ^
 
@@ -765,7 +852,7 @@ value:
 [0x2] 2:	returnref
 [0x3] 3:	ret
 
-func:@19 [std#string.convertInt] in file: src/std/string.sharp:126:29: note:  
+func:@19 [std#string.convertInt] in file: src/std/string.sharp:128:29: note:  
 		        static fn convertInt( var number ) : string
 		                            ^
 
@@ -787,7 +874,7 @@ convertInt:
 [0xf] 15:	new_class @2 // std#string
 [0x10] 16:	inc sp
 [0x11] 17:	movsl #0
-[0x12] 18:	newstr @6
+[0x12] 18:	newstr @10
 [0x13] 19:	call @5 // <std#string.string(var[])>
 [0x14] 20:	movsl #0
 [0x15] 21:	movr adx, fp
@@ -801,7 +888,7 @@ convertInt:
 [0x1d] 29:	new_class @2 // std#string
 [0x1e] 30:	inc sp
 [0x1f] 31:	movsl #0
-[0x20] 32:	newstr @7
+[0x20] 32:	newstr @11
 [0x21] 33:	call @5 // <std#string.string(var[])>
 [0x22] 34:	movl 1
 [0x23] 35:	popref
@@ -813,7 +900,7 @@ convertInt:
 [0x29] 41:	new_class @2 // std#string
 [0x2a] 42:	inc sp
 [0x2b] 43:	movsl #0
-[0x2c] 44:	newstr @7
+[0x2c] 44:	newstr @11
 [0x2d] 45:	call @5 // <std#string.string(var[])>
 [0x2e] 46:	movl 2
 [0x2f] 47:	popref
@@ -964,7 +1051,7 @@ getStackTrace:
 [0x7] 7:	ifne
 [0x8] 8:	inc sp
 [0x9] 9:	movsl #0
-[0xa] 10:	newstr @7
+[0xa] 10:	newstr @11
 [0xb] 11:	movl 0
 [0xc] 12:	movn #1
 [0xd] 13:	popref
