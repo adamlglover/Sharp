@@ -21,7 +21,7 @@ class Main base Base {
     }
 
     static fn foo(Main main) {
-        fact(Main.x);
+        fact(main.x);
     }
 
     static fn fact(var x) : var {
@@ -87,16 +87,10 @@ class Main base Base {
             } catch(RuntimeErr re) {
                 print("caught FIRSTTTT!! error ");
                 print(re.message);
-                throw new RuntimeErr("OOppsss!!!!");
             }
 
         } finally {
             print("finally!!");
-            try {
-                throw new RuntimeErr("OOppsss Number 2!!!!");
-            } finally {
-            print("finally inside finally!!"); // todo: fix
-            }
         }
         } finally {
             print("finally!! yet again");
@@ -117,6 +111,11 @@ class Main base Base {
             print("im not sure what x is?");
         }
 
+        List simpleList = new List();
+        simpleList.add((dynamic_object)new Integer(9));
+        simpleList.add((dynamic_object)new Integer(10));
+        simpleList.add((dynamic_object)new Integer(22));
+        System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
         print("done");
 
 

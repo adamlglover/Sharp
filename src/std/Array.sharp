@@ -11,4 +11,14 @@ class Array {
         
         return newArry;
     }
+
+    fn copyOf(dynamic_object[] data, var len) : dynamic_object[] {
+            dynamic_object[] newArry = new dynamic_object[len];
+
+            for(var i = 0; i < len; i++) {
+                newArry[i] = data[i];
+            }
+
+            return newArry;
+        }
 }

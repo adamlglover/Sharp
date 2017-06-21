@@ -27,6 +27,10 @@ class Integer {
         return returnvalue;
     }
 
+    fn getValue() : var {
+        return value;
+    }
+
     public fn toString() : string 
     {
         return toString(value);

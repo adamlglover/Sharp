@@ -2908,7 +2908,7 @@ Method* runtime::resolveMethodUtype(ast* pAst, ast* pAst2, Expression &out) {
                 }
             }
 
-            if(!fn->isStatic()) {
+            if(fn != NULL && !fn->isStatic()) {
                 expression.code.push_i64(SET_Di(i64, op_MOVL, 0));
             }
         } else {
@@ -4318,7 +4318,7 @@ Expression runtime::parseArrayExpression(ast* pAst) {
             } else
                 expression.code.push_i64(SET_Ei(i64, op_PUSHREF));
 
-            expression.code.inject(expression.code.__asm64.size(), indexExpr.code);
+            pushExpressionToRegister(indexExpr, expression, ebx);
 
             if(c_options.optimize) {
                 if(referenceAffected)
@@ -4336,8 +4336,13 @@ Expression runtime::parseArrayExpression(ast* pAst) {
 
                 expression.code.push_i64(SET_Di(i64, op_MOVND, ebx));
             } else if(interm.utype.field->type == field_native) {
-                expression.type = expression_var;
-                expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, ebx));
+                if(interm.utype.field->nf == fdynamic) {
+                    expression.type = expression_dynamicclass;
+                    expression.code.push_i64(SET_Di(i64, op_MOVND, ebx));
+                } else {
+                    expression.type = expression_var;
+                    expression.code.push_i64(SET_Ci(i64, op_MOVX, ebx,0, ebx));
+                }
             }else {
                 expression.type = expression_unknown;
             }
@@ -4706,7 +4711,7 @@ void runtime::parseNativeCast(Expression& utype, Expression& arg, Expression& ou
             errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "type `void` cannot be used as a cast");
             return;
         case fdynamic:
-            out.type = expression_lclass;
+            out.type = expression_dynamicclass;
             if(arg.type == expression_lclass) {
                 return;
             }
@@ -4727,16 +4732,21 @@ void runtime::parseClassCast(Expression& utype, Expression& arg, Expression& out
         }
     }
 
+    if(utype.type == expression_class)
+        utype.type = expression_lclass;
+
     switch(arg.type) {
         case expression_lclass:
             if(utype.utype.klass->hasBaseClass(arg.utype.klass)) {
-                out.type = utype.type;
+                out.inject(arg);
                 out.utype = utype.utype;
+                out.type = expression_lclass;
                 return;
             }
             break;
         case expression_dynamicclass:
             // TODO: put runtime code to evaluate at runtime
+            pushExpressionToPtr(arg, out);
             out.code.push_i64(SET_Di(i64, op_CHECK_CAST, utype.utype.klass->vaddr));
             out.type = utype.type;
             out.utype = utype.utype;
@@ -4744,11 +4754,13 @@ void runtime::parseClassCast(Expression& utype, Expression& arg, Expression& out
         case expression_field:
             if(arg.utype.field->type == field_class) {
                 if(utype.utype.klass->match(arg.utype.klass)) {
+                    out.inject(arg);
                     out.type = expression_lclass;
                     out.utype = utype.utype;
                     return;
                 }
             } else if(arg.utype.field->type == field_native && arg.utype.field->nf == fdynamic) {
+                pushExpressionToPtr(arg, out);
                 out.code.push_i64(SET_Di(i64, op_CHECK_CAST, utype.utype.klass->vaddr));
                 out.type = expression_lclass;
                 out.utype = utype.utype;
@@ -4776,12 +4788,12 @@ Expression runtime::parseCastExpression(ast* pAst) {
 
     utype = parseUtype(pAst->getsubast(ast_utype));
     arg = parseExpression(pAst->getsubast(ast_expression));
-    expression.code.inject(expression.code.size(), arg.code);
 
     if(utype.type != expression_unknown &&
             utype.type != expression_unresolved) {
         switch(utype.type) {
             case expression_native:
+                expression.code.inject(expression.code.size(), arg.code);
                 parseNativeCast(utype, arg, expression);
                 break;
             case expression_class:
@@ -4796,6 +4808,7 @@ Expression runtime::parseCastExpression(ast* pAst) {
         }
     }
 
+    expression._new=arg._new;
     return expression;
 }
 
@@ -5898,6 +5911,50 @@ void runtime::assignValue(token_entity operand, Expression& out, Expression &lef
             out.inject(left);
             out.code.push_i64(SET_Ei(i64, op_POP));
         }
+    } else if(left.type == expression_dynamicclass) {
+        if(operand == "=" && right.type == expression_null) {
+            out.code.inject(out.code.__asm64.size(), left.code);
+            out.code.push_i64(SET_Ei(i64, op_DEL));
+            return;
+        } else if(right.type == expression_string) {
+            pushExpressionToStack(right, out);
+            out.code.inject(out.code.__asm64.size(), left.code);
+
+            out.code.push_i64(SET_Ei(i64, op_POPREF));
+            return;
+        } else if(operand == "==" && right.type == expression_null) {
+            pushExpressionToPtr(left, out);
+
+            out.code.push_i64(SET_Ei(i64, op_CHKNULL));
+            out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+            return;
+        } else if(operand == "!=" && right.type == expression_null) {
+            pushExpressionToPtr(left, out);
+
+            out.code.push_i64(SET_Ei(i64, op_CHKNULL));
+            out.code.push_i64(SET_Ci(i64, op_NOT, cmt,0, cmt));
+            out.code.push_i64(SET_Ci(i64, op_MOVR, ebx,0, cmt));
+            return;
+        } else if(right.type == expression_null) {
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
+                                                              + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+        }
+
+        if(equalsNoErr(left, right)) {
+            out.type=expression_dynamicclass;
+            if(c_options.optimize && right.utype.type == ResolvedReference::FIELD
+               && right.utype.field->local) {
+                out.inject(left);
+                out.code.push_i64(SET_Di(i64, op_MUTL, right.utype.field->vaddr));
+            } else {
+                pushExpressionToStack(right, out);
+                out.inject(left);
+                out.code.push_i64(SET_Ei(i64, op_POPREF));
+            }
+        } else {
+            errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
+                                                              + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
+        }
     } else {
         errors->newerror(GENERIC, pAst->line,  pAst->col, "Binary operator `" + operand.gettoken()
                                                           + "` cannot be applied to expression of type `" + left.typeToString() + "` and `" + right.typeToString() + "`");
@@ -6165,7 +6222,11 @@ Expression runtime::parseEqualExpression(ast* pAst) {
             errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable/comparable");
             break;
         case expression_dynamicclass:
-            errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable/comparable. Did you forget to apply a cast? "
+            if(right.type==expression_dynamicclass || right.type==expression_lclass
+               || right.type==expression_field) {
+                assignValue(operand, out, left, right, pAst);
+            } else
+                errors->newerror(GENERIC, pAst->line, pAst->col, "expression is not assignable/comparable. Did you forget to apply a cast? "
                     "i.e ((SomeClass)dynamic_class) " + operand.gettoken() + " <data>");
             break;
         case expression_string:
