@@ -280,6 +280,7 @@ void GC::notify(int sig) {
     gc->signal = sig;
 }
 
+#ifdef DEBUGGING
 void GC::print_stack() {
     cout << endl << "==============================\n";
     cout << "@" << thread_self->curr_adsp << ":"
@@ -290,3 +291,4 @@ void GC::print_stack() {
     }
     cout << endl << "]]";
 }
+#endif
