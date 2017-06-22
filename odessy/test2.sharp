@@ -87,10 +87,12 @@ class Main base Base {
             } catch(RuntimeErr re) {
                 print("caught FIRSTTTT!! error ");
                 print(re.message);
+                throw new RuntimeErr("Genericcc 3!!!");
             }
 
         } finally {
             print("finally!!");
+                throw new RuntimeErr("Genericcc 2!!!");
         }
         } finally {
             print("finally!! yet again");

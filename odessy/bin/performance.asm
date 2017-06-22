@@ -340,228 +340,248 @@ main:
 [0x9b] 155:	movn #0
 [0x9c] 156:	pushref
 [0x9d] 157:	call @2 // <application#Main.print(var[])>
-[0x9e] 158:	goto @161
-[0x9f] 159:	nop
-[0xa0] 160:	nop
-[0xa1] 161:	goto @164
-[0xa2] 162:	nop
-[0xa3] 163:	nop
-[0xa4] 164:	iframe
-[0xa5] 165:	inc sp
-[0xa6] 166:	movsl #0
-[0xa7] 167:	newstr @5
-[0xa8] 168:	call @2 // <application#Main.print(var[])>
+[0x9e] 158:	inc sp
+[0x9f] 159:	iframe
+[0xa0] 160:	inc sp
+[0xa1] 161:	movsl #0
+[0xa2] 162:	new_class @2 // std.err#RuntimeErr
+[0xa3] 163:	inc sp
+[0xa4] 164:	movsl #0
+[0xa5] 165:	newstr @5
+[0xa6] 166:	call @34 // <std.err#Throwable.Throwable(var[])>
+[0xa7] 167:	throw 
+[0xa8] 168:	goto @171
 [0xa9] 169:	nop
 [0xaa] 170:	nop
-[0xab] 171:	iframe
-[0xac] 172:	inc sp
-[0xad] 173:	movsl #0
-[0xae] 174:	newstr @6
-[0xaf] 175:	call @2 // <application#Main.print(var[])>
-[0xb0] 176:	iframe
-[0xb1] 177:	inc sp
-[0xb2] 178:	movsl #0
-[0xb3] 179:	newstr @7
-[0xb4] 180:	call @0 // <application#Base.print2(var[])>
-[0xb5] 181:	movi #11, ebx
-[0xb7] 183:	movr ecx, ebx
-[0xb8] 184:	movr adx, fp
-[0xb9] 185:	smovr ecx+5
-[0xba] 186:	nop
-[0xbb] 187:	nop
-[0xbc] 188:	movi #6, ebx
-[0xbe] 190:	movr egx, ebx
-[0xbf] 191:	movr adx, fp
-[0xc0] 192:	smov ebx+5
-[0xc1] 193:	test ebx, egx
-[0xc2] 194:	movr ebx, cmt
-[0xc3] 195:	movr cmt, ebx
-[0xc4] 196:	loadx adx
-[0xc5] 197:	iadd adx, #9
-[0xc6] 198:	ifne
-[0xc7] 199:	iframe
-[0xc8] 200:	inc sp
-[0xc9] 201:	movsl #0
-[0xca] 202:	newstr @8
-[0xcb] 203:	call @2 // <application#Main.print(var[])>
-[0xcc] 204:	goto @254
-[0xcd] 205:	movi #10, ebx
-[0xcf] 207:	movr egx, ebx
-[0xd0] 208:	movr adx, fp
-[0xd1] 209:	smov ebx+5
-[0xd2] 210:	test ebx, egx
-[0xd3] 211:	movr ebx, cmt
-[0xd4] 212:	movr cmt, ebx
-[0xd5] 213:	loadx adx
-[0xd6] 214:	iadd adx, #9
-[0xd7] 215:	ifne
-[0xd8] 216:	iframe
-[0xd9] 217:	inc sp
-[0xda] 218:	movsl #0
-[0xdb] 219:	newstr @9
-[0xdc] 220:	call @2 // <application#Main.print(var[])>
-[0xdd] 221:	goto @254
-[0xde] 222:	movl 2
-[0xdf] 223:	chknull
-[0xe0] 224:	movr ebx, cmt
-[0xe1] 225:	movr cmt, ebx
-[0xe2] 226:	loadx adx
-[0xe3] 227:	iadd adx, #9
-[0xe4] 228:	ifne
-[0xe5] 229:	iframe
-[0xe6] 230:	inc sp
-[0xe7] 231:	movsl #0
-[0xe8] 232:	newstr @10
-[0xe9] 233:	call @0 // <application#Base.print2(var[])>
-[0xea] 234:	goto @254
-[0xeb] 235:	movl 2
-[0xec] 236:	chknull
-[0xed] 237:	not cmt, cmt
-[0xee] 238:	movr ebx, cmt
-[0xef] 239:	movr cmt, ebx
-[0xf0] 240:	loadx adx
-[0xf1] 241:	iadd adx, #9
-[0xf2] 242:	ifne
-[0xf3] 243:	iframe
-[0xf4] 244:	inc sp
-[0xf5] 245:	movsl #0
-[0xf6] 246:	newstr @11
-[0xf7] 247:	call @0 // <application#Base.print2(var[])>
-[0xf8] 248:	goto @254
+[0xab] 171:	goto @174
+[0xac] 172:	nop
+[0xad] 173:	nop
+[0xae] 174:	iframe
+[0xaf] 175:	inc sp
+[0xb0] 176:	movsl #0
+[0xb1] 177:	newstr @6
+[0xb2] 178:	call @2 // <application#Main.print(var[])>
+[0xb3] 179:	inc sp
+[0xb4] 180:	iframe
+[0xb5] 181:	inc sp
+[0xb6] 182:	movsl #0
+[0xb7] 183:	new_class @2 // std.err#RuntimeErr
+[0xb8] 184:	inc sp
+[0xb9] 185:	movsl #0
+[0xba] 186:	newstr @7
+[0xbb] 187:	call @34 // <std.err#Throwable.Throwable(var[])>
+[0xbc] 188:	throw 
+[0xbd] 189:	nop
+[0xbe] 190:	nop
+[0xbf] 191:	iframe
+[0xc0] 192:	inc sp
+[0xc1] 193:	movsl #0
+[0xc2] 194:	newstr @8
+[0xc3] 195:	call @2 // <application#Main.print(var[])>
+[0xc4] 196:	iframe
+[0xc5] 197:	inc sp
+[0xc6] 198:	movsl #0
+[0xc7] 199:	newstr @9
+[0xc8] 200:	call @0 // <application#Base.print2(var[])>
+[0xc9] 201:	movi #11, ebx
+[0xcb] 203:	movr ecx, ebx
+[0xcc] 204:	movr adx, fp
+[0xcd] 205:	smovr ecx+5
+[0xce] 206:	nop
+[0xcf] 207:	nop
+[0xd0] 208:	movi #6, ebx
+[0xd2] 210:	movr egx, ebx
+[0xd3] 211:	movr adx, fp
+[0xd4] 212:	smov ebx+5
+[0xd5] 213:	test ebx, egx
+[0xd6] 214:	movr ebx, cmt
+[0xd7] 215:	movr cmt, ebx
+[0xd8] 216:	loadx adx
+[0xd9] 217:	iadd adx, #9
+[0xda] 218:	ifne
+[0xdb] 219:	iframe
+[0xdc] 220:	inc sp
+[0xdd] 221:	movsl #0
+[0xde] 222:	newstr @10
+[0xdf] 223:	call @2 // <application#Main.print(var[])>
+[0xe0] 224:	goto @274
+[0xe1] 225:	movi #10, ebx
+[0xe3] 227:	movr egx, ebx
+[0xe4] 228:	movr adx, fp
+[0xe5] 229:	smov ebx+5
+[0xe6] 230:	test ebx, egx
+[0xe7] 231:	movr ebx, cmt
+[0xe8] 232:	movr cmt, ebx
+[0xe9] 233:	loadx adx
+[0xea] 234:	iadd adx, #9
+[0xeb] 235:	ifne
+[0xec] 236:	iframe
+[0xed] 237:	inc sp
+[0xee] 238:	movsl #0
+[0xef] 239:	newstr @11
+[0xf0] 240:	call @2 // <application#Main.print(var[])>
+[0xf1] 241:	goto @274
+[0xf2] 242:	movl 2
+[0xf3] 243:	chknull
+[0xf4] 244:	movr ebx, cmt
+[0xf5] 245:	movr cmt, ebx
+[0xf6] 246:	loadx adx
+[0xf7] 247:	iadd adx, #9
+[0xf8] 248:	ifne
 [0xf9] 249:	iframe
 [0xfa] 250:	inc sp
 [0xfb] 251:	movsl #0
 [0xfc] 252:	newstr @12
-[0xfd] 253:	call @2 // <application#Main.print(var[])>
-[0xfe] 254:	movl 8
-[0xff] 255:	inc sp
-[0x100] 256:	iframe
-[0x101] 257:	inc sp
-[0x102] 258:	movsl #0
-[0x103] 259:	new_class @10 // std#List
-[0x104] 260:	call @63 // <std#List.List()>
-[0x105] 261:	movl 8
-[0x106] 262:	popref
+[0xfd] 253:	call @0 // <application#Base.print2(var[])>
+[0xfe] 254:	goto @274
+[0xff] 255:	movl 2
+[0x100] 256:	chknull
+[0x101] 257:	not cmt, cmt
+[0x102] 258:	movr ebx, cmt
+[0x103] 259:	movr cmt, ebx
+[0x104] 260:	loadx adx
+[0x105] 261:	iadd adx, #9
+[0x106] 262:	ifne
 [0x107] 263:	iframe
 [0x108] 264:	inc sp
 [0x109] 265:	movsl #0
 [0x10a] 266:	newstr @13
-[0x10b] 267:	call @2 // <application#Main.print(var[])>
-[0x10c] 268:	iframe
-[0x10d] 269:	movl 8
-[0x10e] 270:	pushref
-[0x10f] 271:	inc sp
-[0x110] 272:	iframe
-[0x111] 273:	inc sp
-[0x112] 274:	movsl #0
-[0x113] 275:	new_class @11 // std#Integer
-[0x114] 276:	movi #9, ebx
-[0x116] 278:	pushr ebx
-[0x117] 279:	call @64 // <std#Integer.Integer(var)>
-[0x118] 280:	call @52 // <std#List.add(dynamic object)>
-[0x119] 281:	iframe
-[0x11a] 282:	inc sp
+[0x10b] 267:	call @0 // <application#Base.print2(var[])>
+[0x10c] 268:	goto @274
+[0x10d] 269:	iframe
+[0x10e] 270:	inc sp
+[0x10f] 271:	movsl #0
+[0x110] 272:	newstr @14
+[0x111] 273:	call @2 // <application#Main.print(var[])>
+[0x112] 274:	movl 8
+[0x113] 275:	inc sp
+[0x114] 276:	iframe
+[0x115] 277:	inc sp
+[0x116] 278:	movsl #0
+[0x117] 279:	new_class @10 // std#List
+[0x118] 280:	call @63 // <std#List.List()>
+[0x119] 281:	movl 8
+[0x11a] 282:	popref
 [0x11b] 283:	iframe
 [0x11c] 284:	inc sp
-[0x11d] 285:	iframe
-[0x11e] 286:	inc sp
-[0x11f] 287:	iframe
-[0x120] 288:	movl 8
-[0x121] 289:	pushref
-[0x122] 290:	movi #0, ebx
-[0x124] 292:	pushr ebx
-[0x125] 293:	call @57 // <std#List.get(var)>
+[0x11d] 285:	movsl #0
+[0x11e] 286:	newstr @15
+[0x11f] 287:	call @2 // <application#Main.print(var[])>
+[0x120] 288:	iframe
+[0x121] 289:	movl 8
+[0x122] 290:	pushref
+[0x123] 291:	inc sp
+[0x124] 292:	iframe
+[0x125] 293:	inc sp
 [0x126] 294:	movsl #0
-[0x127] 295:	check_cast 11 // std#Integer
-[0x128] 296:	call @66 // <std#Integer.getValue()>
-[0x129] 297:	call @65 // <std#Integer.toString(var)>
-[0x12a] 298:	call @40 // <std#System.print(std#string)>
-[0x12b] 299:	iframe
-[0x12c] 300:	movl 8
-[0x12d] 301:	pushref
+[0x127] 295:	new_class @11 // std#Integer
+[0x128] 296:	movi #9, ebx
+[0x12a] 298:	pushr ebx
+[0x12b] 299:	call @64 // <std#Integer.Integer(var)>
+[0x12c] 300:	call @52 // <std#List.add(dynamic object)>
+[0x12d] 301:	iframe
 [0x12e] 302:	inc sp
 [0x12f] 303:	iframe
 [0x130] 304:	inc sp
-[0x131] 305:	movsl #0
-[0x132] 306:	new_class @11 // std#Integer
-[0x133] 307:	movi #10, ebx
-[0x135] 309:	pushr ebx
-[0x136] 310:	call @64 // <std#Integer.Integer(var)>
-[0x137] 311:	call @52 // <std#List.add(dynamic object)>
-[0x138] 312:	iframe
-[0x139] 313:	inc sp
-[0x13a] 314:	iframe
-[0x13b] 315:	inc sp
-[0x13c] 316:	iframe
-[0x13d] 317:	inc sp
-[0x13e] 318:	iframe
-[0x13f] 319:	movl 8
-[0x140] 320:	pushref
-[0x141] 321:	movi #1, ebx
-[0x143] 323:	pushr ebx
-[0x144] 324:	call @57 // <std#List.get(var)>
+[0x131] 305:	iframe
+[0x132] 306:	inc sp
+[0x133] 307:	iframe
+[0x134] 308:	movl 8
+[0x135] 309:	pushref
+[0x136] 310:	movi #0, ebx
+[0x138] 312:	pushr ebx
+[0x139] 313:	call @57 // <std#List.get(var)>
+[0x13a] 314:	movsl #0
+[0x13b] 315:	check_cast 11 // std#Integer
+[0x13c] 316:	call @66 // <std#Integer.getValue()>
+[0x13d] 317:	call @65 // <std#Integer.toString(var)>
+[0x13e] 318:	call @40 // <std#System.print(std#string)>
+[0x13f] 319:	iframe
+[0x140] 320:	movl 8
+[0x141] 321:	pushref
+[0x142] 322:	inc sp
+[0x143] 323:	iframe
+[0x144] 324:	inc sp
 [0x145] 325:	movsl #0
-[0x146] 326:	check_cast 11 // std#Integer
-[0x147] 327:	call @66 // <std#Integer.getValue()>
-[0x148] 328:	call @65 // <std#Integer.toString(var)>
-[0x149] 329:	call @40 // <std#System.print(std#string)>
-[0x14a] 330:	iframe
-[0x14b] 331:	inc sp
+[0x146] 326:	new_class @11 // std#Integer
+[0x147] 327:	movi #10, ebx
+[0x149] 329:	pushr ebx
+[0x14a] 330:	call @64 // <std#Integer.Integer(var)>
+[0x14b] 331:	call @52 // <std#List.add(dynamic object)>
 [0x14c] 332:	iframe
 [0x14d] 333:	inc sp
 [0x14e] 334:	iframe
 [0x14f] 335:	inc sp
 [0x150] 336:	iframe
-[0x151] 337:	movl 8
-[0x152] 338:	pushref
-[0x153] 339:	movi #0, ebx
-[0x155] 341:	pushr ebx
-[0x156] 342:	call @57 // <std#List.get(var)>
-[0x157] 343:	movsl #0
-[0x158] 344:	check_cast 11 // std#Integer
-[0x159] 345:	call @66 // <std#Integer.getValue()>
-[0x15a] 346:	call @65 // <std#Integer.toString(var)>
-[0x15b] 347:	call @40 // <std#System.print(std#string)>
-[0x15c] 348:	iframe
-[0x15d] 349:	movl 8
-[0x15e] 350:	pushref
+[0x151] 337:	inc sp
+[0x152] 338:	iframe
+[0x153] 339:	movl 8
+[0x154] 340:	pushref
+[0x155] 341:	movi #1, ebx
+[0x157] 343:	pushr ebx
+[0x158] 344:	call @57 // <std#List.get(var)>
+[0x159] 345:	movsl #0
+[0x15a] 346:	check_cast 11 // std#Integer
+[0x15b] 347:	call @66 // <std#Integer.getValue()>
+[0x15c] 348:	call @65 // <std#Integer.toString(var)>
+[0x15d] 349:	call @40 // <std#System.print(std#string)>
+[0x15e] 350:	iframe
 [0x15f] 351:	inc sp
 [0x160] 352:	iframe
 [0x161] 353:	inc sp
-[0x162] 354:	movsl #0
-[0x163] 355:	new_class @11 // std#Integer
-[0x164] 356:	movi #22, ebx
-[0x166] 358:	pushr ebx
-[0x167] 359:	call @64 // <std#Integer.Integer(var)>
-[0x168] 360:	call @52 // <std#List.add(dynamic object)>
-[0x169] 361:	iframe
-[0x16a] 362:	inc sp
-[0x16b] 363:	iframe
-[0x16c] 364:	inc sp
-[0x16d] 365:	iframe
-[0x16e] 366:	inc sp
-[0x16f] 367:	iframe
-[0x170] 368:	movl 8
-[0x171] 369:	pushref
-[0x172] 370:	movi #2, ebx
-[0x174] 372:	pushr ebx
-[0x175] 373:	call @57 // <std#List.get(var)>
+[0x162] 354:	iframe
+[0x163] 355:	inc sp
+[0x164] 356:	iframe
+[0x165] 357:	movl 8
+[0x166] 358:	pushref
+[0x167] 359:	movi #0, ebx
+[0x169] 361:	pushr ebx
+[0x16a] 362:	call @57 // <std#List.get(var)>
+[0x16b] 363:	movsl #0
+[0x16c] 364:	check_cast 11 // std#Integer
+[0x16d] 365:	call @66 // <std#Integer.getValue()>
+[0x16e] 366:	call @65 // <std#Integer.toString(var)>
+[0x16f] 367:	call @40 // <std#System.print(std#string)>
+[0x170] 368:	iframe
+[0x171] 369:	movl 8
+[0x172] 370:	pushref
+[0x173] 371:	inc sp
+[0x174] 372:	iframe
+[0x175] 373:	inc sp
 [0x176] 374:	movsl #0
-[0x177] 375:	check_cast 11 // std#Integer
-[0x178] 376:	call @66 // <std#Integer.getValue()>
-[0x179] 377:	call @65 // <std#Integer.toString(var)>
-[0x17a] 378:	call @40 // <std#System.print(std#string)>
-[0x17b] 379:	iframe
-[0x17c] 380:	inc sp
-[0x17d] 381:	movsl #0
-[0x17e] 382:	newstr @14
-[0x17f] 383:	call @2 // <application#Main.print(var[])>
-[0x180] 384:	movi #32, ebx
-[0x182] 386:	_putc ebx
-[0x183] 387:	movr adx, sp
-[0x184] 388:	smov ebx+0
-[0x185] 389:	put ebx
-[0x186] 390:	ret
+[0x177] 375:	new_class @11 // std#Integer
+[0x178] 376:	movi #22, ebx
+[0x17a] 378:	pushr ebx
+[0x17b] 379:	call @64 // <std#Integer.Integer(var)>
+[0x17c] 380:	call @52 // <std#List.add(dynamic object)>
+[0x17d] 381:	iframe
+[0x17e] 382:	inc sp
+[0x17f] 383:	iframe
+[0x180] 384:	inc sp
+[0x181] 385:	iframe
+[0x182] 386:	inc sp
+[0x183] 387:	iframe
+[0x184] 388:	movl 8
+[0x185] 389:	pushref
+[0x186] 390:	movi #2, ebx
+[0x188] 392:	pushr ebx
+[0x189] 393:	call @57 // <std#List.get(var)>
+[0x18a] 394:	movsl #0
+[0x18b] 395:	check_cast 11 // std#Integer
+[0x18c] 396:	call @66 // <std#Integer.getValue()>
+[0x18d] 397:	call @65 // <std#Integer.toString(var)>
+[0x18e] 398:	call @40 // <std#System.print(std#string)>
+[0x18f] 399:	iframe
+[0x190] 400:	inc sp
+[0x191] 401:	movsl #0
+[0x192] 402:	newstr @16
+[0x193] 403:	call @2 // <application#Main.print(var[])>
+[0x194] 404:	movi #32, ebx
+[0x196] 406:	_putc ebx
+[0x197] 407:	movr adx, sp
+[0x198] 408:	smov ebx+0
+[0x199] 409:	put ebx
+[0x19a] 410:	ret
 
 func:@12 [application#Main.Main] in file: odessy/test2.sharp:10:6: note:  
 		class Main base Base {
@@ -639,7 +659,7 @@ replace:
 [0x10] 16:	new_class @2 // std.err#RuntimeErr
 [0x11] 17:	inc sp
 [0x12] 18:	movsl #0
-[0x13] 19:	newstr @15
+[0x13] 19:	newstr @17
 [0x14] 20:	call @34 // <std.err#Throwable.Throwable(var[])>
 [0x15] 21:	throw 
 [0x16] 22:	movr adx, fp
@@ -820,7 +840,7 @@ at:
 [0x17] 23:	new_class @3 // std#string
 [0x18] 24:	inc sp
 [0x19] 25:	movsl #0
-[0x1a] 26:	newstr @16
+[0x1a] 26:	newstr @18
 [0x1b] 27:	call @14 // <std#string.string(var[])>
 [0x1c] 28:	inc sp
 [0x1d] 29:	iframe
@@ -839,7 +859,7 @@ at:
 [0x2a] 42:	smovobj @0
 [0x2b] 43:	inc sp
 [0x2c] 44:	movsl #0
-[0x2d] 45:	newstr @17
+[0x2d] 45:	newstr @19
 [0x2e] 46:	call @18 // <std#string.$operator+(var[])>
 [0x2f] 47:	movsl #0
 [0x30] 48:	dec sp
@@ -1236,7 +1256,7 @@ convertInt:
 [0xf] 15:	new_class @3 // std#string
 [0x10] 16:	inc sp
 [0x11] 17:	movsl #0
-[0x12] 18:	newstr @18
+[0x12] 18:	newstr @20
 [0x13] 19:	call @14 // <std#string.string(var[])>
 [0x14] 20:	movsl #0
 [0x15] 21:	movr adx, fp
@@ -1250,7 +1270,7 @@ convertInt:
 [0x1d] 29:	new_class @3 // std#string
 [0x1e] 30:	inc sp
 [0x1f] 31:	movsl #0
-[0x20] 32:	newstr @19
+[0x20] 32:	newstr @21
 [0x21] 33:	call @14 // <std#string.string(var[])>
 [0x22] 34:	movl 1
 [0x23] 35:	popref
@@ -1262,7 +1282,7 @@ convertInt:
 [0x29] 41:	new_class @3 // std#string
 [0x2a] 42:	inc sp
 [0x2b] 43:	movsl #0
-[0x2c] 44:	newstr @19
+[0x2c] 44:	newstr @21
 [0x2d] 45:	call @14 // <std#string.string(var[])>
 [0x2e] 46:	movl 2
 [0x2f] 47:	popref
@@ -1475,7 +1495,7 @@ getStackTrace:
 [0x7] 7:	ifne
 [0x8] 8:	inc sp
 [0x9] 9:	movsl #0
-[0xa] 10:	newstr @19
+[0xa] 10:	newstr @21
 [0xb] 11:	movl 0
 [0xc] 12:	movn #1
 [0xd] 13:	popref
@@ -1954,7 +1974,7 @@ add:
 [0x18] 24:	new_class @3 // std#string
 [0x19] 25:	inc sp
 [0x1a] 26:	movsl #0
-[0x1b] 27:	newstr @20
+[0x1b] 27:	newstr @22
 [0x1c] 28:	call @14 // <std#string.string(var[])>
 [0x1d] 29:	inc sp
 [0x1e] 30:	iframe
@@ -1973,7 +1993,7 @@ add:
 [0x2b] 43:	smovobj @0
 [0x2c] 44:	inc sp
 [0x2d] 45:	movsl #0
-[0x2e] 46:	newstr @21
+[0x2e] 46:	newstr @23
 [0x2f] 47:	call @18 // <std#string.$operator+(var[])>
 [0x30] 48:	movsl #0
 [0x31] 49:	dec sp
@@ -2164,7 +2184,7 @@ addAll:
 [0x18] 24:	new_class @3 // std#string
 [0x19] 25:	inc sp
 [0x1a] 26:	movsl #0
-[0x1b] 27:	newstr @20
+[0x1b] 27:	newstr @22
 [0x1c] 28:	call @14 // <std#string.string(var[])>
 [0x1d] 29:	inc sp
 [0x1e] 30:	iframe
@@ -2183,7 +2203,7 @@ addAll:
 [0x2b] 43:	smovobj @0
 [0x2c] 44:	inc sp
 [0x2d] 45:	movsl #0
-[0x2e] 46:	newstr @21
+[0x2e] 46:	newstr @23
 [0x2f] 47:	call @18 // <std#string.$operator+(var[])>
 [0x30] 48:	movsl #0
 [0x31] 49:	dec sp
@@ -2522,7 +2542,7 @@ toString:
 [0xf] 15:	new_class @3 // std#string
 [0x10] 16:	inc sp
 [0x11] 17:	movsl #0
-[0x12] 18:	newstr @18
+[0x12] 18:	newstr @20
 [0x13] 19:	call @14 // <std#string.string(var[])>
 [0x14] 20:	movsl #0
 [0x15] 21:	movr adx, fp
@@ -2536,7 +2556,7 @@ toString:
 [0x1d] 29:	new_class @3 // std#string
 [0x1e] 30:	inc sp
 [0x1f] 31:	movsl #0
-[0x20] 32:	newstr @19
+[0x20] 32:	newstr @21
 [0x21] 33:	call @14 // <std#string.string(var[])>
 [0x22] 34:	movl 1
 [0x23] 35:	popref
@@ -2548,7 +2568,7 @@ toString:
 [0x29] 41:	new_class @3 // std#string
 [0x2a] 42:	inc sp
 [0x2b] 43:	movsl #0
-[0x2c] 44:	newstr @19
+[0x2c] 44:	newstr @21
 [0x2d] 45:	call @14 // <std#string.string(var[])>
 [0x2e] 46:	movl 2
 [0x2f] 47:	popref

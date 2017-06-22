@@ -811,7 +811,10 @@ bool Thread::execFinally(int command) {
 
     Object *ptr=NULL; // ToDO: when ptr is derefrenced assign pointer to null pointer data struct in environment
 
-    int64_t  start, result=true;
+
+    Throwable oldError;
+    oldError = throwable;
+    int64_t  start, result=true, isException=exceptionThrown;
     _init_opcode_table
 
     if(command ==EXEC_ALL_FINALLY) {
@@ -827,6 +830,7 @@ bool Thread::execFinally(int command) {
             }
         }
     }
+
 
     for(unsigned int i = start; i < currMethod->finallyBlocks.size(); i++) {
         FinallyTable &ft = currMethod->finallyBlocks.get(i);
@@ -1056,9 +1060,24 @@ bool Thread::execFinally(int command) {
             cout << "std::bad_alloc\n";
             // TODO: throw out of memory error
         } catch (Exception &e) {
-            throwable=e.getThrowable();
-            fillStackTrace(&__stack[SP64].object);
-            result=0;
+            /*
+             * The sexiest way to handle exceptions in finally blocks!!
+             *
+             * Seriously why in the hell would you do this in the first place? -.-
+             */
+            throwable = e.getThrowable();
+            exceptionThrown = true;
+            try {
+                Throw(&__stack[SP64].object);
+
+                throwable = oldError;
+                exceptionThrown = (bool)isException;
+                DISPATCH();
+            }catch(Exception &e) {
+                throwable = e.getThrowable();
+            }
+
+            return true;
         }
     }
 
@@ -1295,6 +1314,8 @@ void Thread::fillStackTrace(Object* exceptionObject) {
     }
 }
 
+// TODO: create variable in thread class int exceptionsThrown; to keep track of that when throwing uncaught exception
+// so we dont get unnessicary nested messages
 void Thread::Throw(Object* exceptionObject) {
     if(exceptionObject->klass == NULL) {
         cout << "object ia not a class" << endl;
