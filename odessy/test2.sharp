@@ -112,9 +112,15 @@ class Main base Base {
         }
 
         List simpleList = new List();
+        print("doing lists\n");
         simpleList.add((dynamic_object)new Integer(9));
+        System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
+        print("LLLlist 1\n");
         simpleList.add((dynamic_object)new Integer(10));
+        System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
+        print("LLLlist 2\n");
         simpleList.add((dynamic_object)new Integer(22));
+        print("LLLlist 3\n");
         System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
         print("done");
 

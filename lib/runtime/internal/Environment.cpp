@@ -43,6 +43,7 @@ ClassObject *Environment::findClass(int64_t id) {
 
     stringstream msg;
     msg << "class not found @id:" << id;
+
     throw Exception(msg.str());
 }
 

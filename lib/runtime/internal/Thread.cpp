@@ -1397,13 +1397,13 @@ void Thread::call_asp(int64_t id) {
     /*
      * Do we have enough space to allocate this new frame?
      */
-    if((__rxs[sp]+(asp->frame_init+asp->self)) < stack_lmt) {
+    if((__rxs[sp]+(asp->frame_init)) < stack_lmt) {
         this->curr_adsp = asp->id;
         this->cache = asp->bytecode;
         this->cache_size=asp->cache_size;
 
-        _FP= ((_SP+1)-asp->param_size)-asp->self;
-        _SP = asp->frame_init == 0 ? (_FP+asp->self) : _FP+(asp->frame_init+asp->self-1);
+        _FP= asp->frame_init == 0 ? (_SP) : ((_SP+1)-(asp->param_size+asp->self));
+        _SP = asp->frame_init == 0 ? (_FP) : _FP+((asp->frame_init)-1);
         if(_FP != 0) __stack[FP64-pc_offset].var = pc; // reset pc to call address
         pc = 0;
     } else {
@@ -1428,7 +1428,7 @@ void Thread::init_frame() {
 }
 
 int Thread::return_asp() {
-    if((FP64-1) < 0 || __stack[FP64-fp_offset].var > _FP) {
+    if(FP64-1 < 0 || __stack[FP64-fp_offset].var > _FP) {
         List<sh_asp*> calls;
         List<long long> pcs;
 

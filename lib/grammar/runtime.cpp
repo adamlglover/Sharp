@@ -4798,6 +4798,7 @@ Expression runtime::parseCastExpression(ast* pAst) {
                 break;
             case expression_class:
                 parseClassCast(utype, arg, expression);
+                expression.func=arg.func;
                 break;
             case expression_field:
                 errors->newerror(GENERIC, utype.lnk->line, utype.lnk->col, "cast expression of type `field` not allowed, must be of type `class`");
