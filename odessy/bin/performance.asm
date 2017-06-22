@@ -502,7 +502,7 @@ main:
 [0x143] 323:	iframe
 [0x144] 324:	movl 8
 [0x145] 325:	pushref
-[0x146] 326:	movi #0, ebx
+[0x146] 326:	movi #1, ebx
 [0x148] 328:	pushr ebx
 [0x149] 329:	call @57 // <std#List.get(var)>
 [0x14a] 330:	movsl #0
@@ -541,7 +541,7 @@ main:
 [0x16c] 364:	iframe
 [0x16d] 365:	movl 8
 [0x16e] 366:	pushref
-[0x16f] 367:	movi #0, ebx
+[0x16f] 367:	movi #2, ebx
 [0x171] 369:	pushr ebx
 [0x172] 370:	call @57 // <std#List.get(var)>
 [0x173] 371:	movsl #0
@@ -1852,38 +1852,75 @@ add:
 [0x11] 17:	new_objarry ebx
 [0x12] 18:	movl 2
 [0x13] 19:	popref
-[0x14] 20:	movl 1
-[0x15] 21:	pushref
-[0x16] 22:	movl 2
-[0x17] 23:	pushref
-[0x18] 24:	inc sp
-[0x19] 25:	iframe
-[0x1a] 26:	movl 0
-[0x1b] 27:	pushref
-[0x1c] 28:	call @60 // <std#List.size()>
-[0x1d] 29:	movr adx, sp
-[0x1e] 30:	smov ebx+0
-[0x1f] 31:	pop
-[0x20] 32:	movsl #0
-[0x21] 33:	chklen ebx
-[0x22] 34:	movnd ebx
-[0x23] 35:	sdelref
-[0x24] 36:	popref
-[0x25] 37:	inc sp
-[0x26] 38:	iframe
-[0x27] 39:	pushref
-[0x28] 40:	movl 2
-[0x29] 41:	pushref
-[0x2a] 42:	movl 2
-[0x2b] 43:	sizeof ebx
-[0x2c] 44:	pushr ebx
-[0x2d] 45:	call @50 // <std#Array.copyOf(dynamic object[],var)>
-[0x2e] 46:	movl 0
-[0x2f] 47:	movn #0
-[0x30] 48:	popref
-[0x31] 49:	ret
+[0x14] 20:	movi #0, ebx
+[0x16] 22:	movr ecx, ebx
+[0x17] 23:	movr adx, fp
+[0x18] 24:	smovr ecx+3
+[0x19] 25:	movi #0, ebx
+[0x1b] 27:	pushr ebx
+[0x1c] 28:	movl 0
+[0x1d] 29:	movn #0
+[0x1e] 30:	movr adx, sp
+[0x1f] 31:	smov ebx+0
+[0x20] 32:	sizeof egx
+[0x21] 33:	lt ebx, egx
+[0x22] 34:	movi #60, adx
+[0x24] 36:	ifne
+[0x25] 37:	movnd ebx
+[0x26] 38:	pushref
+[0x27] 39:	movl 4
+[0x28] 40:	popref
+[0x29] 41:	movl 4
+[0x2a] 42:	pushref
+[0x2b] 43:	movl 2
+[0x2c] 44:	pushref
+[0x2d] 45:	movr adx, fp
+[0x2e] 46:	smov ebx+3
+[0x2f] 47:	movi #1, ecx
+[0x31] 49:	addl ecx, @3
+[0x32] 50:	movsl #0
+[0x33] 51:	chklen ebx
+[0x34] 52:	movnd ebx
+[0x35] 53:	sdelref
+[0x36] 54:	popref
+[0x37] 55:	movr adx, sp
+[0x38] 56:	smov ebx+0
+[0x39] 57:	inc ebx
+[0x3a] 58:	smovr ebx+0
+[0x3b] 59:	goto @28
+[0x3c] 60:	pop
+[0x3d] 61:	movl 1
+[0x3e] 62:	pushref
+[0x3f] 63:	movl 2
+[0x40] 64:	pushref
+[0x41] 65:	inc sp
+[0x42] 66:	iframe
+[0x43] 67:	movl 0
+[0x44] 68:	pushref
+[0x45] 69:	call @60 // <std#List.size()>
+[0x46] 70:	movr adx, sp
+[0x47] 71:	smov ebx+0
+[0x48] 72:	pop
+[0x49] 73:	movsl #0
+[0x4a] 74:	chklen ebx
+[0x4b] 75:	movnd ebx
+[0x4c] 76:	sdelref
+[0x4d] 77:	popref
+[0x4e] 78:	inc sp
+[0x4f] 79:	iframe
+[0x50] 80:	pushref
+[0x51] 81:	movl 2
+[0x52] 82:	pushref
+[0x53] 83:	movl 2
+[0x54] 84:	sizeof ebx
+[0x55] 85:	pushr ebx
+[0x56] 86:	call @50 // <std#Array.copyOf(dynamic object[],var)>
+[0x57] 87:	movl 0
+[0x58] 88:	movn #0
+[0x59] 89:	popref
+[0x5a] 90:	ret
 
-func:@53 [std#List.add] in file: src/std/List.sharp:16:11: note:  
+func:@53 [std#List.add] in file: src/std/List.sharp:21:11: note:  
 		    fn add( var pos, dynamic_object object ) {
 		          ^
 
@@ -2093,7 +2130,7 @@ add:
 [0xd8] 216:	del
 [0xd9] 217:	ret
 
-func:@54 [std#List.addAll] in file: src/std/List.sharp:39:14: note:  
+func:@54 [std#List.addAll] in file: src/std/List.sharp:44:14: note:  
 		    fn addAll( var pos, List collection ) {
 		             ^
 
@@ -2331,7 +2368,7 @@ addAll:
 [0xf5] 245:	del
 [0xf6] 246:	ret
 
-func:@55 [std#List.addAll] in file: src/std/List.sharp:62:14: note:  
+func:@55 [std#List.addAll] in file: src/std/List.sharp:67:14: note:  
 		    fn addAll(List collection) {
 		             ^
 
@@ -2350,7 +2387,7 @@ addAll:
 [0xa] 10:	call @54 // <std#List.addAll(var,std#List)>
 [0xb] 11:	ret
 
-func:@56 [std#List.clear] in file: src/std/List.sharp:66:13: note:  
+func:@56 [std#List.clear] in file: src/std/List.sharp:71:13: note:  
 		    fn clear() {
 		            ^
 
@@ -2361,7 +2398,7 @@ clear:
 [0x2] 2:	del
 [0x3] 3:	ret
 
-func:@57 [std#List.get] in file: src/std/List.sharp:70:11: note:  
+func:@57 [std#List.get] in file: src/std/List.sharp:75:11: note:  
 		    fn get( var pos ) : dynamic_object {
 		          ^
 
@@ -2376,11 +2413,10 @@ get:
 [0x6] 6:	chklen ebx
 [0x7] 7:	movnd ebx
 [0x8] 8:	sdelref
-[0x9] 9:	movr adx, fp
-[0xa] 10:	smovobj @-5
-[0xb] 11:	ret
+[0x9] 9:	returnref
+[0xa] 10:	ret
 
-func:@58 [std#List.remove] in file: src/std/List.sharp:74:14: note:  
+func:@58 [std#List.remove] in file: src/std/List.sharp:79:14: note:  
 		    fn remove( var pos ) {
 		             ^
 
@@ -2388,7 +2424,7 @@ func:@58 [std#List.remove] in file: src/std/List.sharp:74:14: note:
 remove:
 [0x0] 0:	ret
 
-func:@59 [std#List.set] in file: src/std/List.sharp:78:11: note:  
+func:@59 [std#List.set] in file: src/std/List.sharp:83:11: note:  
 		    fn set( var pos, dynamic_object object )
 		          ^
 
@@ -2396,7 +2432,7 @@ func:@59 [std#List.set] in file: src/std/List.sharp:78:11: note:
 set:
 [0x0] 0:	ret
 
-func:@60 [std#List.size] in file: src/std/List.sharp:83:12: note:  
+func:@60 [std#List.size] in file: src/std/List.sharp:88:12: note:  
 		    fn size() : var 
 		           ^
 
@@ -2409,7 +2445,7 @@ size:
 [0x4] 4:	smovr ebx+[-5]
 [0x5] 5:	ret
 
-func:@61 [std#List.subList] in file: src/std/List.sharp:88:15: note:  
+func:@61 [std#List.subList] in file: src/std/List.sharp:93:15: note:  
 		    fn subList( var start, var end ) : List
 		              ^
 
@@ -2417,7 +2453,7 @@ func:@61 [std#List.subList] in file: src/std/List.sharp:88:15: note:
 subList:
 [0x0] 0:	ret
 
-func:@62 [std#List.getArray] in file: src/std/List.sharp:93:16: note:  
+func:@62 [std#List.getArray] in file: src/std/List.sharp:98:16: note:  
 		    fn getArray() : dynamic_object[]
 		               ^
 
@@ -2447,19 +2483,20 @@ func:@64 [std#Integer.Integer] in file: src/std/Integer.sharp:6:19: note:
 Integer:
 [0x0] 0:	movl 0
 [0x1] 1:	movn #0
-[0x2] 2:	newi cx
-[0x3] 3:	movr adx, fp
-[0x4] 4:	smov ebx+1
-[0x5] 5:	pushr ebx
-[0x6] 6:	movl 0
-[0x7] 7:	movn #0
-[0x8] 8:	movi #0, adx
-[0xa] 10:	popr ecx
-[0xb] 11:	rmov adx, ecx
-[0xc] 12:	movl 0
-[0xd] 13:	movr adx, fp
-[0xe] 14:	smovobj @-5
-[0xf] 15:	ret
+[0x2] 2:	movi #1, ebx
+[0x4] 4:	newi ebx
+[0x5] 5:	movr adx, fp
+[0x6] 6:	smov ebx+1
+[0x7] 7:	pushr ebx
+[0x8] 8:	movl 0
+[0x9] 9:	movn #0
+[0xa] 10:	movi #0, adx
+[0xc] 12:	popr ecx
+[0xd] 13:	rmov adx, ecx
+[0xe] 14:	movl 0
+[0xf] 15:	movr adx, fp
+[0x10] 16:	smovobj @-5
+[0x11] 17:	ret
 
 func:@65 [std#Integer.toString] in file: src/std/Integer.sharp:11:23: note:  
 		    static fn toString( var number ) : string 

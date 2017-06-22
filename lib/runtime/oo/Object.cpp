@@ -90,6 +90,8 @@ void Object::createstr(int64_t ref) {
 }
 
 void Object::checkcast(int64_t klass) {
+    if(this->size == 0)
+        throw Exception(&Environment::ClassCastException, "invalid cast on null object");
     if(this->klass == NULL)
         throw Exception(&Environment::ClassCastException, "invalid cast on non-class object");
 

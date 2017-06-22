@@ -90,7 +90,7 @@ void GC::_init_GC() {
     gc->mutex = Monitor();
     gc->sigMutex = Monitor();
     gc->signal = 0;
-    gc->gc_alloc_heap=(GcObject*)malloc(sizeof(GcObject)*gc_max_heap_size);
+    gc->gc_alloc_heap=(Object*)malloc(sizeof(Object)*gc_max_heap_size);
     Environment::init(gc->gc_alloc_heap, gc_max_heap_size);
     gc->allocptr=0;
 }
@@ -101,22 +101,7 @@ void GC::_insert(Object *gc_obj) {
         _collect_GC_EXPLICIT();
     }
 
-    if(gc_obj->_rNode != NULL) {
-        gc_obj->del_ref();
-        gc->mutex.release();
-        return;
-    }
-
-    if(gc_obj->refs.size() > 0) {
-        for(unsigned long i=0; i < gc_obj->refs.size(); i++) {
-            Sh_InvRef(gc_obj->refs.at(i));
-        }
-        gc_obj->refs.free();
-    }
-
-    gc->gc_alloc_heap[gc->allocptr].HEAD=gc_obj->HEAD;
-    gc->gc_alloc_heap[gc->allocptr]._Node=gc_obj->_Node;
-    gc->gc_alloc_heap[gc->allocptr].size=gc_obj->size;
+    gc->gc_alloc_heap[gc->allocptr].mutate(gc_obj);
 
     gc->allocptr++;
     gc->mutex.release();
@@ -293,4 +278,15 @@ void GC::_insert_stack(data_stack *st, unsigned long stack_size) {
 void GC::notify(int sig) {
     gc->sigMutex.acquire(INDEFINITE);
     gc->signal = sig;
+}
+
+void GC::print_stack() {
+    cout << endl << "==============================\n";
+    cout << "@" << thread_self->curr_adsp << ":"
+         << (thread_self->curr_adsp+env->__address_spaces)->name.str() << " ";
+    cout << "[[" << "allocptr:" << gc->allocptr << endl;
+    for(unsigned int i = 0; i < gc->allocptr; i++) {
+        cout << "{@" << i << ":" << gc->gc_alloc_heap[i].toString() << endl;
+    }
+    cout << endl << "]]";
 }

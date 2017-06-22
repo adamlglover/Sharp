@@ -31,9 +31,13 @@ public:
     static void _insert_stack(data_stack* st, unsigned long sz);
     static void notify(int sig);
 
+#ifdef DEBUGGING
+    static void print_stack();
+#endif
+
 private:
     Monitor mutex, sigMutex;
-    GcObject* gc_alloc_heap;
+    Object* gc_alloc_heap;
     unsigned long allocptr;
     int signal;
 
@@ -49,25 +53,6 @@ private:
      _GCThread_start(void *);
 
     void _GC_run();
-};
-
-struct GcObject{
-    double *HEAD;
-    Object *_Node;
-    int64_t size;
-
-    void free(){
-        if(HEAD != NULL)
-            std::free(HEAD); HEAD = NULL;
-        if(_Node != NULL) {
-            for(int64_t i = 0; i < size; i++) {
-                _Node[i].free();
-            }
-            std::free(_Node); _Node = NULL;
-        }
-
-        size = 0;
-    }
 };
 
 #define _GC_CAP_THRESHOLD 1.5

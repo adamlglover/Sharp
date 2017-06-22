@@ -12,7 +12,6 @@
 class Object;
 class Method;
 class ArrayObject;
-struct GcObject;
 
 class Environment {
 public:
@@ -59,12 +58,11 @@ public:
 
     nString& getstring(int64_t ref);
 
-    static void init(GcObject*,int64_t);
     static void init(Object*,int64_t);
     static void init(data_stack*,int64_t);
 
     static void free(Object*, int64_t);
-    static void freesticky(GcObject*, int64_t);
+    static void freesticky(Object*, int64_t);
     static void gcinsert_stack(Object *, int64_t);
 
     nString getstringfield(string name, Object *pObject);

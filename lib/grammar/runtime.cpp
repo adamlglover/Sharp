@@ -346,8 +346,16 @@ void runtime::parseReturnStatement(Block& block, ast* pAst) { // TODO: fix retur
                         block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
                         block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
                     } else {
-                        block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
-                        block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                        if(value.utype.type == ResolvedReference::FIELD) {
+                            if(value.utype.field->local) {
+                                block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                                block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                            } else
+                                block.code.push_i64(SET_Ei(i64, op_RETURNREF));
+                        } else {
+                            block.code.push_i64(SET_Ci(i64, op_MOVR, adx,0, fp));
+                            block.code.push_i64(SET_Di(i64, op_SMOVOBJ, -5));
+                        }
                     }
                 }
                 break;
@@ -1191,11 +1199,6 @@ void runtime::parseVarDecl(Block& block, ast* pAst) {
 void runtime::addLine(Block& block, ast *pAst) {
     Scope* scope = current_scope();
 
-    for(unsigned int i = 0; i < scope->function->line_table.size(); i++) {
-        if(scope->function->line_table.get(i).value == pAst->line) {
-            return;
-        }
-    }
 
     scope->function->line_table.add(keypair<int64_t, long>(block.code.__asm64.size(), pAst->line));
 }
@@ -1337,7 +1340,8 @@ void runtime::parseConstructorDecl(ast* pAst) {
             if(field->nativeInt() && !field->array) {
                 fblock.code.push_i64(SET_Di(i64, op_MOVL, 0));
                 fblock.code.push_i64(SET_Di(i64, op_MOVN, field->vaddr));
-                fblock.code.push_i64(SET_Di(i64, op_NEWi, 1));
+                fblock.code.push_i64(SET_Di(i64, op_MOVI, 1), ebx);
+                fblock.code.push_i64(SET_Di(i64, op_NEWi, ebx));
             }
         }
 

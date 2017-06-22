@@ -117,20 +117,6 @@ void Environment::init(Object* objects, int64_t size) {
 
 }
 
-void Environment::init(GcObject* objects, int64_t size) {
-    if(objects != NULL)
-    {
-        GcObject* ptr=&objects[0];
-        for(int64_t i = 0; i < size; i++) {
-            ptr->HEAD=NULL;
-            ptr->_Node = NULL;
-            ptr->size = 0;
-            ptr++;
-        }
-    }
-
-}
-
 void Environment::newNative(Object *object, int8_t type) {
     if(object->mark == gc_green)
         object->free();
@@ -164,7 +150,7 @@ void Environment::gcinsert_stack(Object *objects, int64_t len) {
     }
 }
 
-void Environment::freesticky(GcObject *objects, int64_t len) {
+void Environment::freesticky(Object *objects, int64_t len) {
     if(len > 0 && objects != NULL) {
         for(int64_t i = 0; i < len; i++) {
             // TodO: implement

@@ -117,11 +117,11 @@ class Main base Base {
         System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
         print("LLLlist 1\n");
         simpleList.add((dynamic_object)new Integer(10));
-        System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
+        System.print(Integer.toString(((Integer)simpleList.get(1)).getValue()));
         print("LLLlist 2\n");
         simpleList.add((dynamic_object)new Integer(22));
         print("LLLlist 3\n");
-        System.print(Integer.toString(((Integer)simpleList.get(0)).getValue()));
+        System.print(Integer.toString(((Integer)simpleList.get(2)).getValue()));
         print("done");
 
 

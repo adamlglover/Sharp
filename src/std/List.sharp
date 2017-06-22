@@ -8,6 +8,11 @@ class List {
     
     fn add( dynamic_object object ) {
         dynamic_object[] newArry = new dynamic_object[size()+1];
+
+        var iter = 0;
+        foreach(dynamic_object obj : data) {
+            newArry[iter++] = obj;
+        }
         newArry[size()] = object;
         
         data = Array.copyOf(newArry, sizeof(newArry));
