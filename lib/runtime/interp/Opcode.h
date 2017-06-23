@@ -204,9 +204,9 @@ void print_stack();
 
 #define tne(r,x) __rxs[0x0002]=__rxs[r]!=__rxs[x]; _brh
 
-#define __lock(r) CHK_NULL(ptr->monitor.acquire((int64_t)__rxs[r]);) _brh
+#define __lock(r) CHK_NULL(ptr->lock((int64_t)__rxs[r]);) _brh
 
-#define __ulock() CHK_NULL(ptr->monitor.release();) _brh
+#define __ulock() CHK_NULL(ptr->unlock();) _brh
 
 #define exp(r) __rxs[0x0008] = exponent(__rxs[r]); _brh
 

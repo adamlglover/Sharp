@@ -230,3 +230,17 @@ void Object::createnative(int64_t size, double init) {
         _nativewrite(i,init)
     }
 }
+
+void Object::lock(int32_t spins) {
+    if(_rNode != NULL) {
+        _rNode->monitor.acquire(spins);
+    } else
+        this->monitor.acquire(spins);
+}
+
+void Object::unlock() {
+    if(_rNode != NULL) {
+        _rNode->monitor.release();
+    } else
+        this->monitor.release();
+}

@@ -79,6 +79,8 @@ public:
     bool isnull() { return mark != gc_green || size==0; }
     void createobjectarry(int64_t size);
     void checkcast(int64_t klass);
+    void lock(int32_t);
+    void unlock();
 
     void createclass(ClassObject *klass);
 
