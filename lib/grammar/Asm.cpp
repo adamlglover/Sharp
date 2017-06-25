@@ -506,6 +506,16 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                         instance->current_scope()->addStore(name, _register, _offset,
                                                             assembler, pAst->line, pAst->col);
                     }
+                } else if(current() == "<"){
+                    expect("<");
+                    expect_function();
+                    expect(">");
+
+                    itmp = i2;
+                    expect(",");
+                    expect_register();
+                    assembler.push_i64(SET_Di(i64, op_MOVI, itmp.high_bytes), i2.high_bytes);
+
                 } else {
                     expect_int();
                     itmp = i2;
@@ -874,6 +884,8 @@ void Asm::parse(m64Assembler &assembler, runtime *instance, string& code, ast* p
                 expect_register();
 
                 assembler.push_i64(SET_Di(i64, op_EXP, i2.high_bytes));
+            } else if(instruction_is("testobj")) {
+                assembler.push_i64(SET_Ei(i64, op_TESTOBJ));
             } else {
                 npos++;
                 tk->geterrors()->newerror(GENERIC, current(), "expected instruction");

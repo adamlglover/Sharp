@@ -81,6 +81,7 @@ public:
     void checkcast(int64_t klass);
     void lock(int32_t);
     void unlock();
+    bool nativeCompare(Object*);
 
     void createclass(ClassObject *klass);
 

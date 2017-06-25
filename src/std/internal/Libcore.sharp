@@ -1,5 +1,7 @@
 mod libcore;
 
+import std.io;
+
 /**
 * {@class Libcore}
 * This class contains the low level functions of performing
@@ -8,7 +10,8 @@ mod libcore;
 class Libcore {
 
     class os {
-        public static fn printData(var[] data) {
+        public static fn printData(var[] data)
+        {
             __print_(data);
         }
 
@@ -16,7 +19,8 @@ class Libcore {
         * Classic print function to print an array of data to
         * the console
         */
-        private static fn __print_(var[] message) {
+        private static fn __print_(var[] message)
+        {
             if(message != null) {
                 foreach(var char : message) {
                     __print_(char, true);
@@ -32,7 +36,8 @@ class Libcore {
         /**
         * print a single character to the console
         */
-        public static fn __print_(var char, var isCharacter) {
+        public static fn __print_(var char, var isCharacter)
+        {
             if(isCharacter) {
                 __asm(
                     "  movr %adx,%fp                                                               "
@@ -46,6 +51,43 @@ class Libcore {
                     "  put ebx                                                                     "
                 );
             }
+        }
+
+        public static fn nativeThreadCreate(Thread thread) : var
+        {
+            var func = thread.getFunctionPointer();
+            var stackSize = thread.getStackSize();
+            var result;
+
+            __asm(
+                "  movr %adx,%fp                                                                 "
+                "  smov ebx+1               // get local 'func'                                  "
+                "  smov egx+2               // get local 'stackSize'                             "
+                "  movr %adx,%ebx                                                                "
+                "  int 0xa8                 // call system call to create thread                 "
+                "  movr %adx,%fp                                                                 "
+                "  smovr %cmt+3             // set return value of native create to 'result'     "
+            );
+
+            return result;
+        }
+    }
+
+    class sys {
+
+        public static fn compareInstance(dynamic_object object, dynamic_object o) : var
+        {
+            var result;
+
+            __asm(
+                "  movl <o>                                                               "
+                "  pushref                                                                "
+                "  movl <object>                                                          "
+                "  testobj                                                                "
+                "  movr %adx,%sp                                                          "
+                "  smovr %cmt+2                                                           "
+            );
+            return result;
         }
     }
 }

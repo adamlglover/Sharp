@@ -1,0 +1,150 @@
+mod std.io;
+
+class Thread {
+
+    public static var THREAD_INIT = 0x000;
+    public static var THREAD_RUNNING = 0x001;
+    public static var THREAD_KILLED = 0x003;
+    public static var DEFAULT_THREAD_STACK = 0xefba;
+
+    private var id;
+    private var funcptr;
+    private var daemon;
+    private var state;
+    private string name;
+    private var exitVal;
+    private var stackSize;
+    private dynamic_object[] args;
+    private static ThreadManager manager;
+
+    public static fn getManager() : ThreadManager
+    {
+        if(manager == null) {
+            manager = new ThreadManager();
+            return manager;
+        } else {
+            return manager;
+        }
+    }
+
+    public Thread(string name, var function, dynamic_object[] args)
+    {
+        self->name = name;
+        self->funcptr = function;
+        self->daemon = false;
+        self->args = args;
+        self->stackSize = DEFAULT_THREAD_STACK;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+    }
+
+    public Thread(string name, var function, var stackSize, dynamic_object[] args)
+    {
+        self->name = name;
+        self->funcptr = function;
+        self->daemon = false;
+        self->args = args;
+        self->stackSize = stackSize;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+    }
+
+    public Thread(string name, var function, dynamic_object[] args, var daemon)
+    {
+        self->name = name;
+        self->funcptr = function;
+        self->daemon = daemon;
+        self->args = args;
+        self->stackSize = DEFAULT_THREAD_STACK;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+    }
+
+    public Thread(string name, var function, var stackSize, dynamic_object[] args, var daemon)
+    {
+        self->name = name;
+        self->funcptr = function;
+        self->daemon = daemon;
+        self->args = args;
+        self->stackSize = stackSize;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+    }
+
+    public Thread(var function, dynamic_object[] args)
+    {
+        self->funcptr = function;
+        self->daemon = false;
+        self->args = args;
+        self->stackSize = DEFAULT_THREAD_STACK;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+
+        self->name = "Thread#" + id;
+    }
+
+    public Thread(var function, var stackSize, dynamic_object[] args)
+    {
+        self->funcptr = function;
+        self->daemon = false;
+        self->args = args;
+        self->stackSize = stackSize;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+
+        self->name = "Thread#" + id;
+    }
+
+    public Thread(var function, dynamic_object[] args, var daemon)
+    {
+        self->funcptr = function;
+        self->daemon = daemon;
+        self->args = args;
+        self->stackSize = DEFAULT_THREAD_STACK;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+
+        self->name = "Thread#" + id;
+    }
+
+    public Thread(var function, var stackSize, dynamic_object[] args, var daemon)
+    {
+        self->funcptr = function;
+        self->daemon = daemon;
+        self->args = args;
+        self->stackSize = stackSize;
+
+        self->state = THREAD_INIT;
+        manager.createThread(self);
+
+        self->name = "Thread#" + id;
+    }
+
+    public fn getStackSize() : var
+    {
+        return stackSize;
+    }
+
+    public fn getFunctionPointer() : var
+    {
+        return funcptr;
+    }
+
+    fn operator==(Thread t) : var
+    {
+        return Libcore.sys.compareInstance((dynamic_object)self, (dynamic_object)t) || id == t.id;
+    }
+
+    fn start()
+    {
+
+    }
+
+}

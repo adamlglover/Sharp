@@ -1,0 +1,42 @@
+mod std.io;
+
+import std;
+
+class ThreadManager {
+
+    public static var THREAD_MAX = 0x40fe;
+
+    private var threadLimit;
+    private static var tid = 0x2; // we start off at 2 because of existing threads
+    List threads;
+
+    public ThreadManager() {
+        threadLimit = THREAD_MAX;
+        threads = new List();
+    }
+
+    fn createThread(Thread thread)
+    {
+        if(!containsThread(thread)) {
+            thread.id = Libcore.os.nativeThreadCreate(thread);
+
+            if(thread.id < 0) {
+                System.println("Thread could not be created");
+            } else {
+                threads.add((dynamic_object)thread);
+            }
+
+        }
+    }
+
+    fn containsThread(Thread t) : var
+    {
+        foreach(Thread thread : threads.toArray()) {
+            if(t == thread) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

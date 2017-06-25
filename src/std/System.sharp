@@ -15,6 +15,16 @@ class System {
         Libcore.os.printData(str.value());
     }
 
+    public static fn println(var[] data) {
+        Libcore.os.printData(data);
+        printChar('\n');
+    }
+
+    public static fn println(string str) {
+        Libcore.os.printData(str.value());
+        printChar('\n');
+    }
+
     public static fn print(var data) {
         Libcore.os.__print_(data, false);
     }

@@ -1,0 +1,18 @@
+mod application;
+
+import std.io;
+
+class Main {
+    static fn foo()
+    {
+
+    }
+
+    static fn main(string[] args) : var
+    {
+        dynamic_object[] arry;
+        Thread thread = new Thread(new string("Thread1"), 9, arry);
+        thread.start();
+        return 0;
+    }
+}

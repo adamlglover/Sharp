@@ -244,3 +244,9 @@ void Object::unlock() {
     } else
         this->monitor.release();
 }
+
+bool Object::nativeCompare(Object *o) {
+    if(o->_rNode != NULL)
+        return nativeCompare(o->_rNode);
+    return this == o;
+}

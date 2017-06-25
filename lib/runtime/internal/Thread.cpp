@@ -792,6 +792,8 @@ void Thread::run() {
                 returnref()
             SDEL:
                 sdel()
+            TESTOBJ:
+                testobj()
         }
     } catch (bad_alloc &e) {
         cout << "std::bad_alloc\n";

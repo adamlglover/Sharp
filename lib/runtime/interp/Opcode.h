@@ -256,6 +256,8 @@ void print_stack();
 
 #define sdel() CHK_NULL(__stack[(int64_t)__rxs[sp]--].object.null();) _brh
 
+#define testobj() CHK_NULL(__rxs[0x0002]=ptr->nativeCompare(&__stack[(int64_t)__rxs[sp]].object);) _brh
+
 #define _init_opcode_table \
     static void* opcode_table[] = { \
         &&_NOP,	\
@@ -364,6 +366,7 @@ void print_stack();
         &&CHKNULL,                                                        \
         &&RETURNREF,                                                        \
         &&SDEL,                                                        \
+        &&TESTOBJ,                                                        \
     };
 
 /*
@@ -476,6 +479,7 @@ enum OPCODE {
     op_CHKNULL=0x67,
     op_RETURNREF=0x68,
     op_SDEL=0x69,
+    op_TESTOBJ=0x6a,
 
     MAX_OPCODE=0x59
 };
