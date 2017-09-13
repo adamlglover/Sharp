@@ -1,0 +1,12 @@
+mod application;
+
+import std;
+
+class Main {
+
+    public static fn main(string[] args) : var
+    {
+        System.println("Hello, world!");
+        return 0;
+    }
+}

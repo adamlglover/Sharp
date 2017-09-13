@@ -1,6 +1,5 @@
 mod libcore;
 
-import std.io;
 
 /**
 * {@class Libcore}
@@ -53,24 +52,7 @@ class Libcore {
             }
         }
 
-        public static fn nativeThreadCreate(Thread thread) : var
-        {
-            var func = thread.getFunctionPointer();
-            var stackSize = thread.getStackSize();
-            var result;
 
-            __asm(
-                "  movr %adx,%fp                                                                 "
-                "  smov ebx+1               // get local 'func'                                  "
-                "  smov egx+2               // get local 'stackSize'                             "
-                "  movr %adx,%ebx                                                                "
-                "  int 0xa8                 // call system call to create thread                 "
-                "  movr %adx,%fp                                                                 "
-                "  smovr %cmt+3             // set return value of native create to 'result'     "
-            );
-
-            return result;
-        }
     }
 
     class sys {

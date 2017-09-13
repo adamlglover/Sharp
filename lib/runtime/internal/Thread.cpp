@@ -1057,6 +1057,8 @@ bool Thread::execFinally(int command) {
                     returnref()
                 SDEL:
                     sdel()
+                TESTOBJ:
+                    testobj()
             }
         } catch (bad_alloc &e) {
             cout << "std::bad_alloc\n";
