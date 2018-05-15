@@ -9,7 +9,26 @@
 #include "List.h"
 
 class Interpreter {
+public:
+    template<class T>
+    static void freeList(List<T> &lst)
+    {
+        for(unsigned int i = 0; i < lst.size(); i++)
+        {
+            lst.get(i).free();
+        }
+        lst.free();
+    }
 
+    template<class T>
+    static void freeList(list<T> &lst)
+    {
+        for(T item : lst)
+        {
+            item.free();
+        }
+        lst.clear();
+    }
 };
 
 #define progname "bootstrap"

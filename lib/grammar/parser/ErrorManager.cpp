@@ -6,6 +6,7 @@
 #include <sstream>
 #include "../../util/KeyPair.h"
 #include "Ast.h"
+#include "../Runtime.h"
 
 void initalizeErrors()
 {
@@ -321,11 +322,11 @@ void ErrorManager::free() {
     this->lastCheckedError.free();
     this->lastError.free();
     this->lines.free();
-    RuntimeEngine::freeList(*errors);
-    RuntimeEngine::freeList(*warnings);
-    RuntimeEngine::freeList(*unfilteredErrors);
+    Interpreter::freeList(*errors);
+    Interpreter::freeList(*warnings);
+    Interpreter::freeList(*unfilteredErrors);
     for(std::list<ParseError>* lst : *possibleErrors) {
-        RuntimeEngine::freeList(*lst);
+        Interpreter::freeList(*lst);
         delete (lst);
     }
     possibleErrors->clear();
