@@ -5,9 +5,10 @@
 #ifndef SHARP_KEYPAIR_H
 #define SHARP_KEYPAIR_H
 
-template <class K, class T>
+template<class K, class T>
 struct KeyPair
 {
+
     KeyPair(K k, T v)
             :
             key(k),
@@ -18,6 +19,7 @@ struct KeyPair
     KeyPair()
     {
     }
+
     void set(K k, T val)
     {
         key = k;

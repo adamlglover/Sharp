@@ -45,7 +45,6 @@ public:
             line(line)
     {
     }
-
     token_entity()
             :
             tok(""),

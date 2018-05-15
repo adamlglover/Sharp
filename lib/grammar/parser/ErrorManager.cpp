@@ -6,7 +6,6 @@
 #include <sstream>
 #include "../../util/KeyPair.h"
 #include "Ast.h"
-#include "../Runtime.h"
 
 void initalizeErrors()
 {
@@ -48,9 +47,6 @@ void initalizeErrors()
     err.set(INVALID_ACCESS_SPECIFIER, "invalid access specifier");
     predefinedErrors.push_back(err);
 
-    err.set(MULTIPLE_DEFINITION, "multiple definition of");
-    predefinedErrors.push_back(err);
-
     err.set(PREVIOUSLY_DEFINED, "");
     predefinedErrors.push_back(err);
 
@@ -69,10 +65,11 @@ void initalizeErrors()
     err.set(EXPECTED_REFRENCE_OF_TYPE, "expected refrence of type");
     predefinedErrors.push_back(err);
 
-    err.set(INVALID_CAST, "invalid cAst of type");
+    err.set(INVALID_CAST, "invalid cast of type");
     predefinedErrors.push_back(err);
 
-    err.set(REDUNDANT_CAST, "redundant cAst of type");
+
+    err.set(REDUNDANT_CAST, "redundant cast of type");
     predefinedErrors.push_back(err);
 
     err.set(REDUNDANT_IMPORT, "redundant self import of module");
@@ -115,8 +112,7 @@ void ErrorManager::printError(ParseError &err) {
 string ErrorManager::getErrors(list<ParseError>* errors)
 {
     stringstream errorlist;
-    for(const ParseError &err : *errors)
-    {
+    for(ParseError &err : *errors) {
         if(err.warning)
             errorlist << filname << ":" << err.line << ":" << err.col << ": warning S60" << err.id << ":  " << err.error.c_str()
                       << endl;
@@ -138,11 +134,13 @@ string ErrorManager::getErrors(list<ParseError>* errors)
 void ErrorManager::printErrors() {
     if(!asis) {
         if(_err) {
-            if(aggressive) // print aggressive errors
+            if(aggressive) {
                 cout << getErrors(unfilteredErrors);
-            else // print optimized errors
+            } else
                 cout << getErrors(errors);
+
         }
+
         cout << getErrors(warnings);
     }
 }
@@ -152,7 +150,7 @@ int ErrorManager::createNewError(error_type err, token_entity token, string xcmt
     ParseError e(kp, token, xcmts);
     ParseError lastError = cm ? lastCheckedError : lastError;
 
-    if(shouldReport(&token, lastError, e))
+    if(shouldReport(NULL, lastError, e))
     {
         if(asis) {
             printError(e);
@@ -165,36 +163,32 @@ int ErrorManager::createNewError(error_type err, token_entity token, string xcmt
         _err = true;
         errors->push_back(e);
         unfilteredErrors->push_back(e);
-        lastError = e;
+        this->lastError = e;
         return 1;
-    }
-    else {
+    } else
         unfilteredErrors->push_back(e);
-    }
 
     return 0;
 }
 
 bool ErrorManager::shouldReport(token_entity *token, const ParseError &lastError,
-                          const ParseError &e) const {
+                                const ParseError &e) const {
     if(lastError.error != e.error && !(lastError.line == e.line && lastError.col == e.col)
-       && (lastError.error.find(e.error) == std::string::npos) && !hasError(errors, e))
-    {
-        if(token != NULL && !(token->getId() == SINGLE || token->getId() == CHAR_LITERAL ||
-                              token->getId() == STRING_LITERAL || token->getId() == INTEGER_LITERAL))
-            return (lastError.error.find(token->getToken()) == std::string::npos) &&
-                   ((lastError.line-e.line)!=-1);
+       && (lastError.error.find(e.error) == std::string::npos) && !hasError(errors, e)) {
+            if(token != NULL && !(token->getId() == SINGLE || token->getId() == CHAR_LITERAL ||
+                                  token->getId() == STRING_LITERAL || token->getId() == INTEGER_LITERAL)) {
+                return (lastError.error.find(token->getToken()) == std::string::npos) &&
+                       ((lastError.line-e.line)!=-1);
+            }
 
         return true;
     }
 
-
     return false;
 }
 
-
 bool ErrorManager::shouldReportWarning(token_entity *token, const ParseError &lastError,
-                                 const ParseError &e) const {
+                                       const ParseError &e) const {
     if(lastError.error != e.error && !(lastError.line == e.line && lastError.col == e.col)
        && (lastError.error.find(e.error) == std::string::npos))
     {
@@ -394,3 +388,4 @@ void ErrorManager::createNewWarning(error_type err, Ast *pAst, string xcmts) {
         warnings->push_back(e);
     }
 }
+

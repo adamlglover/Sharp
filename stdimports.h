@@ -18,16 +18,15 @@
 
 using namespace std;
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-#define WIN32_
-#else
+#ifdef __unix__
 #define POSIX_
+#elif defined(_WIN32) || defined(WIN32)
+#define WIN32_
 #endif
 
 #ifdef WIN32_
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include "lib/util/mingw.mutex.h"
 
 #ifndef __wtypes_h__
 #include <wtypes.h>
@@ -38,17 +37,11 @@ using namespace std;
 #endif
 #endif
 #ifdef POSIX_
-    #include <pthread.h>
+#include <pthread.h>
     #include <unistd.h>
     #include <sys/time.h>
 
     #define POSIX_USEC_INTERVAL 1000
-
-    #define MUTEX pthread_mutex_t
-#endif
-
-#ifndef DEBUGGING
-#define DEBUGGING
 #endif
 
 struct Sharp {
@@ -69,9 +62,9 @@ struct Sharp {
 
 extern Sharp versions;
 
-void* __malloc(size_t bytes);
-void* __calloc(size_t n, size_t bytes);
-void* __realloc(void *ptr, size_t bytes);
+void* memalloc(size_t bytes);
+void* memcalloc(size_t n, size_t bytes);
+void* memrealloc(void *ptr, size_t bytes);
 void __os_sleep(int64_t);
 
 #define CXX11_INLINE inline

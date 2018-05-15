@@ -48,17 +48,17 @@ enum error_type
 static std::list<KeyPair<error_type, string>> predefinedErrors;
 void initalizeErrors();
 
-struct ParseError
+class ParseError
 {
 public:
     ParseError()
-            :
-            error()
     {
+        error = "";
         id = NO_ERR;
         line = 0;
         col = 0;
     }
+
     ParseError(const ParseError &pe)
     {
         operator=(pe);
@@ -99,7 +99,6 @@ public:
         col=pe.col;
         warning=pe.warning;
     }
-
     void free() {
         error.clear();
     }
@@ -115,7 +114,6 @@ class Ast;
 
 class ErrorManager
 {
-public:
     ErrorManager(List<string>& lines, string file_name, bool asis, bool aggressiveRoporting)
             :
             lines(),
@@ -179,7 +177,7 @@ private:
     bool hasError(list <ParseError> *e, const ParseError &parseerror1) const;
 
     bool shouldReportWarning(token_entity *token, const ParseError &last_err, const ParseError &e) const;
-};
 
+};
 
 #endif //SHARP_PARSEERROR_H
