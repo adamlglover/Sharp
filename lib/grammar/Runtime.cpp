@@ -8,6 +8,7 @@
 #include "parser/Parser.h"
 #include "../util/File.h"
 
+options c_options;
 void help();
 
 int _bootstrap(int argc, const char* argv[])
