@@ -53,7 +53,7 @@ private:
     string get_escaped_string(string msg) const;
 
     List<token_entity> entites;
-    ErrorManager *erros;
+    ErrorManager *errors;
     List<string> lines;
     string toks, empty;
     unsigned long len;

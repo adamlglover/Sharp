@@ -114,6 +114,7 @@ class Ast;
 
 class ErrorManager
 {
+public:
     ErrorManager(List<string>& lines, string file_name, bool asis, bool aggressiveRoporting)
             :
             lines(),
