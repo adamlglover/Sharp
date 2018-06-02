@@ -43,6 +43,7 @@ public:
     ErrorManager* getErrors();
     List<string>& getLines();
     string &getData();
+    void free();
 
     string file;
     token_entity* EOF_token;
@@ -59,6 +60,7 @@ private:
     unsigned long len;
     unsigned long cursor;
     int line, col;
+
 };
 
 #endif //SHARP_TOKENIZER_H

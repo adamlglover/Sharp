@@ -318,11 +318,300 @@ void tokenizer::parse() {
                 8. 123.456E-3
                 9. 12345e5
              */
+                bool dot_found         = false;
+                bool e_found           = false;
+                bool post_e_sign_found = false;
+                bool underscore_ok     = false;
+                stringstream num;
+
+                while( !isend()) {
+
+                    if(current == '_') {
+                        if(!underscore_ok || peek(-1) == '.')
+                        {
+                            errors->createNewError(ILLEGAL_NUMBER_FORMAT, line, col, ", unexpected or illegally placed underscore");
+                            goto start;
+                        }
+                        advance();
+                    } else if ('.' == current)
+                    {
+                        num << current;
+                        if (dot_found)
+                        {
+                            errors->createNewError(ILLEGAL_NUMBER_FORMAT, line, col, ", double decimal");
+                            goto start;
+                        }
+                        dot_found = true;
+                        advance();
+                        continue;
+                    } else if (ismatch('e',current))
+                    {
+                        underscore_ok = false;
+                        num << current;
+                        const char c = peek(1);
+
+                        if (peekend(1))
+                        {
+                            errors->createNewError(ILLEGAL_NUMBER_FORMAT, line, col, ", missing exponent prefix");
+                            goto start;
+                        } else if (
+                                ('+' != c) &&
+                                ('-' != c) &&
+                                ! isnumber(c)
+                                )
+                        {
+                            errors->createNewError(ILLEGAL_NUMBER_FORMAT, line, col, ", expected `+`, `-`, or digit");
+                            goto start;
+                        }
+
+                        e_found = true;
+                        advance();
+                        continue;
+                    } else if (e_found && issign(current))
+                    {
+                        num << current;
+                        if (post_e_sign_found)
+                        {
+                            errors->createNewError(ILLEGAL_NUMBER_FORMAT, line, col, ", duplicate exponent sign postfix");
+                            goto start;
+                        }
+
+                        post_e_sign_found = true;
+                        advance();
+                        continue;
+                    } else if (('.' != current) && !isdigit(current))
+                        break;
+                    else
+                    {
+                        if(isdigit(current) && !e_found)
+                            underscore_ok = true;
+
+                        num << current;
+                        advance();
+                    }
+                }
+
+                entites.add(token_entity(num.str(), INTEGER_LITERAL, col, line));
+                goto start;
             }
+        } else if('"' == current) // "Hello, World", "Name: \n", etc.
+        {
+            stringstream message;
+            if (tokensLeft() < 2)
+            {
+                errors->createNewError(EXPECTED_STRING_LITERAL_EOF, line, col);
+                advance();
+                goto start;
+            }
+            advance();
+
+            bool escaped_found = false;
+            bool escaped = false;
+
+            while (!isend()) {
+                if (current == '\n') {
+                    errors->createNewError(ILLEGAL_STRING_FORMAT, line, col, ", expected `\"` before end of line");
+                    newline();
+                    goto start;
+                } else if (!escaped && ('\\' == current))
+                {
+                    message << current;
+                    escaped_found = true;
+                    escaped = true;
+                    advance();
+                    continue;
+                } else if (!escaped)
+                {
+                    if ('"' == current)
+                        break;
+
+                    message << current;
+                }
+                else if (escaped)
+                {
+                    if(!isletter((char) tolower(current)) && ('\\' != current))
+                    {
+                        errors->createNewError(ILLEGAL_STRING_FORMAT, line, col, ", text preceding `\\` must be alpha or '\\' only");
+                        goto start;
+                    }
+
+                    message << current;
+                    escaped = false;
+                }
+
+
+                advance();
+            }
+
+            if (isend())
+            {
+                errors->createNewError(UNEXPECTED_EOF, line, col);
+                goto start;
+            }
+
+            if (!escaped_found)
+                entites.add(token_entity(message.str(), STRING_LITERAL, col, line));
+            else
+                entites.add(token_entity(get_escaped_string(message.str()), STRING_LITERAL, col, line));
+
+            advance();
+            goto start;
+        } else if('\'' == current) // 'a', '\t', etc.
+        {
+            stringstream character;
+            if (tokensLeft() < 2)
+            {
+                errors->createNewError(EXPECTED_CHAR_LITERAL_EOF, line, col);
+                advance();
+                goto start;
+            }
+            advance();
+
+            bool escaped_found = false;
+            bool escaped = false;
+            bool hascharacter = false;
+
+            while (!isend())
+            {
+                if (!escaped && ('\\' == current))
+                {
+                    if(hascharacter)
+                    {
+                        errors->createNewError(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", a chacacter literal cannot contain more than a single character; expected `'`");
+                        goto start;
+                    }
+
+                    character << current;
+                    escaped_found = true;
+                    escaped = true;
+                    advance();
+                    continue;
+                } else if (!escaped)
+                {
+                    if ('\'' == current)
+                        break;
+
+                    if(hascharacter)
+                    {
+                        errors->createNewError(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", a chacacter literal cannot contain more than a single character; expected `'`");
+                        goto start;
+                    }
+
+                    hascharacter = true;
+                    character << current;
+                } else if (escaped)
+                {
+                    hascharacter = true;
+                    if(!isletter((char) tolower(current)) && current != '\\')
+                    {
+                        errors->createNewError(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", text preceding `\\` must be alpha only");
+                        goto start;
+                    }
+                    character << current;
+                    escaped = false;
+                }
+
+                advance();
+            }
+
+            if (isend())
+            {
+                errors->createNewError(UNEXPECTED_EOF, line, col);
+                goto start;
+            }
+
+            if (!escaped_found)
+            {
+                if(character.str().empty()) {
+                    errors->createNewError(ILLEGAL_CHAR_LITERAL_FORMAT, line, col, ", character literals cannot be empty");
+                } else
+                    entites.add(token_entity(character.str(), CHAR_LITERAL, col, line));
+            }
+            else
+            {
+                string msg = character.str();
+                entites.add(token_entity(get_escaped_string(msg), CHAR_LITERAL, col, line));
+            }
+
+            advance();
+            goto start;
+        } else
+        {
+            errors->createNewError(UNEXPECTED_SYMBOL, line, col, " `" + string(1, current) + "`");
+            advance();
+            goto start;
         }
 
     }
 
     end:
     entites.push_back(*EOF_token);
+}
+
+bool tokenizer::ismatch(char i, char b) {
+    return tolower(i) == tolower(b);
+}
+
+string tokenizer::get_escaped_string(string msg) const {
+    stringstream escapedmessage;
+    for(unsigned long i = 0; i < msg.length(); i++)
+    {
+        if(msg.at(i) == '\\')
+        {
+            switch(msg.at(i+1)) {
+                case 'n':
+                    escapedmessage << endl;
+                    break;
+                case 't':
+                    escapedmessage << '\t';
+                    break;
+                case 'b':
+                    escapedmessage << '\b';
+                    break;
+                case 'v':
+                    escapedmessage << '\v';
+                    break;
+                case 'r':
+                    escapedmessage << '\r';
+                    break;
+                case 'f':
+                    escapedmessage << '\f';
+                    break;
+                default:
+                    escapedmessage << msg.at(i+1);
+                    break;
+            }
+
+            i++;
+        }
+        else
+            escapedmessage << msg.at(i);
+    }
+    return escapedmessage.str();
+}
+
+List<string>& tokenizer::getLines() {
+    return lines;
+}
+
+void tokenizer::free() {
+    this->line = 0;
+    this->col = 0;
+    this->cursor = 0;
+    this->len = 0;
+    empty.clear();
+    this->errors->free();
+    this->lines.free();
+    this->entites.free();
+    delete (this->errors); this->errors = NULL;
+    toks.clear();
+}
+
+string &tokenizer::getData() {
+    return !toks.empty() ? toks : empty;
+}
+
+ErrorManager* tokenizer::getErrors()
+{
+    return errors;
 }
